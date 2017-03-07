@@ -73,7 +73,7 @@ tf.app.flags.DEFINE_float('decrease_lr_threshold',
                             """Percent decrease in validation loss below 
                             which the learning rate will be decayed.""")
 tf.app.flags.DEFINE_float('decay_lr_ratio', 
-                            .95,
+                            1.,
                             """Learning rate decay factor.""")
 tf.app.flags.DEFINE_float('min_lr', 
                             .000005,
