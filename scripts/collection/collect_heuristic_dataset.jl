@@ -26,7 +26,10 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
     heuristic_behavior_type = flags["heuristic_behavior_type"]
     lon_accel_std_dev = flags["lon_accel_std_dev"]
     lat_accel_std_dev = flags["lat_accel_std_dev"]
-    response_time = flags["response_time"]
+    overall_response_time = flags["overall_response_time"]
+    lon_response_time = flags["lon_response_time"]
+    err_p_a_to_i = flags["err_p_a_to_i"]
+    err_p_i_to_a = flags["err_p_i_to_a"]
     evaluator_type = flags["evaluator_type"]
     prediction_model_type = flags["prediction_model_type"]
     network_filepath = flags["network_filepath"]
@@ -108,42 +111,53 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
             params = [get_aggressive_behavior_params(
                 lon_σ = lon_accel_std_dev, 
                 lat_σ = lat_accel_std_dev, 
-                response_time = response_time)]
+                lon_response_time = lon_response_time,
+                overall_response_time = overall_response_time,
+                err_p_a_to_i = err_p_a_to_i,
+                err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([1.])
         elseif heuristic_behavior_type == "passive"
             params = [get_passive_behavior_params(
                 lon_σ = lon_accel_std_dev, 
                 lat_σ = lat_accel_std_dev, 
-                response_time = response_time)]
+                lon_response_time = lon_response_time,
+                overall_response_time = overall_response_time,
+                err_p_a_to_i = err_p_a_to_i,
+                err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([1.])
         elseif heuristic_behavior_type == "normal"
             params = [get_normal_behavior_params(
                 lon_σ = lon_accel_std_dev, 
                 lat_σ = lat_accel_std_dev, 
-                response_time = response_time)]
+                lon_response_time = lon_response_time,
+                overall_response_time = overall_response_time,
+                err_p_a_to_i = err_p_a_to_i,
+                err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([1.])
         else
             params = [get_aggressive_behavior_params(
                         lon_σ = lon_accel_std_dev, 
                         lat_σ = lat_accel_std_dev, 
-                        response_time = response_time), 
+                        lon_response_time = lon_response_time,
+                        overall_response_time = overall_response_time,
+                        err_p_a_to_i = err_p_a_to_i,
+                        err_p_i_to_a = err_p_i_to_a), 
                     get_passive_behavior_params(
                         lon_σ = lon_accel_std_dev, 
                         lat_σ = lat_accel_std_dev, 
-                        response_time = response_time),
+                        lon_response_time = lon_response_time,
+                        overall_response_time = overall_response_time,
+                        err_p_a_to_i = err_p_a_to_i,
+                        err_p_i_to_a = err_p_i_to_a),
                     get_normal_behavior_params(
                         lon_σ = lon_accel_std_dev, 
                         lat_σ = lat_accel_std_dev, 
-                        response_time = response_time)]
+                        lon_response_time = lon_response_time,
+                        overall_response_time = overall_response_time,
+                        err_p_a_to_i = err_p_a_to_i,
+                        err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([.2,.3,.5])
         end
-        behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
-    elseif behavior_type == "varied_response_time"
-        params = [get_normal_behavior_params(
-                lon_σ = lon_accel_std_dev, 
-                lat_σ = lat_accel_std_dev, 
-                response_time = t) for t in .1:sampling_period:.5]
-        weights = WeightVec([.1, .2, .3, .4])
         behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
     elseif behavior_type == "learned"
         behavior_gen = LearnedBehaviorGenerator(driver_network_filepath)

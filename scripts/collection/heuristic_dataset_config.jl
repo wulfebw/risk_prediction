@@ -62,10 +62,18 @@ add_entry!(FLAGS,
     "lat_accel_std_dev", .1, Float64, 
     "Standard deviation of normal distribution from which latitudinal 
     acceleration is sampled.")
-
 add_entry!(FLAGS, 
-    "response_time", .3, Float64, 
+    "overall_response_time", .3, Float64, 
     "Response time for heursitic, delayed driver models.")
+add_entry!(FLAGS, 
+    "lon_response_time", .2, Float64, 
+    "Additional response time for longitudinal, heursitic driver models.")
+add_entry!(FLAGS, 
+    "err_p_a_to_i", 0.0, Float64, 
+    "Probability of driver becoming inattentive.")
+add_entry!(FLAGS, 
+    "err_p_i_to_a", 0.0, Float64, 
+    "Probability of driver becoming attentive from inattentive state.")
 add_entry!(FLAGS, 
     "driver_network_filepath", "../../data/policies/gail_mlp.h5", String, 
     "Filepath to policy network to use with learned drivers.")
