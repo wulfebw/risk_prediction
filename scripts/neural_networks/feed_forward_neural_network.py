@@ -420,7 +420,9 @@ class ClassificationFeedForwardNeuralNetwork(FeedForwardNeuralNetwork):
             - returns class predictions for each target for each sample.
         """
         num_samples = len(inputs)
-        outputs = np.empty((num_samples, self.flags.output_dim))
+        pred_y = np.empty((num_samples, self.flags.output_dim))
+        pred_probs = np.empty((num_samples, self.flags.output_dim, 
+            self.flags.num_target_bins))
         num_batches = int(num_samples / self.flags.batch_size)
         if num_batches * self.flags.batch_size < num_samples:
             num_batches += 1
@@ -431,8 +433,9 @@ class ClassificationFeedForwardNeuralNetwork(FeedForwardNeuralNetwork):
             probs = self.session.run(
                 self._probs, feed_dict={self._input_ph: inputs[s:e],
                 self._dropout_ph: 1.})
-            outputs[s:e, :] = np.argmax(probs, axis=-1)
-        return outputs
+            pred_y[s:e, :] = np.argmax(probs, axis=-1)
+            pred_probs[s:e, :, :] = probs
+        return pred_y, pred_probs
 
     def _build_placeholders(self):
         """
