@@ -1,4 +1,7 @@
+
+import bisect
 import collections
+import csv
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -276,6 +279,39 @@ def compare_dataset_features(d1, d2, l1, l2):
             print(map_2[k])
             input()
 
+def report_high_prob_target_seeds_veh_idxs(data, output_filepath, 
+        tidx=1, threshold=.5):
+    # sort the targets
+    batch_idxs = data['batch_idxs']
+    seeds = data['seeds']
+    targets = data['y_train'][:,tidx]
+    idxs = list(reversed(np.argsort(targets)))
+
+    # collect the output seeds and veh idxs
+    rows = []
+    for idx in idxs:
+        # go through batch idxs until finding the scene of the vehicle
+        i = bisect.bisect_right(batch_idxs, idx)
+
+        # get the vehicle idx
+        if i > 0:
+            veh_idx = idx - batch_idxs[i - 1] + 1
+        else:
+            veh_idx = idx + 1
+
+        # check if the target is above the threshold, if not break
+        target_val = data['y_train'][idx,tidx]
+        if target_val < threshold:
+            break
+
+        # write the seed and veh idx to file
+        rows.append([seeds[i], veh_idx])
+
+    outfile = open(output_filepath, 'w')
+    csv_writer = csv.writer(outfile)
+    csv_writer.writerow(['seed','veh_index'])
+    csv_writer.writerows(rows)
+    outfile.close()
 
 def display_target_info(datasets, target_labels, dataset_labels, 
         output_directory):
@@ -338,19 +374,6 @@ def display_target_info(datasets, target_labels, dataset_labels,
         plt.savefig(output_filepath)
         plt.close()
 
-    # for tidx in range(target_dim):
-        
-
-
-    #     plt.scatter(np.arange(num_datasets) * 5, means[:, tidx], c='green', alpha=.5)
-    #     plt.title(target_labels[tidx])
-    #     plt.xlabel('seconds')
-    #     plt.ylabel('pr(target)')
-    #     output_filepath = os.path.join(output_directory, 
-    #         '{}_across_datasets.png'.format(target_labels[tidx]))
-    #     plt.savefig(output_filepath)
-    #     plt.close()
-
 if __name__ == '__main__':
     # labels stored in external csv files 
     feature_labels_filepath = '../../data/datasets/features.csv'
@@ -362,7 +385,9 @@ if __name__ == '__main__':
 
     # the dataset filepaths to visualize along with labels
     input_filepaths = [
-        '../../data/datasets/2_19/risk_10_sec_10_timesteps.h5',
+        # '../../data/datasets/risk.h5',
+        '../../data/datasets/march/risk_5_sec_3_timesteps.h5',
+        # '../../data/datasets/2_19/risk_10_sec_10_timesteps.h5',
         # '../../data/datasets/2_19/risk_.1_sec_full.h5',
         # '../../data/datasets/2_19/risk_.1_sec_.5_sec_features.h5',
         # '../../data/datasets/2_13/risk_learned.h5',
@@ -394,7 +419,8 @@ if __name__ == '__main__':
     ]
     dataset_labels = [
         # 'full',
-        'risk_10',
+        'test',
+        # 'risk_5'
         # 'multi',
         # 'lidar',
         # 'regular'
@@ -438,7 +464,7 @@ if __name__ == '__main__':
         input_filepath in input_filepaths]
 
     # display basic info about the targets
-    display_target_info(datasets, target_labels, dataset_labels, output_directory)
+    # display_target_info(datasets, target_labels, dataset_labels, output_directory)
 
     # ## analyze behavior
     # for i, dataset in enumerate(datasets):
@@ -456,6 +482,12 @@ if __name__ == '__main__':
 
     # output_directory = os.path.join(base_directory, dataset_labels[-1])
     # sort_scenario_seeds_by_target(datasets[-1], output_directory)
+
+    tidx = 0
+    output_filepath = os.path.join(
+        output_directory, 'seed_veh_idx_target_{}.csv'.format(tidx))
+    report_high_prob_target_seeds_veh_idxs(
+        datasets[0], output_filepath, tidx=tidx)
 
     # # compare two datasets
     # compare_dataset_targets_pairwise(
