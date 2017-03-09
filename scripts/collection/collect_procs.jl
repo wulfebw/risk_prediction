@@ -7,7 +7,6 @@ input_filepaths = ["5_sec_fix_part_2.h5",
 input_filepaths = [string(basedir, f) for f in input_filepaths]
 output_filepath = "../../data/datasets/1_22/risk_5_second_fix_complete.h5"
 
-
 # # collect procs
 # basedir = "../../data/datasets/"
 # num_procs = 18

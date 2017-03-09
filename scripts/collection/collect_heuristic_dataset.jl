@@ -197,8 +197,11 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
     end
 
     # dataset
+    # formulate attributes of the dataset
+    attrs = convert(Dict, flags)
+    attrs["feature_names"] = feature_names(ext)
     dataset = Dataset(output_filepath, feature_dim, feature_timesteps, target_dim,
-        max_num_samples, chunk_dim = chunk_dim, init_file = false)
+        max_num_samples, chunk_dim = chunk_dim, init_file = false, attrs = attrs)
 
     # collector
     col = DatasetCollector(seeds, roadway_gen, scene_gen, behavior_gen, eval,
