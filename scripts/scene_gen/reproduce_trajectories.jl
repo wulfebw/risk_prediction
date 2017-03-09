@@ -18,7 +18,7 @@ Description:
         on whether the corresponding value of a target is above a threshold
 """
 function select_seeds_veh_indices(dataset_filepath::String, 
-        target_index::Int = 1, threshold::Float64 = .75)
+        target_index::Int = 1, threshold::Float64 = 1.)
     target_seeds = Int[]
     veh_idxs = Int[]
     h5open(dataset_filepath, "r") do infile
@@ -52,18 +52,6 @@ function select_seeds_veh_indices(dataset_filepath::String,
         end
     end
     return target_seeds, veh_idxs
-end
-
-function fixup_types!(d::Dict{String,Any})
-    for (k,v) in d
-        if v == "true"
-            v = true
-        elseif v == "false"
-            v = false
-        end
-        d[k] = v
-    end
-    d
 end
 
 function simulate!(scene::Scene, models::Dict{Int, DriverModel}, 
@@ -113,6 +101,7 @@ function reproduce_dataset_trajectories(dataset_filepath::String,
     # indices to file as well
     timesteps = length(col.eval.rec.scenes)
     for seed in seeds
+        srand(seed)
         rand!(col, seed)
         trajdata = Trajdata(col.roadway, Dict{Int, VehicleDef}(),
             Array(TrajdataState, length(col.scene) * timesteps),
@@ -126,7 +115,7 @@ end
 dataset_filepath = "../../data/datasets/risk.h5"
 output_directory = "../../data/trajdatas/"
 seeds_veh_indices_filepath = "../../data/trajdatas/seeds_veh_idxs.csv"
-target_index = 1
+target_index = 2
 threshold = .5
 seeds, veh_idxs = select_seeds_veh_indices(
     dataset_filepath, target_index, threshold)

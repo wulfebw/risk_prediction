@@ -37,7 +37,8 @@ def classification_score(y, y_pred, probs, name, flags):
         print(sklearn.metrics.classification_report(y[:,tidx], y_pred[:,tidx]))
         print(sklearn.metrics.confusion_matrix(y[:,tidx], y_pred[:,tidx]))
         if probs.shape[-1] == 2:
-            pos_idx = 1
+            pos_idx = 1 # means 1 is the positive class
+
             fpr, tpr, thresholds = sklearn.metrics.roc_curve(
                 y[:,tidx], probs[:,tidx,pos_idx], pos_label=pos_idx)
             roc_auc = sklearn.metrics.auc(fpr, tpr)
@@ -168,18 +169,20 @@ def evaluate_regression_fit(network, data, flags):
     y_pred = network.predict(data['x_train'])
     regression_score(data['y_train'], y_pred, 'unshuffled', data)
 
-def compare_output(network, data, flags, num_samples=10):
+def compare_classification_output(network, data, flags, num_samples=10):
     y_idxs = np.where(np.sum(data['y_val'][:10000], axis=1) > 1e-4)[0]
     y_idxs = np.random.permutation(y_idxs)[:num_samples]
-    y_pred = network.predict(data['x_val'][y_idxs])
+    y_pred, pred_probs = network.predict(data['x_val'][y_idxs])
     for y_pred_s, y_s in zip(y_pred, data['y_val'][y_idxs]):
         print('actual:{}\npredicted:{}'.format(y_s, y_pred_s))
 
 def evaluate_fit(network, data, flags):
     if not os.path.exists(flags.viz_dir):
         os.mkdir(flags.viz_dir)
-    compare_output(network, data, flags)
+    
     if flags.task_type == 'classification':
+        compare_classification_output(network, data, flags)
         evaluate_classification_fit(network, data, flags)
+        report_poorly_performing_indices()
     else:
         evaluate_regression_fit(network, data, flags)
