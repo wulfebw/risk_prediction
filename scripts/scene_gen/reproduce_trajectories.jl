@@ -1,4 +1,10 @@
-
+#=
+For these scripts to work the following should hold:
+1. the machine where the data was collected and this machine must give identical simulation results. Reasons why this might not be the case include
+- different AutoRisk versions
+- different ADM versions
+- different versions of any other library
+=#
 using AutoRisk
 
 include("../collection/collect_heuristic_dataset.jl")
@@ -12,43 +18,47 @@ function write_seeds_veh_indices_file(output_filepath::String,
     end
 end
 
+function load_targets_seeds_batch_idxs(filepath::String)
+    targets, seeds, batch_idxs = [], [], []
+    h5open(filepath, "r") do infile
+        targets = read(infile, "risk/targets")
+        seeds = read(infile, "risk/seeds")
+        batch_idxs = read(infile, "risk/batch_idxs")
+    end
+    return targets, seeds, batch_idxs
+end
+
 """
 Description:
     - Selects seeds and corresponding vehicle indices from a dataset based 
         on whether the corresponding value of a target is above a threshold
 """
-function select_seeds_veh_indices(dataset_filepath::String, 
-        target_index::Int = 1, threshold::Float64 = 1.)
+function select_seeds_veh_indices(targets::Array{Float64}, seeds::Array{Int}, 
+        batch_idxs::Array{Int}, target_index::Int = 1, threshold::Float64 = 1.)
     target_seeds = Int[]
     veh_idxs = Int[]
-    h5open(dataset_filepath, "r") do infile
-        targets = read(infile, "risk/targets")
-        seeds = read(infile, "risk/seeds")
-        batch_idxs = read(infile, "risk/batch_idxs")
-        num_targets, num_samples = size(targets)
-        
-        cur_idx = 1
-        for sidx in 1:num_samples
-            # if the sample is over this batch index then increment the 
-            # seed / batch counter e.g., 201 > 200 -> cur_idx should be 2
-            if sidx > batch_idxs[cur_idx]
-                cur_idx += 1
+    num_targets, num_samples = size(targets)
+    cur_idx = 1
+    for sidx in 1:num_samples
+        # if the sample is over this batch index then increment the 
+        # seed / batch counter e.g., 201 > 200 -> cur_idx should be 2
+        if sidx > batch_idxs[cur_idx]
+            cur_idx += 1
+        end
+
+        # if the target is over the threshold, then collect the seed and 
+        # vehicle index
+        if targets[target_index, sidx] >= threshold
+            # edge case when collecting vehicle index in first seed
+            if cur_idx == 1
+                veh_idx = sidx
+            else
+                # e.g., cur_idx = 2, sidx = 201, then veh_idx = 201 - 200 = 1
+                veh_idx = sidx - batch_idxs[cur_idx - 1]
             end
 
-            # if the target is over the threshold, then collect the seed and 
-            # vehicle index
-            if targets[target_index, sidx] >= threshold
-                # edge case when collecting vehicle index in first seed
-                if cur_idx == 1
-                    veh_idx = sidx
-                else
-                    # e.g., cur_idx = 2, sidx = 201, then veh_idx = 201 - 200 = 1
-                    veh_idx = sidx - batch_idxs[cur_idx - 1]
-                end
-
-                push!(target_seeds, seeds[cur_idx])
-                push!(veh_idxs, veh_idx)
-            end
+            push!(target_seeds, seeds[cur_idx])
+            push!(veh_idxs, veh_idx)
         end
     end
     return target_seeds, veh_idxs
@@ -61,8 +71,7 @@ function simulate!(scene::Scene, models::Dict{Int, DriverModel},
         trajdata.vehdefs[veh.def.id] = veh.def
     end
 
-    actions = get_actions!(Array(DriveAction, length(scene)), 
-        scene, roadway, models)
+    actions = Array(DriveAction, length(scene))
     frame_index, state_index = 0, 0
     for t in 1:timesteps
         lo = state_index + 1
@@ -101,8 +110,8 @@ function reproduce_dataset_trajectories(dataset_filepath::String,
     # indices to file as well
     timesteps = length(col.eval.rec.scenes)
     for seed in seeds
-        srand(seed)
         rand!(col, seed)
+        srand(seed)
         trajdata = Trajdata(col.roadway, Dict{Int, VehicleDef}(),
             Array(TrajdataState, length(col.scene) * timesteps),
             Array(TrajdataFrame, timesteps))
@@ -111,15 +120,3 @@ function reproduce_dataset_trajectories(dataset_filepath::String,
         write_trajdata(trajdata, output_filepath)
     end
 end
-
-dataset_filepath = "../../data/datasets/risk.h5"
-output_directory = "../../data/trajdatas/"
-seeds_veh_indices_filepath = "../../data/trajdatas/seeds_veh_idxs.csv"
-target_index = 2
-threshold = .5
-seeds, veh_idxs = select_seeds_veh_indices(
-    dataset_filepath, target_index, threshold)
-write_seeds_veh_indices_file(seeds_veh_indices_filepath, seeds, veh_idxs)
-reproduce_dataset_trajectories(dataset_filepath, output_directory, 
-    unique(seeds))
-

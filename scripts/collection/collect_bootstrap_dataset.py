@@ -1,4 +1,6 @@
 """
+
+# outline
 1. while loop
 2. collect dataset with julia
     - initial collection without network
@@ -7,6 +9,41 @@
 3. train a network to convergence on that dataset
     - load flags from run_compression.py
     - then just do a normal tf setup where you frun fit on each dataset
+
+# flags
+- python flags
+    + julia_weights_filepath
+        * where to save the julia weights
+    + dataset_filepath
+        * becomes output_filepath (where to save the datasets)
+- julia flags
+    + evaluator_type
+        * type of eval (base, bootstrap)
+    + output_filepath
+        * where to save 
+    + network_filepath
+        * filepath to bootstrap network
+
+# cmd
+## debug
+python collect_bootstrap_dataset.py \
+--dataset_filepath ../../data/datasets/bootstrap/ \
+--num_scenarios 1000 \
+--num_monte_carlo_runs 10 \
+--bootstrap_iterations 10 \
+--julia_weights_filepath ../../data/networks/bootstrap/ \
+--debug_lo_v_rear 5. \
+--debug_hi_v_rear 5. \
+--debug_lo_v_fore 0. \
+--debug_hi_v_fore 0. \
+--decay_lr_ratio .95 \
+--prime_time .1 \
+--sampling_time .1 \
+--input_dim 40 \
+--monitor_scenario_record_freq 1000 \
+--num_epochs 1 \
+--run_filepath run_collect_debug_dataset.jl
+
 """
 
 import numpy as np
@@ -18,7 +55,8 @@ import tensorflow as tf
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
-import compression.run_compression
+import compression.compression_flags as compression_flags
+import compression.run_compression as run_compression
 import dataset
 import dataset_loaders
 import neural_networks.feed_forward_neural_network as ffnn
@@ -29,9 +67,9 @@ def generate_dataset(flags, dataset_filepath, network_filepath):
     evaluator_type = 'base' if network_filepath == 'none' else 'bootstrap'
     proc_string = '-p {}'.format(flags.num_proc) if flags.num_proc > 1 else ''
     # format the subprocess command
-    cmd = 'julia {} run_collect_heuristic_dataset.jl --evaluator_type {} --output_filepath {} --network_filepath {} --initial_seed {} '.format(
-        proc_string, evaluator_type, dataset_filepath, network_filepath, 
-        flags.initial_seed)
+    cmd = 'julia {} {} --evaluator_type {} --output_filepath {} --network_filepath {} --initial_seed {} '.format(
+        proc_string, flags.run_filepath, evaluator_type, dataset_filepath,
+        network_filepath, flags.initial_seed)
     # append all of the command line arguments not used in flags, because they 
     # must then have been intended for the dataset collection process
     for idx in range(1, len(sys.argv) - 1, 2):
@@ -49,17 +87,22 @@ def generate_dataset(flags, dataset_filepath, network_filepath):
 
 def main(argv=None):
     # use the flags from regular compression
-    FLAGS = compression.run_compression.FLAGS
+    FLAGS = compression_flags.FLAGS
+
+    # custom parse of flags for list input
+    compression_flags.custom_parse_flags(FLAGS)
 
     # set random seeds
     np.random.seed(FLAGS.random_seed)
     tf.set_random_seed(FLAGS.random_seed)
 
-    # set up training constants
+    # where to save the intermediate datasets
     basedir = os.path.split(FLAGS.dataset_filepath)[0]
     if not os.path.exists(basedir):
         os.mkdir(basedir)
     dataset_filepath_template = os.path.join(basedir, 'iter_{}.h5')
+
+    # where to save the networks
     basedir = os.path.split(FLAGS.julia_weights_filepath)[0]
     if not os.path.exists(basedir):
         os.mkdir(basedir)
@@ -87,7 +130,7 @@ def main(argv=None):
             # load in the dataset
             data = dataset_loaders.risk_dataset_loader(dataset_filepath,
                 normalize=True, shuffle=True, train_split=.9, 
-                debug_size=FLAGS.debug_size)
+                debug_size=FLAGS.debug_size, timesteps=FLAGS.timesteps)
             d = dataset.Dataset(data, FLAGS)
 
             # fit the network to the dataset

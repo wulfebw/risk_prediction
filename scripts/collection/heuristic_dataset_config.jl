@@ -181,5 +181,22 @@ add_entry!(FLAGS,
     "output_filepath", "../../data/datasets/risk.h5", String, 
     "Filepath where to save dataset.")
 add_entry!(FLAGS, 
+    "monitoring_directory", "../../data/monitoring/risk", String, 
+    "Directory where to save monitoring files.")
+add_entry!(FLAGS, 
     "initial_seed", 1, Int64, 
     "If using a sequential set of seed values, this is the first that will be used.")
+
+# monitoring
+add_entry!(FLAGS, "monitor_scenario_record_freq", 100, Int64, 
+    "How frequently to record scenarios.")
+
+# debug
+add_entry!(FLAGS, "debug_lo_delta_s", 0., Float64, "low Δs value for generator.")
+add_entry!(FLAGS, "debug_hi_delta_s", 10., Float64, "high Δs value for generator.")
+add_entry!(FLAGS, "debug_lo_v_rear", 0., Float64, "low velocity value for generator.")
+add_entry!(FLAGS, "debug_hi_v_rear", 0., Float64, "high velocity value for generator.")
+add_entry!(FLAGS, "debug_lo_v_fore", 0., Float64, "low velocity value for generator.")
+add_entry!(FLAGS, "debug_hi_v_fore", 0., Float64, "high velocity value for generator.")
+add_entry!(FLAGS, "debug_rear_sigma", 0., Float64, "lon accel sigma for debug rear veh.")
+add_entry!(FLAGS, "debug_fore_sigma", 0., Float64, "lon accel sigma for debug fore veh.")

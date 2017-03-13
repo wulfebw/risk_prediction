@@ -136,6 +136,9 @@ tf.app.flags.DEFINE_integer('num_scenarios',
 tf.app.flags.DEFINE_string('initial_network_filepath',
                             'none',
                             'Filepath of initial network or none.')
+tf.app.flags.DEFINE_string('run_filepath',
+                            'run_collect_debug_dataset.jl',
+                            'Filepath to run file.')
 
 
 def custom_parse_flags(flags):

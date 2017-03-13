@@ -11,7 +11,6 @@ function analyze_risk_dataset(output_filepath)
     println("avg targets: $(mean(targets, (2)))")
     println("size of dataset features: $(size(features))")
     println("size of dataset targets: $(size(targets))")
-
 end
 
 function main()
