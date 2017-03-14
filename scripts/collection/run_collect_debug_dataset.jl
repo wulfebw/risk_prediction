@@ -39,7 +39,9 @@ function build_debug_collector(flags::Flags)
         lo_v_rear = flags["debug_lo_v_rear"],
         hi_v_rear = flags["debug_hi_v_rear"],
         lo_v_fore = flags["debug_lo_v_fore"],
-        hi_v_fore = flags["debug_hi_v_fore"]
+        hi_v_fore = flags["debug_hi_v_fore"],
+        v_eps = flags["debug_v_eps"],
+        s_eps = flags["debug_s_eps"]
     )
     behgen = DebugBehaviorGenerator(
         rear_lon_σ = flags["debug_rear_sigma"],

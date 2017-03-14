@@ -10,11 +10,11 @@ using AutoRisk
 include("../collection/collect_heuristic_dataset.jl")
 
 function write_seeds_veh_indices_file(output_filepath::String, 
-        seeds::Array{Int}, veh_idxs::Array{Int})
+        seeds::Array{Int}, veh_idxs::Array{Int}, probs::Array{Float64})
     outfile = open(output_filepath, "w")
-    write(outfile, "seed,vehicle_index\n")
-    for (s, v) in zip(seeds, veh_idxs)
-        write(outfile, "$(s),$(v)\n")
+    write(outfile, "seed,vehicle_index,prob\n")
+    for (s, v, p) in zip(seeds, veh_idxs, probs)
+        write(outfile, "$(s),$(v),$(p)\n")
     end
 end
 
@@ -35,8 +35,9 @@ Description:
 """
 function select_seeds_veh_indices(targets::Array{Float64}, seeds::Array{Int}, 
         batch_idxs::Array{Int}, target_index::Int = 1, threshold::Float64 = 1.)
-    target_seeds = Int[]
-    veh_idxs = Int[]
+    target_seeds = Int64[]
+    veh_idxs = Int64[]
+    probs = Float64[]
     num_targets, num_samples = size(targets)
     cur_idx = 1
     for sidx in 1:num_samples
@@ -59,13 +60,15 @@ function select_seeds_veh_indices(targets::Array{Float64}, seeds::Array{Int},
 
             push!(target_seeds, seeds[cur_idx])
             push!(veh_idxs, veh_idx)
+            push!(probs, targets[target_index, sidx])
         end
     end
-    return target_seeds, veh_idxs
+    return target_seeds, veh_idxs, probs
 end
 
 function simulate!(scene::Scene, models::Dict{Int, DriverModel}, 
-        roadway::Roadway, trajdata::Trajdata, timesteps::Int)
+        roadway::Roadway, trajdata::Trajdata, prime_timesteps::Int, 
+        sampling_timesteps::Int)
 
     for veh in scene
         trajdata.vehdefs[veh.def.id] = veh.def
@@ -73,13 +76,16 @@ function simulate!(scene::Scene, models::Dict{Int, DriverModel},
 
     actions = Array(DriveAction, length(scene))
     frame_index, state_index = 0, 0
-    for t in 1:timesteps
-        lo = state_index + 1
-            for veh in scene
-                trajdata.states[state_index+=1] = TrajdataState(veh.def.id, veh.state)
-            end
-        hi = state_index
-        trajdata.frames[frame_index+=1] = TrajdataFrame(lo, hi, t)
+    for t in 1:(prime_timesteps + sampling_timesteps)
+        if t > prime_timesteps
+            lo = state_index + 1
+                for veh in scene
+                    trajdata.states[state_index+=1] = TrajdataState(
+                        veh.def.id, veh.state)
+                end
+            hi = state_index
+            trajdata.frames[frame_index+=1] = TrajdataFrame(lo, hi, t)
+        end
 
         get_actions!(actions, scene, roadway, models)
         tick!(scene, roadway, actions, models)
@@ -108,14 +114,18 @@ function reproduce_dataset_trajectories(dataset_filepath::String,
     # collecting the last sampling_time seconds worth of frames in a trajdata
     # then save the trajdata to file in addition to saving the relevant vehicle 
     # indices to file as well
+    prime_timesteps = Int(ceil(flags["prime_time"] / flags["sampling_period"]))
+    sampling_timesteps = Int(ceil(flags["sampling_time"] / flags["sampling_period"]))
     timesteps = length(col.eval.rec.scenes)
+    @assert timesteps == prime_timesteps + sampling_timesteps
     for seed in seeds
         rand!(col, seed)
         srand(seed)
         trajdata = Trajdata(col.roadway, Dict{Int, VehicleDef}(),
-            Array(TrajdataState, length(col.scene) * timesteps),
-            Array(TrajdataFrame, timesteps))
-        simulate!(col.scene, col.models, col.roadway, trajdata, timesteps)
+            Array(TrajdataState, length(col.scene) * sampling_timesteps),
+            Array(TrajdataFrame, sampling_timesteps))
+        simulate!(col.scene, col.models, col.roadway, trajdata, prime_timesteps,
+            sampling_timesteps)
         output_filepath = joinpath(output_directory, "$(seed).txt")
         write_trajdata(trajdata, output_filepath)
     end

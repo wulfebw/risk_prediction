@@ -12,14 +12,14 @@ import scipy.stats
 import sys
 # import seaborn as sns
 
-
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import dataset_loaders
 import utils
 
-COLORS = ["red", "green", "blue", "purple", "yellow", "orange"]
+COLORS = ["red", "green", "blue", "purple", "yellow", "orange", "teal", 
+    "black", "cyan", "magenta", "lightcoral", "darkseagreen"]
 
 def scatter_with_best_fit(features, targets, f_idx, t_idx, d_idx):
     """
@@ -330,49 +330,61 @@ def display_target_info(datasets, target_labels, dataset_labels,
     print('target correlation matrix: ')
     print(np.corrcoef(datasets[-1]['y_train'], rowvar=0))
 
-    # plot targets for each dataset
-    # normalize across means
+    means = np.array(means)
+    num_datasets, num_targets = means.shape
+    for tidx in range(num_targets):
+        output_filepath = os.path.join(output_directory, 'mean_{}.png'.format(target_labels[tidx]))
+        plt.scatter(range(num_datasets), means[:,tidx],label=target_labels[tidx])
+        plt.savefig(output_filepath)
+        plt.clf()
+
+
     means = means / np.max(means, axis=0)
     num_datasets, target_dim = means.shape
-    width = 0.2
-    indices = np.arange(target_dim)
+    width = 0.1
     rects = []
-    fig, ax = plt.subplots()
-    fig.set_size_inches(10, 6)
-    for i in range(num_datasets):
-        rect = ax.bar(indices + width * i, means[i,:], width, color=COLORS[i], 
-            alpha=.9, edgecolor="black")
-        rects.append(rect)
-    
-    # change in target across datasets
-    ax.set_ylabel('pr(target)')
-    ax.set_title('pr(target) across datasets')
-    print(target_labels)
-    plt.xticks(indices, target_labels)
-    ax.legend(([rect[0] for rect in rects]), dataset_labels, bbox_to_anchor=(.75, .98))
-    output_filepath = os.path.join(output_directory, 'target_comparison.png')
-    plt.savefig(output_filepath)
+    for tidx in range(target_dim):
+        fig, ax = plt.subplots()
+        fig.set_size_inches(num_datasets / 2, num_datasets / 2)
+        color = np.array([.1,.1,.1])
+        color_step = (1 - color) / num_datasets - 1e-4
+        for didx in range(num_datasets):
+            color += color_step
+            rect = ax.bar(width * didx, means[didx,tidx], width, color=tuple(color), 
+                alpha=.9, edgecolor="black")
+            rects.append(rect)
+        ax.set_ylabel('pr({})'.format(target_labels[tidx]))
+        ax.set_title('pr({}) across datasets'.format(target_labels[tidx]))
+        ax.legend(([rect[0] for rect in rects]), dataset_labels, bbox_to_anchor=(.5, -1.1))
+        output_filepath = os.path.join(output_directory, 'comparison_{}.png'.format(target_labels[tidx]))
+        plt.savefig(output_filepath)
+        plt.clf()
 
     # histogram of target values
     _, num_targets = datasets[0]['y_train'].shape
     num_datasets = len(datasets)
+    side_len = int(np.ceil(np.sqrt(num_datasets)))
     target_sets = [d['y_train'] for d in datasets]
+    fig = plt.figure(figsize=(num_datasets, 8))
+    ignore_zeros = True
     for t_idx in range(num_targets):
-        # fig = plt.figure(1)
         for d_idx in range(num_datasets):
-            plt.subplot(int('{}1{}'.format(num_datasets, d_idx + 1)))
-            n, bins, patches = plt.hist(
-                target_sets[d_idx][:, t_idx][target_sets[d_idx][:, t_idx] > 0], 
-                50, alpha=0.5)
+            plt.subplot(side_len, side_len, d_idx + 1)
+            if ignore_zeros:
+                n, bins, patches = plt.hist(
+                    target_sets[d_idx][:, t_idx][target_sets[d_idx][:, t_idx] > 0], 
+                    50, alpha=0.5)
+            else:
+                n, bins, patches = plt.hist(target_sets[d_idx][:, t_idx], 50, alpha=0.5)
             plt.title('{}: {}'.format(
                     dataset_labels[d_idx], target_labels[t_idx]))
         output_filepath = os.path.join(
-            output_directory, 'new_target_{}.png'.format(
+            output_directory, 'hist_{}.png'.format(
                 target_labels[t_idx]))
         print(output_filepath)
         plt.tight_layout()
         plt.savefig(output_filepath)
-        plt.close()
+        plt.clf()
 
 if __name__ == '__main__':
     # labels stored in external csv files 
@@ -383,69 +395,23 @@ if __name__ == '__main__':
     feature_labels = utils.load_labels(feature_labels_filepath)
     target_labels = utils.load_labels(target_labels_filepath)
 
-    # the dataset filepaths to visualize along with labels
-    input_filepaths = [
-        # '../../data/datasets/risk.h5',
-        '../../data/datasets/march/risk_5_sec_3_timesteps.h5',
-        # '../../data/datasets/2_19/risk_10_sec_10_timesteps.h5',
-        # '../../data/datasets/2_19/risk_.1_sec_full.h5',
-        # '../../data/datasets/2_19/risk_.1_sec_.5_sec_features.h5',
-        # '../../data/datasets/2_13/risk_learned.h5',
-        # '../../data/datasets/2_13/risk_.1_sec_lidar_features.h5',
-        # '../../data/datasets/2_13/risk_.1_sec_regular_features.h5'
-        # '../../data/datasets/2_4/risk_.1_sec_multi.h5',
-        # '../../data/datasets/2_4/risk_.1_sec.h5',
-        # '../../data/datasets/1_30/risk_10_sec.h5',
-        # '../../data/datasets/1_30/risk_10_sec_bootstrap.h5',
-        # '../../data/datasets/1_22/risk_5_second_fix_complete.h5',
-        # '../../data/datasets/1_30/risk_5_sec_delay.h5',
-        # '../../data/datasets/1_22/risk_5_second_no_idm_decel.h5',
-        # '../../data/datasets/1_22/bootstrap_10_sec.h5',
-        # '../../data/datasets/1_22/risk_10_second_full.h5',
-        # '../../data/datasets/1_22/risk_5_second_complete.h5',
-        # '../../data/datasets/1_8/risk_20_second_thresh_5_second.h5',
-        # '../../data/datasets/1_8/risk_5_second.h5',
-        # '../../data/datasets/1_8/risk_10_second.h5',
-        # '../../data/datasets/1_1/risk_5_second.h5',
-        # '../../data/datasets/1_1/risk_10_second.h5',
-        # '../../data/datasets/1_1/risk_24.h5', 
-        # '../../data/datasets/1_1/risk_25.h5', 
-        # '../../data/datasets/1_1/risk_26.h5', 
-        # '../../data/datasets/11_27/risk_16.h5',
-        # '../../data/datasets/12_5/risk_halftime.h5',
-        # '../../data/datasets/11_27/risk_no_noise.h5',
-        # '../../data/datasets/11_14/risk_ngsim.h5'
-        # '../../data/datasets/12_11/risk_18.h5'
-    ]
-    dataset_labels = [
-        # 'full',
-        'test',
-        # 'risk_5'
-        # 'multi',
-        # 'lidar',
-        # 'regular'
-        # 'risk_10_sec',
-        # 'risk_10_sec_bootstrap',
-        # 'risk_5_second',
-        # 'risk_5_second_delay',
-        # 'risk_5_second_no_idm_decel',
-        # '10_sec_bootstrap',
-        # '10_sec',
-        # '5_sec',
-        # '10_sec',
-        # '10_sec_thresh',
-        # '20_sec_thresh',
-        # '5_sec',
-        # '10_sec',
-        # '5_sec_3_sec_burn_in',
-        # '10_sec_3_sec_burn_in',
-        # '20_sec'
-    ]
+    ## the dataset filepaths to visualize along with labels
+    # input_filepaths = [
+    #     # '../../data/datasets/risk.h5',
+    #     '../../data/datasets/bootstrap/iter_4.h5',
+    #     # '../../data/datasets/march/risk_20_sec_3_timesteps.h5',
+    # ]
+    # dataset_labels = [
+    #     # 'full',
+    #     'boot',
+    #     # 'risk_5'
+    # ]
 
-    # input_filenames = ['iter_{}.h5'.format(i) for i in range(10)]
-    # basedir = '/Users/wulfebw/Desktop/temp_risk/datasets'
-    # input_filepaths = [os.path.join(basedir, f) for f in input_filenames]
-    # dataset_labels = ['{}_seconds'.format(i * 5) for i in range(1, 11)]
+    num_iters = 50
+    input_filenames = ['iter_{}.h5'.format(i) for i in range(num_iters)]
+    basedir = '../../data/datasets/bootstrap'
+    input_filepaths = [os.path.join(basedir, f) for f in input_filenames]
+    dataset_labels = ['{}_seconds'.format(i) for i in range(1, num_iters + 1)]
     
     # check for / create output directory
     base_directory = '../../data/visualizations/'
@@ -464,7 +430,7 @@ if __name__ == '__main__':
         input_filepath in input_filepaths]
 
     # display basic info about the targets
-    # display_target_info(datasets, target_labels, dataset_labels, output_directory)
+    display_target_info(datasets, target_labels, dataset_labels, output_directory)
 
     # ## analyze behavior
     # for i, dataset in enumerate(datasets):
@@ -483,11 +449,11 @@ if __name__ == '__main__':
     # output_directory = os.path.join(base_directory, dataset_labels[-1])
     # sort_scenario_seeds_by_target(datasets[-1], output_directory)
 
-    tidx = 0
-    output_filepath = os.path.join(
-        output_directory, 'seed_veh_idx_target_{}.csv'.format(tidx))
-    report_high_prob_target_seeds_veh_idxs(
-        datasets[0], output_filepath, tidx=tidx)
+    # tidx = 0
+    # output_filepath = os.path.join(
+    #     output_directory, 'seed_veh_idx_target_{}.csv'.format(tidx))
+    # report_high_prob_target_seeds_veh_idxs(
+    #     datasets[0], output_filepath, tidx=tidx)
 
     # # compare two datasets
     # compare_dataset_targets_pairwise(

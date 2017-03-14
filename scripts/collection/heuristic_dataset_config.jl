@@ -188,7 +188,7 @@ add_entry!(FLAGS,
     "If using a sequential set of seed values, this is the first that will be used.")
 
 # monitoring
-add_entry!(FLAGS, "monitor_scenario_record_freq", 100, Int64, 
+add_entry!(FLAGS, "monitor_scenario_record_freq", 1000, Int64, 
     "How frequently to record scenarios.")
 
 # debug
@@ -200,3 +200,7 @@ add_entry!(FLAGS, "debug_lo_v_fore", 0., Float64, "low velocity value for genera
 add_entry!(FLAGS, "debug_hi_v_fore", 0., Float64, "high velocity value for generator.")
 add_entry!(FLAGS, "debug_rear_sigma", 0., Float64, "lon accel sigma for debug rear veh.")
 add_entry!(FLAGS, "debug_fore_sigma", 0., Float64, "lon accel sigma for debug fore veh.")
+add_entry!(FLAGS, "debug_v_eps", 1e-8, Float64, 
+    "step for random velocity values (set to the range to choose between end points).")
+    add_entry!(FLAGS, "debug_s_eps", 1e-8, Float64, 
+    "step for random location values (set to the range to choose between end points).")

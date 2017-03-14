@@ -28,20 +28,24 @@
 ## debug
 python collect_bootstrap_dataset.py \
 --dataset_filepath ../../data/datasets/bootstrap/ \
---num_scenarios 1000 \
---num_monte_carlo_runs 10 \
---bootstrap_iterations 10 \
+--num_scenarios 10000 \
+--num_monte_carlo_runs 1 \
+--bootstrap_iterations 50 \
 --julia_weights_filepath ../../data/networks/bootstrap/ \
---debug_lo_v_rear 5. \
---debug_hi_v_rear 5. \
---debug_lo_v_fore 0. \
---debug_hi_v_fore 0. \
---decay_lr_ratio .95 \
+--debug_lo_delta_s 2. \
+--debug_hi_delta_s 5. \
+--debug_lo_v_rear 0. \
+--debug_hi_v_rear 0. \
+--debug_lo_v_fore -1. \
+--debug_hi_v_fore 1. \
+--debug_v_eps 2. \
 --prime_time .1 \
 --sampling_time .1 \
 --input_dim 40 \
---monitor_scenario_record_freq 1000 \
---num_epochs 1 \
+--monitor_scenario_record_freq 10000 \
+--num_epochs 50 \
+--loss_type mse \
+--decay_lr_ratio .95 \
 --run_filepath run_collect_debug_dataset.jl
 
 """
@@ -56,6 +60,7 @@ path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import compression.compression_flags as compression_flags
+import compression.compression_metrics as compression_metrics
 import compression.run_compression as run_compression
 import dataset
 import dataset_loaders
@@ -125,6 +130,7 @@ def main(argv=None):
             
             # generate a dataset
             dataset_filepath = dataset_filepath_template.format(bootstrap_iter)
+            FLAGS.dataset_filepath = dataset_filepath
             generate_dataset(FLAGS, dataset_filepath, network_filepath)
 
             # load in the dataset
@@ -135,6 +141,9 @@ def main(argv=None):
 
             # fit the network to the dataset
             network.fit(d)
+
+            # evaluate the fit
+            compression_metrics.evaluate_fit(network, data, FLAGS)
 
             # save weights to a julia-compatible weight file for next iteration
             network_filepath = network_filepath_template.format(bootstrap_iter)
