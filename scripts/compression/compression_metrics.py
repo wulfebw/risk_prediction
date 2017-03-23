@@ -120,7 +120,11 @@ def regression_score(y, y_pred, name, data=None, eps=1e-16,
         prec = recall = len(np.where(y_class[prec_idxs] == 1)[0])
         if len(prec_idxs) > 0:
             prec /= len(prec_idxs)
-            recall /= len(np.where(y_class == 1)[0])
+            normalization_count = len(np.where(y_class == 1)[0])
+            if normalization_count > 0:
+                recall /= normalization_count
+            else:
+                recall = 0
         else:
             prec = 0
             recall = 0

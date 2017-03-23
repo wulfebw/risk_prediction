@@ -32,19 +32,20 @@ python collect_bootstrap_dataset.py \
 --num_monte_carlo_runs 1 \
 --bootstrap_iterations 50 \
 --julia_weights_filepath ../../data/networks/bootstrap/ \
---debug_lo_delta_s 2. \
---debug_hi_delta_s 5. \
+--debug_lo_delta_s 10. \
+--debug_hi_delta_s 10. \
 --debug_lo_v_rear 0. \
 --debug_hi_v_rear 0. \
---debug_lo_v_fore -1. \
---debug_hi_v_fore 1. \
+--debug_lo_v_fore 0. \
+--debug_hi_v_fore 0. \
+--debug_rear_sigma 0. \
+--debug_fore_sigma 0. \
 --debug_v_eps 2. \
 --prime_time .1 \
 --sampling_time .1 \
 --input_dim 40 \
 --monitor_scenario_record_freq 10000 \
 --num_epochs 50 \
---loss_type mse \
 --decay_lr_ratio .95 \
 --run_filepath run_collect_debug_dataset.jl
 

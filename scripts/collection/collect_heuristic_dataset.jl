@@ -36,6 +36,7 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
     driver_network_filepath = flags["driver_network_filepath"]
     extractor_type = flags["extractor_type"]
     feature_timesteps = flags["feature_timesteps"]
+    bootstrap_discount = flags["bootstrap_discount"]
 
     # feature_dim depends on extractor_type, so build extractor first
     if extractor_type == "heuristic"
@@ -190,7 +191,7 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
 
         eval = BootstrappingMonteCarloEvaluator(ext, num_runs, context, prime_time,
             sampling_time, veh_idx_can_change, rec, features, targets, 
-            agg_targets, prediction_model)
+            agg_targets, prediction_model, discount = bootstrap_discount)
     else
         eval = MonteCarloEvaluator(ext, num_runs, context, prime_time, sampling_time,
             veh_idx_can_change, rec, features, targets, agg_targets)
