@@ -85,6 +85,8 @@ docs/_build/
 *.mat
 *.zip
 *.jld
+*.txt
+*.csv
 
 # notebook checkpoints
 *checkpoint*
@@ -122,6 +124,8 @@ CTestTestfile.cmake
 # media
 *.pdf
 *.gif
+*.aux
+*.tex
 
 # snapshots
 *snapshots*
