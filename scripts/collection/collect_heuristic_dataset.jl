@@ -117,6 +117,7 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
                 err_p_a_to_i = err_p_a_to_i,
                 err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([1.])
+            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
         elseif heuristic_behavior_type == "passive"
             params = [get_passive_behavior_params(
                 lon_σ = lon_accel_std_dev, 
@@ -126,6 +127,7 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
                 err_p_a_to_i = err_p_a_to_i,
                 err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([1.])
+            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
         elseif heuristic_behavior_type == "normal"
             params = [get_normal_behavior_params(
                 lon_σ = lon_accel_std_dev, 
@@ -135,7 +137,8 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
                 err_p_a_to_i = err_p_a_to_i,
                 err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([1.])
-        else
+            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
+        elseif heuristic_behavior_type == "fixed_ratio"
             params = [get_aggressive_behavior_params(
                         lon_σ = lon_accel_std_dev, 
                         lat_σ = lat_accel_std_dev, 
@@ -158,8 +161,29 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
                         err_p_a_to_i = err_p_a_to_i,
                         err_p_i_to_a = err_p_i_to_a)]
             weights = WeightVec([.2,.3,.5])
+            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
+        elseif heuristic_behavior_type == "correlated"
+            min_p = get_passive_behavior_params(
+                        lon_σ = lon_accel_std_dev, 
+                        lat_σ = lat_accel_std_dev, 
+                        lon_response_time = lon_response_time,
+                        overall_response_time = overall_response_time,
+                        err_p_a_to_i = err_p_a_to_i,
+                        err_p_i_to_a = err_p_i_to_a
+            )
+            max_p = get_aggressive_behavior_params(
+                        lon_σ = lon_accel_std_dev, 
+                        lat_σ = lat_accel_std_dev, 
+                        lon_response_time = lon_response_time,
+                        overall_response_time = overall_response_time,
+                        err_p_a_to_i = err_p_a_to_i,
+                        err_p_i_to_a = err_p_i_to_a
+            )
+            behavior_gen = CorrelatedBehaviorGenerator(context, min_p, max_p)
+        else
+            throw(ArgumentError(
+                "invalid heuristic behavior type $(heursitic_behavior_type)"))
         end
-        behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
     elseif behavior_type == "learned"
         behavior_gen = LearnedBehaviorGenerator(driver_network_filepath)
     else

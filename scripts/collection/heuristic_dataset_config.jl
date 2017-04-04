@@ -52,8 +52,8 @@ add_entry!(FLAGS,
     "behavior_type", "heuristic", String, 
     "Driver type {heuristic, learned}.")
 add_entry!(FLAGS, 
-    "heuristic_behavior_type", "", String, 
-    "Only use this behavior {aggressive, passive, normal} if given and using heuristic driver.")
+    "heuristic_behavior_type", "correlated", String, 
+    "{aggressive, passive, normal, fixed_ratio, correlated}.")
 add_entry!(FLAGS, 
     "lon_accel_std_dev", 1., Float64, 
     "Standard deviation of normal distribution from which longitudinal 
