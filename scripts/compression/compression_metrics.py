@@ -23,6 +23,7 @@ TARGET_LABELS = [
     'hard brake',
     'low time to collision'
 ]
+COLORS = ['r','b','g','m','gold']
 
 def report_poorly_performing_indices_features(idxs, data):
     batch_idxs = data['batch_idxs']
@@ -72,7 +73,7 @@ def classification_score(y, y_pred, probs, name, flags):
             precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx])
             avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx])
             if not np.isnan(avg_precision):
-                plt.plot(recall, precision, label='{} (area = {:.3f})'.format(
+                plt.plot(recall, precision, c=COLORS[tidx], label='{} (area = {:.3f})'.format(
                     TARGET_LABELS[tidx], avg_precision))
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
