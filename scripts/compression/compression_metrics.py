@@ -1,7 +1,7 @@
 
 import copy
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(suppress=True, precision=4)
@@ -53,6 +53,21 @@ def classification_score(y, y_pred, probs, name, flags):
             plt.legend()
             plt.savefig(output_filepath)
             plt.clf()
+
+            precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx])
+            avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx])
+            plt.plot(recall, precision, label='{}_{} (area = {})'.format(name, tidx, avg_precision))
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('Recall')
+            plt.ylabel('Precision')
+            plt.title('prc for {} target {}'.format(name, tidx))
+            output_filepath = os.path.join(
+                flags.viz_dir, 'prc_{}_{}.png'.format(name, tidx))
+            plt.legend()
+            plt.savefig(output_filepath)
+            plt.clf()
+            
         print('######\n')
 
 def regression_score(y, y_pred, name, data=None, eps=1e-16, 
@@ -187,6 +202,5 @@ def evaluate_fit(network, data, flags):
     if flags.task_type == 'classification':
         compare_classification_output(network, data, flags)
         evaluate_classification_fit(network, data, flags)
-        report_poorly_performing_indices()
     else:
         evaluate_regression_fit(network, data, flags)
