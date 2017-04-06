@@ -8,11 +8,21 @@ np.set_printoptions(suppress=True, precision=4)
 import os
 import sys
 import sklearn.metrics
+import seaborn as sns
+
 
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import dataset_loaders
+
+TARGET_LABELS = [
+    'lane change collision',
+    'rear end ego vehicle in front',
+    'rear end ego vehicle in rear',
+    'hard brake',
+    'low time to collision'
+]
 
 def report_poorly_performing_indices_features(idxs, data):
     batch_idxs = data['batch_idxs']
@@ -42,33 +52,39 @@ def classification_score(y, y_pred, probs, name, flags):
             fpr, tpr, thresholds = sklearn.metrics.roc_curve(
                 y[:,tidx], probs[:,tidx,pos_idx], pos_label=pos_idx)
             roc_auc = sklearn.metrics.auc(fpr, tpr)
-            plt.plot(fpr, tpr, label='{}_{} (area = {})'.format(name, tidx, roc_auc))
-            plt.xlim([0.0, 1.0])
-            plt.ylim([0.0, 1.05])
-            plt.xlabel('False Positive Rate')
-            plt.ylabel('True Positive Rate')
-            plt.title('roc for {} target {}'.format(name, tidx))
-            output_filepath = os.path.join(
-                flags.viz_dir, 'roc_{}_{}.png'.format(name, tidx))
-            plt.legend()
-            plt.savefig(output_filepath)
-            plt.clf()
+            if not np.isnan(roc_auc):
+                plt.plot(fpr, tpr, label='{} (area = {:.3f})'.format(
+                    TARGET_LABELS[tidx], roc_auc))
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curves for Various Targets'.format(name, tidx))
+    output_filepath = os.path.join(
+        flags.viz_dir, 'roc_{}.png'.format(name))
+    plt.legend()
+    plt.savefig(output_filepath)
+    plt.clf()
+
+    for tidx in range(y.shape[1]):
+        if probs.shape[-1] == 2:
 
             precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx])
             avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx])
-            plt.plot(recall, precision, label='{}_{} (area = {})'.format(name, tidx, avg_precision))
-            plt.xlim([0.0, 1.0])
-            plt.ylim([0.0, 1.05])
-            plt.xlabel('Recall')
-            plt.ylabel('Precision')
-            plt.title('prc for {} target {}'.format(name, tidx))
-            output_filepath = os.path.join(
-                flags.viz_dir, 'prc_{}_{}.png'.format(name, tidx))
-            plt.legend()
-            plt.savefig(output_filepath)
-            plt.clf()
-            
-        print('######\n')
+            if not np.isnan(avg_precision):
+                plt.plot(recall, precision, label='{} (area = {:.3f})'.format(
+                    TARGET_LABELS[tidx], avg_precision))
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curves for Various Targets'.format(name))
+    output_filepath = os.path.join(
+        flags.viz_dir, 'prc_{}.png'.format(name))
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_filepath)
+    plt.clf()
 
 def regression_score(y, y_pred, name, data=None, eps=1e-16, 
         y_null=None):
@@ -155,26 +171,26 @@ def evaluate_classification_fit(network, data, flags):
     y_pred, y_probs = network.predict(data['x_train'])
     y = data['y_train']
     y_null = np.mean(y, axis=0)
-    classification_score(y, y_pred, y_probs, 'train', flags)
+    classification_score(y, y_pred, y_probs, 'training', flags)
 
     # validation
     y_pred, y_probs = network.predict(data['x_val'])
     y = data['y_val']
     y_null = np.mean(y, axis=0)
-    classification_score(y, y_pred, y_probs, 'val', flags)
+    classification_score(y, y_pred, y_probs, 'validation', flags)
 
 def evaluate_regression_fit(network, data, flags):
     # final train loss
     y_pred = network.predict(data['x_train'])
     y = data['y_train']
     y_null = np.mean(y, axis=0)
-    regression_score(y, y_pred, 'train', y_null=y_null)
+    regression_score(y, y_pred, 'training', y_null=y_null)
 
     # final validation loss
     y_pred = network.predict(data['x_val'])
     y = data['y_val']
     y_null = np.mean(y, axis=0)
-    regression_score(y, y_pred, 'val', y_null=y_null)
+    regression_score(y, y_pred, 'validation', y_null=y_null)
 
     y_pred = network.predict(data['x_val'])
     y_pred = y_pred[:, 3]
