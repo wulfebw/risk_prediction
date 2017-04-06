@@ -24,6 +24,6 @@ def select_proposal_samples(input_filepath, output_filepath):
     outfile.close()
 
 if __name__ == '__main__':
-    input_filepath = '../../data/datasets/risk.h5'
-    output_filepath = '../../data/datasets/proposal_risk.h5'
+    input_filepath = '../../data/datasets/risk_3_lane_prop_.5_sec.h5'
+    output_filepath = '../../data/datasets/proposal_risk_3_lane.h5'
     select_proposal_samples(input_filepath, output_filepath)

@@ -204,7 +204,7 @@ add_entry!(FLAGS,
     "If using a sequential set of seed values, this is the first that will be used.")
 
 # monitoring
-add_entry!(FLAGS, "monitor_scenario_record_freq", 1000, Int64, 
+add_entry!(FLAGS, "monitor_scenario_record_freq", 0, Int64, 
     "How frequently to record scenarios.")
 
 # debug

@@ -177,7 +177,7 @@ function build_joint_generator(flags, context::ActionContext)
     # assume the target vehicle is 2nd to last in its row
     # then we need (prime_time + sampling_time + timestep) / sampling period
     # vehicles in front of the target vehicle
-    num_veh_per_lane = Int((prime_time + sampling_time) / sampling_period)
+    num_veh_per_lane = Int(ceil((prime_time + sampling_time) / sampling_period))
     num_veh_per_lane += 1
     flags["max_num_vehicles"] = num_veh_per_lane * flags["num_lanes"]
     min_p = get_passive_behavior_params(err_p_a_to_i = .5)
