@@ -191,6 +191,8 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
                 "invalid behavior type $(behavior_type)"))
     end
     
+    gen = FactoredGenerator(roadway_gen, scene_gen, behavior_gen)
+
     models = Dict{Int, DriverModel}()
 
     # evaluator
@@ -238,8 +240,8 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
     end
 
     # collector
-    col = DatasetCollector(seeds, roadway_gen, scene_gen, behavior_gen, eval,
-        dataset, scene, models, roadway, id = col_id, monitor = monitor)
+    col = DatasetCollector(seeds, gen, eval, dataset, scene, models, roadway, 
+        id = col_id, monitor = monitor)
 
     return col
 end

@@ -32,8 +32,8 @@ function build_debug_collector(flags::Flags)
 
     # build collector
     seeds = collect(flags["initial_seed"]:(flags["initial_seed"] + flags["num_scenarios"] - 1))
-    roadwaygen = StaticRoadwayGenerator(gen_straight_roadway(1))
-    scenegen = DebugSceneGenerator(
+    roadway_gen = StaticRoadwayGenerator(gen_straight_roadway(1))
+    scene_gen = DebugSceneGenerator(
         lo_Δs = flags["debug_lo_delta_s"],
         hi_Δs = flags["debug_hi_delta_s"],
         lo_v_rear = flags["debug_lo_v_rear"],
@@ -43,10 +43,11 @@ function build_debug_collector(flags::Flags)
         v_eps = flags["debug_v_eps"],
         s_eps = flags["debug_s_eps"]
     )
-    behgen = DebugBehaviorGenerator(
+    behavior_gen = DebugBehaviorGenerator(
         rear_lon_σ = flags["debug_rear_sigma"],
         fore_lon_σ = flags["debug_fore_sigma"]
     )
+    gen = FactoredGenerator(roadway_gen, scene_gen, behavior_gen)
 
     # dataset
     max_num_samples = num_veh * flags["num_scenarios"]
@@ -59,8 +60,9 @@ function build_debug_collector(flags::Flags)
 
     scene = Scene(num_veh)
     models = Dict{Int, DriverModel}()
-    roadway = rand!(roadwaygen, 1)
-    col = DatasetCollector(seeds, roadwaygen, scenegen, behgen, eval, dataset, scene, models, roadway, monitor = monitor)
+    roadway = rand!(roadway_gen, 1)
+    col = DatasetCollector(seeds, gen, eval, dataset, scene, models, roadway, 
+        monitor = monitor)
     return col
 end
 
