@@ -47,6 +47,19 @@ add_entry!(FLAGS,
     "min_init_dist", 12., Float64, 
     "Minimum distance between vehicles at start of simulation.")
 
+# generator
+add_entry!(FLAGS, 
+    "generator_type", "factored", String, 
+    "Driver type {factored, joint}.")
+
+# joint generator
+add_entry!(FLAGS, 
+    "base_bn_filepath", "../../data/bayesnets/base_test.jld", String, 
+    "Filepath to base bayesian network.")
+add_entry!(FLAGS, 
+    "prop_bn_filepath", "../../data/bayesnets/prop_test.jld", String, 
+    "Filepath to proposal bayesian network.")
+
 # behavior
 add_entry!(FLAGS, 
     "behavior_type", "heuristic", String, 
@@ -63,16 +76,16 @@ add_entry!(FLAGS,
     "Standard deviation of normal distribution from which latitudinal 
     acceleration is sampled.")
 add_entry!(FLAGS, 
-    "overall_response_time", .3, Float64, 
+    "overall_response_time", .2, Float64, 
     "Response time for heursitic, delayed driver models.")
 add_entry!(FLAGS, 
     "lon_response_time", .2, Float64, 
     "Additional response time for longitudinal, heursitic driver models.")
 add_entry!(FLAGS, 
-    "err_p_a_to_i", 0.0, Float64, 
+    "err_p_a_to_i", 0.01, Float64, 
     "Probability of driver becoming inattentive.")
 add_entry!(FLAGS, 
-    "err_p_i_to_a", 0.0, Float64, 
+    "err_p_i_to_a", 0.3, Float64, 
     "Probability of driver becoming attentive from inattentive state.")
 add_entry!(FLAGS, 
     "driver_network_filepath", "../../data/policies/gail_mlp.h5", String, 
