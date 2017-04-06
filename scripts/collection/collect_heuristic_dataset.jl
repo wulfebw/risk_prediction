@@ -228,9 +228,18 @@ function build_dataset_collector(output_filepath, flags, col_id = 0)
     dataset = Dataset(output_filepath, feature_dim, feature_timesteps, target_dim,
         max_num_samples, chunk_dim = chunk_dim, init_file = false, attrs = attrs)
 
+    # optionally include monitor
+    if flags["monitor_scenario_record_freq"] > 0
+        submonitors = Submonitor[ScenarioRecorderMonitor(
+            freq = flags["monitor_scenario_record_freq"])]
+        monitor = Monitor(flags["monitoring_directory"], submonitors)
+    else
+        monitor = nothing
+    end
+
     # collector
     col = DatasetCollector(seeds, roadway_gen, scene_gen, behavior_gen, eval,
-        dataset, scene, models, roadway, id = col_id)
+        dataset, scene, models, roadway, id = col_id, monitor = monitor)
 
     return col
 end
