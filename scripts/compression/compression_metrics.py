@@ -52,7 +52,10 @@ def classification_score(y, y_pred, probs, lw, name, flags):
 
             fpr, tpr, thresholds = sklearn.metrics.roc_curve(
                 y[:,tidx], probs[:,tidx,pos_idx], pos_label=pos_idx)
-            roc_auc = sklearn.metrics.auc(fpr, tpr, sample_weight=lw)
+            if lw is not None:
+                roc_auc = sklearn.metrics.auc(fpr, tpr, sample_weight=lw)
+            else:
+                roc_auc = sklearn.metrics.auc(fpr, tpr)
             if not np.isnan(roc_auc):
                 plt.plot(fpr, tpr, label='{} (area = {:.3f})'.format(
                     TARGET_LABELS[tidx], roc_auc))
@@ -68,13 +71,14 @@ def classification_score(y, y_pred, probs, lw, name, flags):
     plt.clf()
 
     for tidx in range(y.shape[1]):
-        if probs.shape[-1] == 2:
-
-            precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
-            avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
-            if not np.isnan(avg_precision):
-                plt.plot(recall, precision, c=COLORS[tidx], label='{} (area = {:.3f})'.format(
-                    TARGET_LABELS[tidx], avg_precision))
+        precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
+        avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
+        stats_output_filepath = os.path.join(flags.viz_dir, 'stats.npz')
+        np.savez(stats_output_filepath, precision=precision, recall=recall, 
+            avg_precision=avg_precision)
+        if not np.isnan(avg_precision):
+            plt.plot(recall, precision, c=COLORS[tidx], label='{} (area = {:.3f})'.format(
+                TARGET_LABELS[tidx], avg_precision))
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
     plt.xlabel('Recall')
