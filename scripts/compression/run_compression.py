@@ -31,9 +31,10 @@ def main(argv=None):
     # load dataset
     input_filepath = FLAGS.dataset_filepath
     data = dataset_loaders.risk_dataset_loader(
-        input_filepath, shuffle=True, train_split=.9, 
+        input_filepath, shuffle=True, train_split=.8, 
         debug_size=FLAGS.debug_size, timesteps=FLAGS.timesteps,
-        num_target_bins=FLAGS.num_target_bins, balanced_class_loss=FLAGS.balanced_class_loss, target_index=FLAGS.target_index)
+        num_target_bins=FLAGS.num_target_bins, balanced_class_loss=FLAGS.balanced_class_loss, target_index=FLAGS.target_index,
+            load_likelihood_weights=FLAGS.use_likelihood_weights)
 
     if FLAGS.use_priority:
         d = priority_dataset.PrioritizedDataset(data, FLAGS)

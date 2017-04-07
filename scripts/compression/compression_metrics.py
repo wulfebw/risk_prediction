@@ -41,7 +41,7 @@ def report_poorly_performing_indices_features(idxs, data):
         print('targets: {}'.format(data['y_train'][idx]))
         print('seed num veh: {}'.format(batch_idxs[i] - batch_idxs[i-1]))
 
-def classification_score(y, y_pred, probs, name, flags):
+def classification_score(y, y_pred, probs, lw, name, flags):
     print('\nclassification results for {}'.format(name))
     for tidx in range(y.shape[1]):
         print('\n###### target: {}'.format(tidx))
@@ -52,7 +52,7 @@ def classification_score(y, y_pred, probs, name, flags):
 
             fpr, tpr, thresholds = sklearn.metrics.roc_curve(
                 y[:,tidx], probs[:,tidx,pos_idx], pos_label=pos_idx)
-            roc_auc = sklearn.metrics.auc(fpr, tpr)
+            roc_auc = sklearn.metrics.auc(fpr, tpr, sample_weight=lw)
             if not np.isnan(roc_auc):
                 plt.plot(fpr, tpr, label='{} (area = {:.3f})'.format(
                     TARGET_LABELS[tidx], roc_auc))
@@ -70,8 +70,8 @@ def classification_score(y, y_pred, probs, name, flags):
     for tidx in range(y.shape[1]):
         if probs.shape[-1] == 2:
 
-            precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx])
-            avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx])
+            precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
+            avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
             if not np.isnan(avg_precision):
                 plt.plot(recall, precision, c=COLORS[tidx], label='{} (area = {:.3f})'.format(
                     TARGET_LABELS[tidx], avg_precision))
@@ -172,13 +172,15 @@ def evaluate_classification_fit(network, data, flags):
     y_pred, y_probs = network.predict(data['x_train'])
     y = data['y_train']
     y_null = np.mean(y, axis=0)
-    classification_score(y, y_pred, y_probs, 'training', flags)
+    lw = data['lw_train'] if 'lw_train' in data.keys() else None
+    classification_score(y, y_pred, y_probs, lw, 'training', flags)
 
     # validation
     y_pred, y_probs = network.predict(data['x_val'])
     y = data['y_val']
     y_null = np.mean(y, axis=0)
-    classification_score(y, y_pred, y_probs, 'validation', flags)
+    lw = data['lw_val'] if 'lw_val' in data.keys() else None
+    classification_score(y, y_pred, y_probs, lw, 'validation', flags)
 
 def evaluate_regression_fit(network, data, flags):
     # final train loss

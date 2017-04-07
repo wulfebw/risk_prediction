@@ -122,6 +122,9 @@ tf.app.flags.DEFINE_float('priority_alpha',
 tf.app.flags.DEFINE_float('priority_beta', 
                             1.0,
                             """Beta parameter for prioritization.""")
+tf.app.flags.DEFINE_bool('use_likelihood_weights', 
+                            False,
+                            """Wether or not to load likelihood ratio weights.""")
 
 # bootstrapping constants
 tf.app.flags.DEFINE_integer('bootstrap_iterations', 

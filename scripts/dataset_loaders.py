@@ -76,7 +76,7 @@ def get_balanced_class_weights(targets):
 def risk_dataset_loader(input_filepath, normalize=True, 
         debug_size=None, train_split=.8, shuffle=False, timesteps=None,
         num_target_bins=None, balanced_class_loss=False, 
-        target_index=None):
+        target_index=None, load_likelihood_weights=False):
     """
     Description:
         - Load a risk dataset from file, optionally normalizing it.
@@ -126,9 +126,9 @@ def risk_dataset_loader(input_filepath, normalize=True,
 
     # if shuffle then randomly permute order
     if shuffle:
-        idxs = np.random.permutation(len(features))
-        features = features[idxs]
-        targets = targets[idxs]
+        shuffle_idxs = np.random.permutation(len(features))
+        features = features[shuffle_idxs]
+        targets = targets[shuffle_idxs]
     
     # separate into train / validation
     num_samples = len(features)
@@ -141,6 +141,19 @@ def risk_dataset_loader(input_filepath, normalize=True,
     if weights is not None:
         data['w_train'] = weights[:num_train]
         data['w_val'] = weights[num_train:]
+
+    if load_likelihood_weights:
+        if debug_size is not None:
+            lw = infile['risk/weights'][:debug_size]
+        else:
+            lw = infile['risk/weights']
+        if shuffle:
+            lw = lw[shuffle_idxs]
+        eps = 1e-2
+        lw[lw < eps] = eps
+        lw[lw > 1.] = 1
+        data['lw_train'] = lw[:num_train]
+        data['lw_val'] = lw[num_train:]
 
     # normalize using train statistics
     if normalize:
