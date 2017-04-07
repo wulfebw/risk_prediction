@@ -52,10 +52,7 @@ def classification_score(y, y_pred, probs, lw, name, flags):
 
             fpr, tpr, thresholds = sklearn.metrics.roc_curve(
                 y[:,tidx], probs[:,tidx,pos_idx], pos_label=pos_idx)
-            if lw is not None:
-                roc_auc = sklearn.metrics.auc(fpr, tpr, sample_weight=lw)
-            else:
-                roc_auc = sklearn.metrics.auc(fpr, tpr)
+            roc_auc = sklearn.metrics.auc(fpr, tpr)
             if not np.isnan(roc_auc):
                 plt.plot(fpr, tpr, label='{} (area = {:.3f})'.format(
                     TARGET_LABELS[tidx], roc_auc))

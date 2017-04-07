@@ -8,15 +8,15 @@ include("collect_heuristic_dataset.jl")
 include("heuristic_dataset_config.jl")
 
 const TARGET_NAMES = [
-    "Pr_lane_change_collision",
-    "Pr_rear_end_rear_collision",
-    "Pr_rear_end_front_collision",
-    "Pr_hard_brake",
-    "Pr_time_to_collision_conflict"
+    "Lane Change Collision",
+    "Rear End Ego Vehicle in Front",
+    "Rear End Ego Vehicle in Rear",
+    "Hard Brake",
+    "Low Time to Collision"
 ]
 
 function collect_targets(col, seed)
-    reset!(col, seed)
+    rand!(col, seed)
     eval, scene, models, roadway = col.eval, col.scene, col.models, col.roadway
 
     # reset values
@@ -53,7 +53,8 @@ function collect_targets(col, seed)
 
         # extract target values from every frame in the record for every vehicle
         extract_targets!(eval.rec, roadway, eval.targets, eval.veh_id_to_idx,
-            eval.veh_idx_can_change, done = eval.done)
+            eval.veh_idx_can_change)
+
         if any(isnan(eval.targets))
             println(eval.targets)
             println(idx)
@@ -81,30 +82,28 @@ end
 function plot_convergence_curve(curve, dir, name, ext = "pdf")
     num_runs, target_dim, num_veh = size(curve) 
     for vidx in 1:num_veh
-        # only plot the vehicle is crashed
-        if abs(sum(curve[:, :, vidx]) - 0.0) < 1e-8
-            continue
-        else
-            println(sum(curve[:,:,vidx]))
-            println(curve[:,:,vidx])
-        end
-        g = GroupPlot(1, target_dim,
-            groupStyle = "horizontal sep = 1.0cm, vertical sep = 1.5cm")
+        println("vehicle $(vidx) / $(num_veh)")
         for tidx in 1:target_dim
-            println("$(TARGET_NAMES[tidx])")
+
+            # only plot if nonzero target
+            if sum(curve[:, tidx, vidx]) < 1e-8
+                continue
+            end
+
             a = Axis(
                     Plots.Linear(
                         collect(1:num_runs), 
                         round(curve[:, tidx, vidx], 5), 
                         markSize=.5
                     ), 
-                # xlabel = "Simulations", 
-                # ylabel = "$(TARGET_NAMES[tidx])", 
-                # title = "$(TARGET_NAMES[tidx])"
+                ymin=0., 
+                ymax=1.1,
+                xlabel = "Number of Simulations", 
+                ylabel = "Pr($(TARGET_NAMES[tidx]))", 
+                title = "$(TARGET_NAMES[tidx])"
             )
-            push!(g, a)
+            TikzPictures.save(string(dir, "$(name)_$(vidx)_$(tidx).$(ext)"), a)
         end
-        TikzPictures.save(string(dir, "$(name)_$(vidx).$(ext)"), g)
     end
 end
 
@@ -132,17 +131,26 @@ end
 
 function main()
     parse_flags!(FLAGS, ARGS)
-    FLAGS["num_monte_carlo_runs"] = 80
-    FLAGS["prime_time"] = 2.
-    FLAGS["sampling_time"] = 5.
-    FLAGS["min_num_vehicles"] = 300
-    FLAGS["max_num_vehicles"] = 300
-    output_filepath = "n/a"
+    FLAGS["num_monte_carlo_runs"] = 50
+    FLAGS["prime_time"] = 5.
+    FLAGS["sampling_time"] = 30.
+    FLAGS["roadway_length"] = 100.
+    FLAGS["roadway_radius"] = 50.
+    FLAGS["max_num_vehicles"] = 50
+    FLAGS["min_num_vehicles"] = 50
+    FLAGS["lon_accel_std_dev"] = 3.
+    FLAGS["lat_accel_std_dev"] = 1.
+    FLAGS["min_init_dist"] = 7.
+    FLAGS["max_vehicle_width"] = 2.9
+    FLAGS["max_vehicle_length"] = 7.
+    FLAGS["err_p_a_to_i"] = .1
+
+    output_filepath = ""
     col = build_dataset_collector(output_filepath, FLAGS)
     seed = 1
     targets = collect_targets(col, seed)
     mean_curve = compute_convergence_curves(targets)
-    output_directory = "../../media/convergence_curves/"
+    output_directory = "../../data/visualizations/convergence_curves/"
     plot_mean_convergence_curve(mean_curve, output_directory, "mean")
     plot_convergence_curve(mean_curve, output_directory, "mean")
 end

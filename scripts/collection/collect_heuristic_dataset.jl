@@ -179,7 +179,8 @@ function build_joint_generator(flags, context::ActionContext)
     # vehicles in front of the target vehicle
     num_veh_per_lane = Int(ceil((prime_time + sampling_time) / sampling_period))
     num_veh_per_lane += 1
-    flags["max_num_vehicles"] = minimum(
+    num_veh_per_lane = min(num_veh_per_lane, flags["max_num_vehicles"])
+    flags["max_num_vehicles"] = min(
         num_veh_per_lane * flags["num_lanes"], flags["max_num_vehicles"])
     min_p = get_passive_behavior_params(err_p_a_to_i = .5)
     max_p = get_aggressive_behavior_params(err_p_a_to_i = .5)
