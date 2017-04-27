@@ -13,6 +13,9 @@ tf.app.flags.DEFINE_integer('num_epochs',
 tf.app.flags.DEFINE_string('snapshot_dir', 
                            '../../data/snapshots/test/',
                            """Path to directory where to save weights.""")
+tf.app.flags.DEFINE_string('viz_dir_parent', 
+                           '../../data/visualizations/',
+                           """Path to directory where to save visualizations.""")
 tf.app.flags.DEFINE_string('viz_dir', 
                            '../../data/visualizations/test/',
                            """Path to directory where to save visualizations.""")

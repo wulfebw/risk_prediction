@@ -216,6 +216,9 @@ def compare_classification_output(network, data, flags, num_samples=10):
         print('actual:{}\npredicted:{}'.format(y_s, y_pred_s))
 
 def evaluate_fit(network, data, flags):
+    if not os.path.exists(flags.viz_dir_parent):
+        os.mkdir(flags.viz_dir_parent)
+        
     if not os.path.exists(flags.viz_dir):
         os.mkdir(flags.viz_dir)
     
