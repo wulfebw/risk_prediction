@@ -40,7 +40,7 @@ function build_extractor(flags)
     return ext
 end
 
-function build_factored_generator(flags, context::ActionContext)
+function build_factored_generator(flags)
     roadway_type = flags["roadway_type"]
     roadway_length = flags["roadway_length"]
     roadway_radius = flags["roadway_radius"]
@@ -111,22 +111,21 @@ function build_factored_generator(flags, context::ActionContext)
         if heuristic_behavior_type == "aggressive"
             params = [aggressive]
             weights = WeightVec([1.])
-            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
+            behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "passive"
             params = [passive]
             weights = WeightVec([1.])
-            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
+            behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "normal"
             params = [normal]
             weights = WeightVec([1.])
-            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
+            behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "fixed_ratio"
             params = [aggressive, passive, normal]
             weights = WeightVec([.2,.3,.5])
-            behavior_gen = PredefinedBehaviorGenerator(context, params, weights)
+            behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "correlated"
-            behavior_gen = CorrelatedBehaviorGenerator(
-                context, passive, aggressive)
+            behavior_gen = CorrelatedBehaviorGenerator(passive, aggressive)
         else
             throw(ArgumentError(
                 "invalid heuristic behavior type $(heursitic_behavior_type)"))
@@ -141,7 +140,7 @@ function build_factored_generator(flags, context::ActionContext)
     return gen
 end
 
-function build_joint_generator(flags, context::ActionContext)
+function build_joint_generator(flags)
     prime_time = flags["prime_time"]
     sampling_time = flags["sampling_time"]
     sampling_period = flags["sampling_period"]
@@ -198,25 +197,24 @@ function build_joint_generator(flags, context::ActionContext)
                 overall_response_time = overall_response_time,
                 err_p_a_to_i = err_p_a_to_i,
                 err_p_i_to_a = err_p_i_to_a)
-    behgen = CorrelatedBehaviorGenerator(context, min_p, max_p)
+    behgen = CorrelatedBehaviorGenerator(min_p, max_p)
     gen = BayesNetLaneGenerator(base_bn, prop_bn, sampler, dynamics, num_veh_per_lane, 
         behgen)
     return gen
 end
 
-function build_generator(flags, context::ActionContext)
+function build_generator(flags)
     if flags["generator_type"] == "factored"
-        gen = build_factored_generator(flags, context)
+        gen = build_factored_generator(flags)
     elseif flags["generator_type"] == "joint"
-        gen = build_joint_generator(flags, context)
+        gen = build_joint_generator(flags)
     else
         throw(ArgumentError("invalid generator type $(flags["generator_type"])"))
     end
     return gen
 end
 
-function build_evaluator(flags, context::ActionContext, 
-        ext::AbstractFeatureExtractor)
+function build_evaluator(flags, ext::AbstractFeatureExtractor)
     evaluator_type = flags["evaluator_type"]
     prediction_model_type = flags["prediction_model_type"]
     num_runs = flags["num_monte_carlo_runs"]
@@ -243,11 +241,11 @@ function build_evaluator(flags, context::ActionContext,
             throw(ArgumentError(
                 "invalid prediction model type $(prediction_model_type)"))
         end
-        eval = BootstrappingMonteCarloEvaluator(ext, num_runs, context, prime_time,
+        eval = BootstrappingMonteCarloEvaluator(ext, num_runs, prime_time,
             sampling_time, veh_idx_can_change, rec, features, targets, 
             agg_targets, prediction_model, discount = bootstrap_discount)
     else
-        eval = MonteCarloEvaluator(ext, num_runs, context, prime_time, sampling_time,
+        eval = MonteCarloEvaluator(ext, num_runs, prime_time, sampling_time,
             veh_idx_can_change, rec, features, targets, agg_targets)
     end
 end
@@ -297,10 +295,9 @@ end
 
 function build_dataset_collector(output_filepath::String, flags, 
         col_id::Int = 0)
-    context = IntegratedContinuous(flags["sampling_period"], 1)
-    gen = build_generator(flags, context)
+    gen = build_generator(flags)
     ext = build_extractor(flags)
-    eval = build_evaluator(flags, context, ext)
+    eval = build_evaluator(flags, ext)
     dataset = build_dataset(output_filepath, flags, ext, get_weights(gen))
     monitor = build_monitor(flags)
     seeds = Vector{Int}() # seeds are replaced by parallel collector

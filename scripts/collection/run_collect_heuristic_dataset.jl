@@ -1,4 +1,5 @@
 using AutoRisk
+using CommandLineFlags
 
 include("collect_heuristic_dataset.jl")
 include("heuristic_dataset_config.jl")

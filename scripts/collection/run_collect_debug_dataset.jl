@@ -1,4 +1,5 @@
 using AutoRisk
+using CommandLineFlags
 
 push!(LOAD_PATH, ".")
 include("heuristic_dataset_config.jl")
@@ -6,7 +7,6 @@ include("heuristic_dataset_config.jl")
 function build_debug_collector(flags::Flags)
     # build evaluator
     ext = MultiFeatureExtractor(AbstractFeatureExtractor[CarLidarFeatureExtractor()])
-    context = IntegratedContinuous(.1, 1)
     num_veh = 2
     prime_time = flags["prime_time"]
     sampling_time = flags["sampling_time"]
@@ -20,13 +20,13 @@ function build_debug_collector(flags::Flags)
     targets = Array{Float64}(num_targets, num_veh)
     agg_targets = Array{Float64}(num_targets, num_veh)
     if flags["evaluator_type"] == "base"
-        eval = MonteCarloEvaluator(ext, flags["num_monte_carlo_runs"], context, 
+        eval = MonteCarloEvaluator(ext, flags["num_monte_carlo_runs"], 
             prime_time, sampling_time, veh_idx_can_change, rec, features, 
             targets, agg_targets)
     else
         prediction_model = Network(flags["network_filepath"])
         eval = BootstrappingMonteCarloEvaluator(ext, flags["num_monte_carlo_runs"], 
-            context, prime_time, sampling_time, veh_idx_can_change, rec, 
+            prime_time, sampling_time, veh_idx_can_change, rec, 
             features, targets, agg_targets, prediction_model)
     end
 
