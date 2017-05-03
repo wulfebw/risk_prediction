@@ -182,29 +182,19 @@ function build_joint_generator(flags)
     flags["max_num_vehicles"] = min(
         num_veh_per_lane * flags["num_lanes"], flags["max_num_vehicles"])
     min_p = get_passive_behavior_params(
+        lon_σ = lon_accel_std_dev, 
+        lat_σ = lat_accel_std_dev, 
         err_p_a_to_i = err_p_a_to_i,
         err_p_i_to_a = err_p_i_to_a,
         overall_response_time = overall_response_time
     )
     max_p = get_aggressive_behavior_params(
+        lon_σ = lon_accel_std_dev, 
+        lat_σ = lat_accel_std_dev, 
         err_p_a_to_i = err_p_a_to_i,
         err_p_i_to_a = err_p_i_to_a,
         overall_response_time = overall_response_time
     )
-    passive = get_passive_behavior_params(
-                lon_σ = lon_accel_std_dev, 
-                lat_σ = lat_accel_std_dev, 
-                lon_response_time = lon_response_time,
-                overall_response_time = overall_response_time,
-                err_p_a_to_i = err_p_a_to_i,
-                err_p_i_to_a = err_p_i_to_a)
-    aggressive = get_aggressive_behavior_params(
-                lon_σ = lon_accel_std_dev, 
-                lat_σ = lat_accel_std_dev, 
-                lon_response_time = lon_response_time,
-                overall_response_time = overall_response_time,
-                err_p_a_to_i = err_p_a_to_i,
-                err_p_i_to_a = err_p_i_to_a)
     behgen = CorrelatedBehaviorGenerator(min_p, max_p)
     gen = BayesNetLaneGenerator(base_bn, prop_bn, sampler, dynamics, num_veh_per_lane, 
         behgen)
