@@ -181,8 +181,16 @@ function build_joint_generator(flags)
     num_veh_per_lane = min(num_veh_per_lane, flags["max_num_vehicles"])
     flags["max_num_vehicles"] = min(
         num_veh_per_lane * flags["num_lanes"], flags["max_num_vehicles"])
-    min_p = get_passive_behavior_params(err_p_a_to_i = .5)
-    max_p = get_aggressive_behavior_params(err_p_a_to_i = .5)
+    min_p = get_passive_behavior_params(
+        err_p_a_to_i = err_p_a_to_i,
+        err_p_i_to_a = err_p_i_to_a,
+        overall_response_time = overall_response_time
+    )
+    max_p = get_aggressive_behavior_params(
+        err_p_a_to_i = err_p_a_to_i,
+        err_p_i_to_a = err_p_i_to_a,
+        overall_response_time = overall_response_time
+    )
     passive = get_passive_behavior_params(
                 lon_σ = lon_accel_std_dev, 
                 lat_σ = lat_accel_std_dev, 
