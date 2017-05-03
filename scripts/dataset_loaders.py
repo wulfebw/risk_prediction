@@ -149,9 +149,6 @@ def risk_dataset_loader(input_filepath, normalize=True,
             lw = infile['risk/weights']
         if shuffle:
             lw = lw[shuffle_idxs]
-        eps = 1e-2
-        lw[lw < eps] = eps
-        lw[lw > 1.] = 1
         data['lw_train'] = lw[:num_train]
         data['lw_val'] = lw[num_train:]
 

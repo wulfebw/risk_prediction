@@ -99,7 +99,7 @@ class WeightedDataset(object):
 
     @data.setter
     def data(self, data):
-        keys = ['x_train', 'y_train', 'w_train', 'x_val', 'y_val', 'w_val']
+        keys = ['x_train', 'y_train', 'lw_train', 'x_val', 'y_val', 'lw_val']
         for k in keys:
             if k not in data:
                 raise ValueError('data must contain key: {}'.format(k))
@@ -127,7 +127,7 @@ class WeightedDataset(object):
         # retrieve training or validation set
         suffix = 'val' if validation else 'train'
         x, y, w = (self.data['x_{}'.format(suffix)], 
-            self.data['y_{}'.format(suffix)], self.data['w_{}'.format(suffix)])
+            self.data['y_{}'.format(suffix)], self.data['lw_{}'.format(suffix)])
         num_batches = self.num_val_batches if validation else self.num_train_batches
 
         # suffle data for this epoch

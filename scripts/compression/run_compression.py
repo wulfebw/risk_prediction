@@ -33,13 +33,15 @@ def main(argv=None):
     data = dataset_loaders.risk_dataset_loader(
         input_filepath, shuffle=True, train_split=.8, 
         debug_size=FLAGS.debug_size, timesteps=FLAGS.timesteps,
-        num_target_bins=FLAGS.num_target_bins, balanced_class_loss=FLAGS.balanced_class_loss, target_index=FLAGS.target_index,
-            load_likelihood_weights=FLAGS.use_likelihood_weights)
+        num_target_bins=FLAGS.num_target_bins, 
+        balanced_class_loss=FLAGS.balanced_class_loss, 
+        target_index=FLAGS.target_index,
+        load_likelihood_weights=FLAGS.use_likelihood_weights)
 
     if FLAGS.use_priority:
         d = priority_dataset.PrioritizedDataset(data, FLAGS)
     else:
-        if FLAGS.balanced_class_loss:
+        if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:
             d = dataset.WeightedDataset(data, FLAGS)
         else:
             d = dataset.Dataset(data, FLAGS)
@@ -60,7 +62,7 @@ def main(argv=None):
             network = rnn.RecurrentNeuralNetwork(session, FLAGS)
         else:
             if FLAGS.task_type == 'classification':
-                if FLAGS.balanced_class_loss:
+                if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:
                     network = ffnn.WeightedClassificationFeedForwardNeuralNetwork(session, FLAGS)
                 else:
                     network = ffnn.ClassificationFeedForwardNeuralNetwork(session, FLAGS)

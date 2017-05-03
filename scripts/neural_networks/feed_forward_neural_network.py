@@ -1066,7 +1066,7 @@ class WeightedClassificationFeedForwardNeuralNetwork(ClassificationFeedForwardNe
         input_ph, target_ph, dropout_ph, lr_ph = super(
             WeightedClassificationFeedForwardNeuralNetwork, self)._build_placeholders()
         weights_ph = tf.placeholder(tf.float32,
-                shape=(None, self.flags.output_dim),
+                shape=(None, 1),
                 name="weights_ph")
         return input_ph, target_ph, dropout_ph, lr_ph, weights_ph
 
