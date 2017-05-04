@@ -7,9 +7,18 @@ import unittest
 path = os.path.join(os.path.dirname(__file__), os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
 
+sys.path.append('scripts/utils')
+import util
+
 import dataset_loaders
 
 class TestRiskDatasetLoader(unittest.TestCase):
+
+    def setUp(self):
+        url = "https://s3.us-east-2.amazonaws.com/autorisk/debug.h5"
+        input_filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'datasets', 'debug.h5'))
+        util.download_if_necessary(url, input_filepath)
+
 
     def test_risk_dataset_loader(self):
         input_filepath = os.path.abspath(os.path.join(
