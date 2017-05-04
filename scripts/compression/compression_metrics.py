@@ -41,7 +41,7 @@ def report_poorly_performing_indices_features(idxs, data):
         print('targets: {}'.format(data['y_train'][idx]))
         print('seed num veh: {}'.format(batch_idxs[i] - batch_idxs[i-1]))
 
-def classification_score(y, y_pred, probs, lw, name, flags):
+def classification_score(y, y_pred, probs, lw, name, viz_dir):
     print('\nclassification results for {}'.format(name))
     for tidx in range(y.shape[1]):
         print('\n###### target: {}'.format(tidx))
@@ -60,9 +60,8 @@ def classification_score(y, y_pred, probs, lw, name, flags):
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title('ROC Curves for Various Targets'.format(name, tidx))
-    output_filepath = os.path.join(
-        flags.viz_dir, 'roc_{}.png'.format(name))
+    plt.title('ROC Curves of Various Targets for {}'.format(name))
+    output_filepath = os.path.join(viz_dir, 'roc_{}.png'.format(name))
     plt.legend()
     plt.savefig(output_filepath)
     plt.clf()
@@ -70,7 +69,7 @@ def classification_score(y, y_pred, probs, lw, name, flags):
     for tidx in range(y.shape[1]):
         precision, recall, _ = sklearn.metrics.precision_recall_curve(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
         avg_precision = sklearn.metrics.average_precision_score(y[:,tidx], probs[:,tidx,pos_idx], sample_weight=lw)
-        stats_output_filepath = os.path.join(flags.viz_dir, 'stats.npz')
+        stats_output_filepath = os.path.join(viz_dir, 'stats.npz')
         np.savez(stats_output_filepath, precision=precision, recall=recall, 
             avg_precision=avg_precision)
         if not np.isnan(avg_precision):
@@ -80,9 +79,8 @@ def classification_score(y, y_pred, probs, lw, name, flags):
     plt.ylim([0.0, 1.05])
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.title('Precision-Recall Curves for Various Targets'.format(name))
-    output_filepath = os.path.join(
-        flags.viz_dir, 'prc_{}.png'.format(name))
+    plt.title('Precision-Recall Curves of Various Targets for {}'.format(name))
+    output_filepath = os.path.join(viz_dir, 'prc_{}.png'.format(name))
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_filepath)
@@ -174,14 +172,14 @@ def evaluate_classification_fit(network, data, flags):
     y = data['y_train']
     y_null = np.mean(y, axis=0)
     lw = data['lw_train'] if 'lw_train' in data.keys() else None
-    classification_score(y, y_pred, y_probs, lw, 'training', flags)
+    classification_score(y, y_pred, y_probs, lw, 'training', flags.viz_dir)
 
     # validation
     y_pred, y_probs = network.predict(data['x_val'])
     y = data['y_val']
     y_null = np.mean(y, axis=0)
     lw = data['lw_val'] if 'lw_val' in data.keys() else None
-    classification_score(y, y_pred, y_probs, lw, 'validation', flags)
+    classification_score(y, y_pred, y_probs, lw, 'validation', flags.viz_dir)
 
 def evaluate_regression_fit(network, data, flags):
     # final train loss

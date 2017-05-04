@@ -1,11 +1,17 @@
 using AutoRisk
 
 # collect full datasets
-basedir = "../../data/datasets/1_22/"
-input_filepaths = ["5_sec_fix_part_2.h5",
-                    "risk_5_sec_fix.h5"]
+basedir = "../../data/datasets/may/"
+input_filepaths = [
+    "ngsim_5_sec_traj_1.h5",
+    "ngsim_5_sec_traj_2.h5",
+    "ngsim_5_sec_traj_3.h5",
+    "ngsim_5_sec_traj_4.h5",
+    "ngsim_5_sec_traj_5.h5",
+    "ngsim_5_sec_traj_6.h5",
+    ]
 input_filepaths = [string(basedir, f) for f in input_filepaths]
-output_filepath = "../../data/datasets/1_22/risk_5_second_fix_complete.h5"
+output_filepath = "../../data/datasets/may/ngsim_5_sec.h5"
 
 # # collect procs
 # basedir = "../../data/datasets/"

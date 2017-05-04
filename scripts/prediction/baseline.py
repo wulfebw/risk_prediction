@@ -18,6 +18,7 @@ path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import dataset_loaders
+# from compression import compression_metrics
 
 MODEL_TYPES = [
     'linear_regression', 
@@ -93,7 +94,7 @@ def parse_args():
     parser.add_argument('-m', dest='model_type', 
         default='all')
     parser.add_argument('-f', dest='dataset_filepath', 
-        default='../../data/datasets/1_1/risk_26.h5')
+        default='../../data/datasets/may/ngsim_5_sec.h5')
     args = parser.parse_args()
     return args
 
@@ -105,8 +106,9 @@ if __name__ == '__main__':
     opts = parse_args()
 
     # load the dataset
-    data = dataset_loaders.risk_dataset_loader(opts.dataset_filepath, 
-        normalize=True, debug_size=None, train_split=.9, shuffle=True)
+    data = dataset_loaders.risk_dataset_loader(
+        opts.dataset_filepath, shuffle=True, train_split=.9, 
+        debug_size=None, timesteps=1, num_target_bins=2)
 
     # build the model
     if len(data['y_train'].shape) > 1:
