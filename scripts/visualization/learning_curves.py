@@ -7,16 +7,18 @@ import tensorflow as tf
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
-import compression.run_compression
+import compression.compression_flags
 import dataset
 import dataset_loaders
 import neural_networks.feed_forward_neural_network as ffnn
 import neural_networks.utils
 
-FLAGS = compression.run_compression.FLAGS
+FLAGS = compression.compression_flags.FLAGS
 
 def main(argv=None):
-    
+    # custom parse of flags for list input
+    compression.compression_flags.custom_parse_flags(FLAGS)
+
     # set random seeds
     np.random.seed(FLAGS.random_seed)
     tf.set_random_seed(FLAGS.random_seed)
@@ -25,7 +27,7 @@ def main(argv=None):
     input_filepath = FLAGS.dataset_filepath
     data = dataset_loaders.risk_dataset_loader(
         input_filepath, shuffle=True, train_split=.8, 
-        debug_size=FLAGS.debug_size)
+        debug_size=FLAGS.debug_size, normalize=True, timesteps=1)
     
     # set training sizes
     num_runs = 12
@@ -38,7 +40,7 @@ def main(argv=None):
     # for each size, fit for a set number of epochs and then compute loss
     for i in range(num_runs):
         # train for longer with more data
-        FLAGS.num_epochs += 20
+        FLAGS.num_epochs += 10
 
         # create run-specific dataset
         cur_data = {'x_train': data['x_train'][:sizes[i]],
@@ -67,7 +69,7 @@ def main(argv=None):
             y = cur_data['y_val']
             ce = (-np.sum(y * np.log(y_pred)) + -np.sum((1 - y) * np.log(1 - y_pred))) / len(y)
             mse = np.mean((y - y_pred) ** 2)
-            np.savez('../../media/scratch.npz',y_pred=y_pred)
+            np.savez('../../data/scratch.npz',y_pred=y_pred)
             val_scores.append((ce, mse))
 
             print('size: {}\ttrain: {}\tval: {}'.format(sizes[i], train_scores[i], val_scores[i]))
@@ -75,7 +77,7 @@ def main(argv=None):
         # reset graph after each run
         tf.python.reset_default_graph()
         output_filepath = os.path.join(
-            '../../media/learning_curves/', os.path.split(input_filepath)[-1].replace('.h5','.npz'))
+            '../../data/learning_curves/', os.path.split(input_filepath)[-1].replace('.h5','.npz'))
         np.savez(output_filepath, sizes=sizes, train_scores=train_scores, val_scores=val_scores)
         
 if __name__ == '__main__':

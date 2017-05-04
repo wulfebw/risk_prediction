@@ -69,7 +69,7 @@ tf.app.flags.DEFINE_string('hidden_layer_dims',
                             '',
                             """Hidden layer sizes, empty list means use hidden_dim.""")
 tf.app.flags.DEFINE_float('learning_rate', 
-                            0.0005,
+                            0.001,
                             """Initial learning rate to use.""")
 tf.app.flags.DEFINE_float('decrease_lr_threshold', 
                             .001,

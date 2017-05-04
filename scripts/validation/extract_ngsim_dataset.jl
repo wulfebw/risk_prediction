@@ -6,7 +6,7 @@ using NGSIM
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 prime = 5 # .5 second prime to compute all features
-frameskip = 50 # 5 second skip
+frameskip = 200 # 20 second skip
 frameoffset = 400
 
 # feature extractor (note the lack of behavioral features)
@@ -78,6 +78,3 @@ for trajdata_index in 1 : 6
     finalize!(dataset)
 end
 toc()
-
-# aggregate accross datasets
-# aggregate_datasets()

@@ -34,7 +34,7 @@ def fit(model, data, viz_dir, name):
 
 def build_model(model_type, num_targets = 1):
     if model_type == 'gradient_boosting':
-        base = ensemble.GradientBoostingClassifier(n_estimators=500)
+        base = ensemble.GradientBoostingClassifier(n_estimators=100, verbose=True)
     elif model_type == 'random_forest':
         base = ensemble.RandomForestClassifier()
     elif model_type == 'dummy_stratified':
@@ -70,9 +70,6 @@ if __name__ == '__main__':
     data = dataset_loaders.risk_dataset_loader(
         opts.dataset_filepath, shuffle=True, train_split=.9, 
         debug_size=None, timesteps=1, num_target_bins=2)
-
-    print(data['x_train'].shape)
-    input()
 
     # build the model
     if len(data['y_train'].shape) > 1:
