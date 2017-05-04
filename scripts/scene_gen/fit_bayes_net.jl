@@ -5,19 +5,27 @@ using Discretizers
 using Distributions
 using HDF5
 using JLD
+using PGFPlots
+
+function histogram_data(data::DataFrame, output_filepath::String; 
+        debug_size::Int = 10000)
+    debug_size = min(debug_size, length(data))
+    g = GroupPlot(1, length(data), 
+            groupStyle = "horizontal sep = 1.75cm, vertical sep = 1.5cm")
+    for name in names(data)
+        if name == :isattentive continue end
+        vals = convert(Vector{Float64}, data[name][1:debug_size])
+        a = Axis(Plots.Histogram(vals), title=string(name))
+        push!(g, a)
+    end
+    PGFPlots.save(output_filepath, g)
+end
 
 function load_dataset(input_filepath::String; debug_size::Int = 10000000)
     infile = h5open(input_filepath, "r")
     debug_size = min(debug_size, size(infile["risk/features"], 3))
     features = read(infile["risk/features"])[:,1,1:debug_size]
     targets = read(infile["risk/targets"])[:,1:debug_size]
-    
-    # features = h5open(input_filepath, "r") do file
-    #     read(file, "risk/features")[:,1,1:debug_size]
-    # end
-    # targets = h5open(input_filepath, "r") do file
-    #     read(file, "risk/targets")[:,1:debug_size]
-    # end
     return features, targets
 end
 
@@ -31,12 +39,12 @@ function preprocess_features(
         features::Array{Float64}, 
         targets::Array{Float64}, 
         feature_names::Array{String};
-        max_collision_prob::Float64 = 1.,
-        min_vel::Float64 = 5.,
+        max_collision_prob::Float64 = .4,
+        min_vel::Float64 = 8.,
         max_vel::Float64 = 25.,
-        max_Δvel::Float64 = 5.,
-        min_dist::Float64 = 2.5,
-        max_dist::Float64 = 40.
+        max_Δvel::Float64 = 4.,
+        min_dist::Float64 = 8.,
+        max_dist::Float64 = 30.
     )
     # threshold based on collision probability if applicable
     valid_target_inds = find(sum(targets[1:3,:], 1)/3. .< max_collision_prob)
@@ -59,8 +67,8 @@ function preprocess_features(
         valid_vel_inds, 
         valid_rel_vel_inds, 
         valid_dist_inds)
-    features = features[:, valid_inds];
-
+    features = features[:, valid_inds]
+    println("number of samples after thresholding: $(length(valid_inds))")
     return features
 end
 
@@ -69,6 +77,7 @@ function extract_base_features(features::Array{Float64},
     bn_feature_names = ["velocity", "fore_m_vel", "fore_m_dist"]
     inds = [find(feature_names .== name)[1] for name in bn_feature_names]
     base_data = features[inds,:]
+    base_data[1,:] .-= base_data[2,:] # convert velocity to relative velocity
     return base_data
 end
 
@@ -123,7 +132,7 @@ function discretize_features(data::Array{Float64}, num_bins::Array{Int})
     end
 
     var_edges = Dict{Symbol,Vector{Float64}}()
-    var_edges[:velocity] = cutpoints[1]
+    var_edges[:relvelocity] = cutpoints[1]
     var_edges[:forevelocity] = cutpoints[2]
     var_edges[:foredistance] = cutpoints[3]
     var_edges[:aggressiveness] = cutpoints[4]
@@ -148,7 +157,7 @@ function extract_is_attentive(features::Array{Float64},
         end
     elseif rand_attentiveness_if_unavailable
         for sidx in 1:num_samples
-            is_attentive = rand() > stationary_p_attentive ? 2 : 1
+            is_attentive = rand() < stationary_p_attentive ? 2 : 1
             is_attentive_values[sidx] = is_attentive
         end
     else
@@ -161,7 +170,7 @@ end
 function form_training_data(disc_data::Array{Int}, 
         is_attentive_values::Array{Int})
     training_data = DataFrame(
-        velocity = disc_data[1,:], 
+        relvelocity = disc_data[1,:], 
         forevelocity = disc_data[2,:],
         foredistance = disc_data[3,:], 
         aggressiveness = disc_data[4,:],
@@ -171,21 +180,23 @@ function form_training_data(disc_data::Array{Int},
 end
 
 function fit_bn(training_data::DataFrame)
+    params = 
     bn = fit(DiscreteBayesNet, training_data, 
         (:isattentive=>:foredistance, 
-        :isattentive=>:velocity,
+        :isattentive=>:relvelocity,
         :aggressiveness=>:foredistance, 
-        :aggressiveness=>:velocity,
-        :foredistance=>:velocity,
-        :forevelocity=>:velocity)
+        :aggressiveness=>:relvelocity,
+        :foredistance=>:relvelocity,
+        :forevelocity=>:relvelocity)
     )
     return bn
 end
 
 function fit_bn(input_filepath::String, 
-        output_filepath::String;
-        debug_size::Int = 1000000,
-        num_bins::Array{Int} = Int[12,12,5,3],
+        output_filepath::String,
+        viz_filepath::String;
+        debug_size::Int = 10000000,
+        num_bins::Array{Int} = Int[8,8,8,3],
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
         stationary_p_attentive::Float64 = .97
@@ -202,12 +213,16 @@ function fit_bn(input_filepath::String,
         rand_attentiveness_if_unavailable = rand_attentiveness_if_unavailable,
         stationary_p_attentive = stationary_p_attentive)
     training_data = form_training_data(disc_data, is_attentive_values)
+    histogram_data(training_data, viz_filepath)
     bn = fit_bn(training_data)
     JLD.save(output_filepath, "bn", bn, "var_edges", var_edges)
 end
 
 tic()
-fit_bn("../../data/datasets/may/ngsim_5_sec.h5", "../../data/bayesnets/base_test.jld")
+fit_bn(
+    "../../data/datasets/may/ngsim_5_sec.h5", 
+    "../../data/bayesnets/base_test.jld",
+    "../../data/bayesnets/feature_histograms.pdf")
 toc()
 
 

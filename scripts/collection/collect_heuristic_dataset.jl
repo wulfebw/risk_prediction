@@ -164,7 +164,6 @@ function build_joint_generator(flags)
     d = JLD.load(flags["prop_bn_filepath"]) 
     prop_bn = d["bn"]
     sampler = UniformAssignmentSampler(var_edges)
-    dynamics = Dict(:velocity=>:forevelocity)
 
     # we want the simulation to be valid for prime_time + sampling_time 
     # the first vehicle in the scene is invalid after the first timestep 
@@ -196,8 +195,7 @@ function build_joint_generator(flags)
         overall_response_time = overall_response_time
     )
     behgen = CorrelatedBehaviorGenerator(min_p, max_p)
-    gen = BayesNetLaneGenerator(base_bn, prop_bn, sampler, dynamics, num_veh_per_lane, 
-        behgen)
+    gen = BayesNetLaneGenerator(base_bn, prop_bn, sampler, num_veh_per_lane, behgen)
     return gen
 end
 
