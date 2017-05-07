@@ -25,7 +25,14 @@ TARGET_LABELS = [
 ]
 COLORS = ['r','b','g','m','gold']
 
-def report_poorly_performing_indices_features(idxs, data):
+def cross_entropy_loss(y_true, y_pred, eps=1e-16):
+    y_true[y_true < eps] = eps
+    y_true[y_true > 1 - eps] = 1 - eps
+    y_pred[y_pred < eps] = eps
+    y_pred[y_pred > 1 - eps] = 1 - eps
+    return -(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+
+def report_poorly_performing_indices(idxs, data):
     batch_idxs = data['batch_idxs']
     seeds = data['seeds']
     for idx in idxs:
@@ -37,9 +44,28 @@ def report_poorly_performing_indices_features(idxs, data):
             veh_idx = idx - batch_idxs[i - 1] + 1
         else:
             veh_idx = idx + 1
-        print('seed: {}\tveh idx: {}'.format(seed, veh_idx))
+        print('seed/frame: {}\tveh idx: {}'.format(seed, veh_idx))
         print('targets: {}'.format(data['y_train'][idx]))
         print('seed num veh: {}'.format(batch_idxs[i] - batch_idxs[i-1]))
+    print('\n')
+
+def report_poorly_performing_classification_indices(network, data, flags,
+        n_report=4):
+    unshuffled = dataset_loaders.risk_dataset_loader(
+        flags.dataset_filepath, shuffle=False, train_split=1., 
+        debug_size=flags.debug_size, timesteps=flags.timesteps,
+        num_target_bins=flags.num_target_bins, 
+        balanced_class_loss=flags.balanced_class_loss, 
+        target_index=flags.target_index,
+        load_likelihood_weights=flags.use_likelihood_weights)
+    x, y_true = unshuffled['x_train'], unshuffled['y_train']
+    y_pred, y_probs = network.predict(x)
+    ce = cross_entropy_loss(y_true, y_probs[:,:,1])
+
+    for tidx in range(flags.output_dim):
+        print(TARGET_LABELS[tidx])
+        idxs = list(reversed(np.argsort(ce[:,tidx])))[:n_report]
+        report_poorly_performing_indices(idxs, unshuffled)
 
 def classification_score(y, y_pred, probs, lw, name, viz_dir):
     print('\nclassification results for {}'.format(name))
@@ -124,13 +150,13 @@ def regression_score(y, y_pred, name, data=None, eps=1e-16,
         num_report = 5
         print('\noverall poorly predicted')
         idxs = np.argsort(np.sum(-(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred)), axis=1))[-num_report:]
-        report_poorly_performing_indices_features(idxs, data)
+        report_poorly_performing_indices(idxs, data)
         print('\nrear end collisions poorly predicted')
         idxs = np.argsort(np.sum(-(y[:,1:3] * np.log(y_pred[:,1:3]) + (1 - y[:,1:3]) * np.log(1 - y_pred[:,1:3])), axis=1))[-num_report:]
-        report_poorly_performing_indices_features(idxs, data)
+        report_poorly_performing_indices(idxs, data)
         print('\nhard brakes poorly predicted')
         idxs = np.argsort(-(y[:,3] * np.log(y_pred[:,3]) + (1 - y[:,3]) * np.log(1 - y_pred[:,3])))[-num_report:]
-        report_poorly_performing_indices_features(idxs, data)
+        report_poorly_performing_indices(idxs, data)
 
     # psuedo r^2 and other metrics
     if y_null is not None:
@@ -180,6 +206,9 @@ def evaluate_classification_fit(network, data, flags):
     y_null = np.mean(y, axis=0)
     lw = data['lw_val'] if 'lw_val' in data.keys() else None
     classification_score(y, y_pred, y_probs, lw, 'validation', flags.viz_dir)
+
+    # print out indices that performed poorly
+    report_poorly_performing_classification_indices(network, data, flags)
 
 def evaluate_regression_fit(network, data, flags):
     # final train loss

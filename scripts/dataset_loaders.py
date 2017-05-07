@@ -3,6 +3,23 @@ import collections
 import h5py
 import numpy as np
 
+BEHAVIORAL_NAMES = ["is_attentive",
+        "prob_attentive_to_inattentive",
+        "prob_inattentive_to_attentive", 
+        "overall_reaction_time",
+        "lon_k_spd",
+        "lon_δ",
+        "lon_T",
+        "lon_desired_velocity",
+        "lon_s_min",
+        "lon_a_max",
+        "lon_d_cmf",
+        "lat_kp",
+        "lat_kd",
+        "lane_politeness",
+        "advantage_threshold",
+        "safe_decel"]
+
 def normalize_features(data, threshold=1e-8):
     """
     Description:
@@ -76,7 +93,8 @@ def get_balanced_class_weights(targets):
 def risk_dataset_loader(input_filepath, normalize=True, 
         debug_size=None, train_split=.8, shuffle=False, timesteps=None,
         num_target_bins=None, balanced_class_loss=False, 
-        target_index=None, load_likelihood_weights=False):
+        target_index=None, load_likelihood_weights=False,
+        ignore_behavioral_features=True):
     """
     Description:
         - Load a risk dataset from file, optionally normalizing it.
@@ -151,6 +169,19 @@ def risk_dataset_loader(input_filepath, normalize=True,
             lw = lw[shuffle_idxs]
         data['lw_train'] = lw[:num_train]
         data['lw_val'] = lw[num_train:]
+
+    if ignore_behavioral_features:
+        feature_names = infile['risk'].attrs['feature_names']
+        beh_idxs = []
+        for i, feature_name in enumerate(feature_names):
+            for beh_name in BEHAVIORAL_NAMES:
+                if beh_name in feature_name:
+                    beh_idxs.append(i)
+        beh_idxs = np.array(beh_idxs)
+        keep_idxs = set(range(len(feature_names)))
+        keep_idxs = np.array(list(keep_idxs.symmetric_difference(beh_idxs)))
+        data['x_train'] = data['x_train'][:, keep_idxs]
+        data['x_val'] = data['x_val'][:, keep_idxs]
 
     # normalize using train statistics
     if normalize:

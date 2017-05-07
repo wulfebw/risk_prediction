@@ -54,6 +54,9 @@ tf.app.flags.DEFINE_integer('target_index',
                             None,
                             """Target index to fit exclusively if set (zero-based).
                             This must be accompanied by setting output_dim to 1.""")
+tf.app.flags.DEFINE_boolean('shuffle_data', 
+                            True,
+                            """Whether to shuffle the data in loading it.""")
 
 # network constants
 tf.app.flags.DEFINE_integer('max_norm', 
