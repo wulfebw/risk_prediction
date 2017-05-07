@@ -59,7 +59,10 @@ def main(argv=None):
     with tf.Session(config=tf.ConfigProto(log_device_placement=False)) as session:
         # if the timestep dimension is > 1, use recurrent network
         if FLAGS.timesteps > 1:
-            network = rnn.RecurrentNeuralNetwork(session, FLAGS)
+            if FLAGS.task_type == 'classification':
+                network = rnn.ClassificationRecurrentNeuralNetwork(session, FLAGS)
+            else:
+                network = rnn.RecurrentNeuralNetwork(session, FLAGS)
         else:
             if FLAGS.task_type == 'classification':
                 if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:

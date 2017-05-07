@@ -180,8 +180,12 @@ def risk_dataset_loader(input_filepath, normalize=True,
         beh_idxs = np.array(beh_idxs)
         keep_idxs = set(range(len(feature_names)))
         keep_idxs = np.array(list(keep_idxs.symmetric_difference(beh_idxs)))
-        data['x_train'] = data['x_train'][:, keep_idxs]
-        data['x_val'] = data['x_val'][:, keep_idxs]
+        if len(data['x_train'].shape) == 3:
+            data['x_train'] = data['x_train'][:, :, keep_idxs]
+            data['x_val'] = data['x_val'][:, :, keep_idxs]
+        else:
+            data['x_train'] = data['x_train'][:, keep_idxs]
+            data['x_val'] = data['x_val'][:, keep_idxs]
 
     # normalize using train statistics
     if normalize:

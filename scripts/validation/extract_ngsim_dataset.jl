@@ -5,8 +5,12 @@ using NGSIM
 
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
-prime = 5 # .5 second prime to compute all features
-frameskip = 200 # 20 second skip
+prime = 8 # .5 second prime to compute all features
+feature_timesteps = 5
+frameskip = 20 # / 10 = seconds to skip between samples
+framecollect = 10 # /10 = seconds to collect
+@assert frameskip >= framecollect
+@assert prime >= feature_timesteps + 2
 frameoffset = 400
 
 # feature extractor (note the lack of behavioral features)
@@ -15,33 +19,33 @@ subexts = [
         TemporalFeatureExtractor(),
         WellBehavedFeatureExtractor(),
         NeighborFeatureExtractor(),
-        CarLidarFeatureExtractor(),
-        RoadLidarFeatureExtractor()
+        CarLidarFeatureExtractor()
     ]
 ext = MultiFeatureExtractor(subexts)
 
 # extract 
 dataset_filepaths = String[]
 tic()
-for trajdata_index in 1 : 6
+@parallel (+) for trajdata_index in 1 : 6
     # dataset for storing feature => target pairs
-    dataset_filepath = "../../data/datasets/may/ngsim_$(Int(ceil(frameskip / 10)))_sec_traj_$(trajdata_index).h5"
+    dataset_filepath = "../../data/datasets/may/ngsim_$(Int(ceil(framecollect / 10)))_sec_traj_$(trajdata_index).h5"
     push!(dataset_filepaths, dataset_filepath)
     dataset = Dataset(
             dataset_filepath,
             length(ext),
-            1,
+            feature_timesteps,
             5,
-            100000,
+            500000,
             init_file = false,
-            attrs = Dict("feature_names"=>feature_names(ext)))
+            attrs = Dict("feature_names"=>feature_names(ext), 
+                "framecollect"=>framecollect))
 
     trajdata = load_trajdata(trajdata_index)
     roadway = get_corresponding_roadway(trajdata_index)
     max_n_objects = maximum(n_objects_in_frame(trajdata, i) for i in 1 : nframes(trajdata))
     scene = Scene(max_n_objects)
-    rec = SceneRecord(prime + frameskip, 0.1, max_n_objects)
-    features = zeros(length(ext), 1, max_n_objects)
+    rec = SceneRecord(prime + framecollect, 0.1, max_n_objects)
+    features = zeros(length(ext), feature_timesteps, max_n_objects)
     targets = zeros(5, max_n_objects)
     veh_id_to_idx = Dict{Int,Int}()
     final_frame = nframes(trajdata) - frameoffset
@@ -50,20 +54,20 @@ for trajdata_index in 1 : 6
         # reset
         empty!(veh_id_to_idx)
             
-        # collect a mapping of vehicle ids to indices in the scene
-        get!(scene, trajdata, initial_frame - prime)
-        get_veh_id_to_idx(scene, veh_id_to_idx)
-        
         # prime
+        get!(scene, trajdata, initial_frame - prime)
         for frame in (initial_frame - prime):initial_frame
             AutomotiveDrivingModels.update!(rec, get!(scene, trajdata, frame))
         end
+
+        # collect a mapping of vehicle ids to indices in the scene
+        get_veh_id_to_idx(scene, veh_id_to_idx)
             
         # extract features
-        pull_features!(ext, rec, roadway, models, features, 1)
+        pull_features!(ext, rec, roadway, models, features, feature_timesteps)
             
-        # update with next frameskip frames
-        for frame in initial_frame:initial_frame + frameskip
+        # update with next framecollect frames
+        for frame in (initial_frame + 1):(initial_frame + framecollect)
             AutomotiveDrivingModels.update!(rec, get!(scene, trajdata, frame))
         end
             
@@ -72,8 +76,9 @@ for trajdata_index in 1 : 6
             
         # update dataset with features, targets
         actual_num_veh = length(veh_id_to_idx)
+        saveframe = trajdata_index * 100000 + initial_frame
         update!(dataset, features[:, :, 1:actual_num_veh], 
-            targets[:, 1:actual_num_veh], 0)
+            targets[:, 1:actual_num_veh], saveframe)
     end
     finalize!(dataset)
 end
