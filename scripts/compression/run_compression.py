@@ -31,7 +31,7 @@ def main(argv=None):
     # load dataset
     input_filepath = FLAGS.dataset_filepath
     data = dataset_loaders.risk_dataset_loader(
-        input_filepath, shuffle=FLAGS.shuffle_data, train_split=.8, 
+        input_filepath, shuffle=FLAGS.shuffle_data, train_split=FLAGS.train_split, 
         debug_size=FLAGS.debug_size, timesteps=FLAGS.timesteps,
         num_target_bins=FLAGS.num_target_bins, 
         balanced_class_loss=FLAGS.balanced_class_loss, 
