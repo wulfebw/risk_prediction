@@ -203,7 +203,7 @@ function fit_bn(input_filepath::String,
         output_filepath::String,
         viz_filepath::String;
         debug_size::Int = 1000000,
-        num_bins::Array{Int} = Int[8,10,12,4],
+        num_bins::Array{Int} = Int[10,10,12,4],
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
         stationary_p_attentive::Float64 = .97

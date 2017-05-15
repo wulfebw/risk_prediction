@@ -20,6 +20,19 @@ BEHAVIORAL_NAMES = ["is_attentive",
         "advantage_threshold",
         "safe_decel"]
 
+# map feature name to (censor_low, censor_high)
+CENSOR_MAP = {
+    'timegap': (0, 30),
+    'time_to_collision': (0, 30)
+}
+
+def enforce_censor_values(features, feature_labels):
+    for (fidx, feature_label) in enumerate(feature_labels):
+        if feature_label in CENSOR_MAP.keys():
+            low, high = CENSOR_MAP[feature_label]
+            features[:, fidx] = np.clip(features[:, fidx], low, high)
+    return features
+
 def normalize_features(data, threshold=1e-8):
     """
     Description:
@@ -137,6 +150,9 @@ def risk_dataset_loader(input_filepath, normalize=True,
             weights = get_balanced_class_weights(targets)
         else:
             weights = None
+
+    # enforce censor values
+    enforce_censor_values(features, infile['risk'].attrs['feature_names'])
 
     msg = 'features and targets must be same length: features len: {}\ttargets len: {}'.format(
         len(features), len(targets))

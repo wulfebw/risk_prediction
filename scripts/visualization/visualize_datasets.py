@@ -2,12 +2,14 @@
 import bisect
 import collections
 import csv
+import h5py
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(precision=5, suppress=True)
 import os 
+from scipy.ndimage.filters import gaussian_filter
 import scipy.stats
 import sys
 # import seaborn as sns
@@ -20,6 +22,42 @@ import utils
 
 COLORS = ["red", "green", "blue", "purple", "yellow", "orange", "teal", 
     "black", "cyan", "magenta", "lightcoral", "darkseagreen"]
+
+
+def compute_kl(p, q):
+    p = np.asarray(p, dtype=np.float)
+    p /= np.sum(p)
+    q = np.asarray(q, dtype=np.float)
+    q /= np.sum(q)
+
+    kl = 0
+    for (pv, qv) in zip(p, q):
+        if pv != 0 and qv != 0:
+            kl += pv * np.log(pv / qv)
+    return kl
+
+def compute_chi_sq(p, q):
+    p = np.asarray(p, dtype=np.float)
+    p /= np.sum(p)
+    q = np.asarray(q, dtype=np.float)
+    q /= np.sum(q)
+
+    chi_sq = 0
+    for (pv, qv) in zip(p, q):
+        if pv != 0 or qv != 0:
+            chi_sq += .5 * (pv - qv) ** 2 / (pv + qv)
+    return chi_sq
+
+def histogram_weights(dataset, output_filepath):
+    weights = dataset['lw_train']
+    std = np.std(weights)
+    mean = np.mean(weights)
+    weights[weights > mean + 3 * std] = 0.
+    plt.hist(weights, 200, alpha=.5)
+    plt.title('Likelihood Weights Histogram')
+    plt.xlabel('weight value')
+    plt.ylabel('count')
+    plt.show()
 
 def scatter_with_best_fit(features, targets, f_idx, t_idx, d_idx):
     """
@@ -143,6 +181,8 @@ def compute_feature_target_correlations(dataset):
     for fidx in range(num_features):
         # take the coefficients corresponding to the targets
         coeffs[fidx, :] = np.corrcoef(x[:, fidx], y, rowvar=0)[0, 1:]
+        if any(np.isnan(coeffs[fidx,:])):
+            print(fidx)
 
     return coeffs
 
@@ -313,28 +353,98 @@ def report_high_prob_target_seeds_veh_idxs(data, output_filepath,
     csv_writer.writerows(rows)
     outfile.close()
 
+def visualize_features(dataset, feature_labels, dataset_label, output_directory):
+    num_features = len(feature_labels)
+    for i, fl in enumerate(feature_labels):
+        print('feature {} {} / {}'.format(feature_labels[i], i, num_features))
+        values = dataset['x_train'][:, i]
+        plt.hist(values, 50, color='green', alpha=.5)
+        plt.xlabel('Value of Feature')
+        plt.ylabel('Count of Feature in Bin')
+        plt.title('Histogram of {} values in dataset {}'.format(
+            feature_labels[i], dataset_label))
+        output_filepath = os.path.join(output_directory, 'hist_{}'.format(feature_labels[i]))
+        plt.savefig(output_filepath)
+        plt.clf()
+
+def compare_feature_histograms(datasets, feature_labels, dataset_labels,
+        output_directory, nbins=50):
+    num_features = len(feature_labels)
+    total_kls = np.zeros(len(datasets) - 1)
+    kls_list = [[] for _ in range(len(datasets) - 1)]
+    for fidx in range(num_features):
+        # track first hist b/c this is what the rest are compared with
+        first_hist = None 
+        for didx, dataset in enumerate(datasets):
+            values = dataset['x_train'][:, fidx]
+            if first_hist is None:
+                first_hist, _ = np.histogram(values, bins=nbins)
+                kl_value = 0.
+            else:
+                cur_hist, _ = np.histogram(values, bins=nbins)
+                kl_value = compute_chi_sq(first_hist, cur_hist)
+                total_kls[didx - 1] += kl_value
+                kls_list[didx - 1] += [kl_value]
+
+            print('feature {} {} / {}\tchisq={}'.format(feature_labels[fidx], fidx, num_features, kl_value))
+            plt.hist(values, nbins, color=COLORS[didx], alpha=.5, normed=True, 
+                label='{}, chisq={}'.format(dataset_labels[didx], kl_value))
+        plt.xlabel('Value of Feature')
+        plt.ylabel('Count of Feature in Bin')
+        plt.title('Histogram of {} values'.format(feature_labels[fidx]))
+        plt.legend()
+        output_filepath = os.path.join(output_directory, 'hist_{}'.format(feature_labels[fidx]))
+        plt.savefig(output_filepath)
+        plt.clf()
+
+    # histogram of kl values by dataset
+    for didx, kl_list in enumerate(kls_list):
+        plt.hist(kl_list, 50, color=COLORS[didx], alpha=.5, normed=True, 
+                label='{}, median chisq={:.3f}, mean chisq={:.3f}'.format(
+                    dataset_labels[didx+1], 
+                    np.median(kl_list),
+                    np.mean(kl_list)))
+    plt.xlabel('Chi Sq value')
+    plt.ylabel('Fraction of Chi Sq values')
+    plt.title('Histogram of Chi Sq values')
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), fancybox=True, 
+        shadow=True)
+    output_filepath = os.path.join(output_directory, 'hist_kl')
+    plt.savefig(output_filepath)
+    plt.clf()
+
+    idxs = reversed(np.argsort(kls_list[0]))
+    for i in idxs:
+        print(feature_labels[i])
+        print("chi sq: {}".format(kls_list[0][i]))
+
+    print([(dataset_labels[i+1],total_kls[i]) for i in range(len(datasets) - 1)])
+
 def display_target_info(datasets, target_labels, dataset_labels, 
         output_directory):
     # basic stats
-    means = [np.mean(d['y_train'], axis=0) for d in datasets]
-    print(means)
-    stds = [np.std(d['y_train'], axis=0) for d in datasets]
-    maxes = [np.max(d['y_train'], axis=0) for d in datasets]
-    num_samples = [len(d['y_train']) for d in datasets]
-    lines = ["{} # samples: {}\ttarget means: {}\tstds: {}\tmax: {}\n".format(
-        l, ns, m, s, mx) for (l, ns, m, s, mx) in zip(
-        dataset_labels, num_samples, means, stds, maxes)]
-    print(''.join(lines))
+    for i, d in enumerate(datasets):
+        num_samples = len(d['y_train'])
+        means = np.mean(d['y_train'], axis=0)
+        sums = np.sum(d['y_train'], axis=0)
+        stds = np.std(d['y_train'], axis=0)
+        line = "{}\n# samples: {}\ntarget means: {}\nsums: {}\nstds: {}\n".format(
+            dataset_labels[i], num_samples, means, sums, stds)
+        print(line)
 
     # correlations
     print('target correlation matrix: ')
     print(np.corrcoef(datasets[-1]['y_train'], rowvar=0))
 
+    means = [np.mean(d['y_train'], axis=0) for d in datasets]
     means = np.array(means)
     num_datasets, num_targets = means.shape
     for tidx in range(num_targets):
         output_filepath = os.path.join(output_directory, 'mean_{}.png'.format(target_labels[tidx]))
         plt.scatter(range(num_datasets), means[:,tidx],label=target_labels[tidx])
+        plt.title('{} vs iterations'.format(target_labels[tidx]))
+        plt.xlabel('iterations')
+        plt.ylabel('pr({})'.format(target_labels[tidx]))
         plt.savefig(output_filepath)
         plt.clf()
 
@@ -345,7 +455,8 @@ def display_target_info(datasets, target_labels, dataset_labels,
     rects = []
     for tidx in range(target_dim):
         fig, ax = plt.subplots()
-        fig.set_size_inches(num_datasets / 2, num_datasets / 2)
+        size = max(6, int(num_datasets / 1.5))
+        fig.set_size_inches(size, size)
         color = np.array([.1,.1,.1])
         color_step = (1 - color) / num_datasets - 1e-4
         for didx in range(num_datasets):
@@ -363,13 +474,15 @@ def display_target_info(datasets, target_labels, dataset_labels,
     # histogram of target values
     _, num_targets = datasets[0]['y_train'].shape
     num_datasets = len(datasets)
-    side_len = int(np.ceil(np.sqrt(num_datasets)))
+    num_cols = 1
+    num_rows = int(np.ceil(num_datasets / num_cols))
     target_sets = [d['y_train'] for d in datasets]
-    fig = plt.figure(figsize=(num_datasets, 8))
+    # fig = plt.figure(figsize=(num_rows, num_cols))
+    fig.set_size_inches(num_cols * 4, num_rows * 2)
     ignore_zeros = True
     for t_idx in range(num_targets):
         for d_idx in range(num_datasets):
-            plt.subplot(side_len, side_len, d_idx + 1)
+            plt.subplot(num_rows, num_cols, d_idx + 1)
             if ignore_zeros:
                 n, bins, patches = plt.hist(
                     target_sets[d_idx][:, t_idx][target_sets[d_idx][:, t_idx] > 0], 
@@ -378,11 +491,12 @@ def display_target_info(datasets, target_labels, dataset_labels,
                 n, bins, patches = plt.hist(target_sets[d_idx][:, t_idx], 50, alpha=0.5)
             plt.title('{}: {}'.format(
                     dataset_labels[d_idx], target_labels[t_idx]))
+            plt.ylabel('{}'.format(target_labels[t_idx]))
         output_filepath = os.path.join(
             output_directory, 'hist_{}.png'.format(
                 target_labels[t_idx]))
         print(output_filepath)
-        plt.tight_layout()
+        # plt.tight_layout()
         plt.savefig(output_filepath)
         plt.clf()
 
@@ -396,51 +510,87 @@ if __name__ == '__main__':
     target_labels = utils.load_labels(target_labels_filepath)
 
     ## the dataset filepaths to visualize along with labels
-    # input_filepaths = [
-    #     # '../../data/datasets/risk.h5',
-    #     '../../data/datasets/bootstrap/iter_4.h5',
-    #     # '../../data/datasets/march/risk_20_sec_3_timesteps.h5',
-    # ]
-    # dataset_labels = [
-    #     # 'full',
-    #     'boot',
-    #     # 'risk_5'
-    # ]
+    input_filepaths = [
+        # '../../data/datasets/may/proposal_five_sec_bn.h5',
+        '../../data/datasets/may/ngsim_5_sec_10_timestep.h5',
+        '../../data/datasets/may/bn_aug_5_sec_10_timestep.h5',
+        '../../data/datasets/may/additional_5_sec_10_timestep.h5',
+        # '../../data/datasets/may/safe_additional_5_sec_10_timestep.h5'
+        # '../../data/datasets/april/risk_20_sec_large.h5',
+        # '../../data/datasets/april/risk_mc_1.h5',
+        # '../../data/datasets/april/risk_mc_2.h5',
+        # '../../data/datasets/april/risk_mc_4.h5',
+        # '../../data/datasets/april/risk_mc_8.h5',
+        # '../../data/datasets/april/risk_mc_16.h5',
+        # '../../data/datasets/april/risk_mc_32.h5'
+        # '../../data/datasets/bootstrap_discount/iter_99.h5',
+        # '../../data/datasets/bootstrap_mc_compare.h5',
+        # '../../data/datasets/march/risk_20_sec_3_timesteps.h5',
+    ]
+    dataset_labels = [
+        # 'proposal_five_seconds',
+        'ngsim_5_second',
+        'bayesnet',
+        'heuristic',
+        # 'safe_heuristic'
+        # '20_sec_large'
+        # 'mc_1',
+        # 'mc_2',
+        # 'mc_4',
+        # 'mc_8',
+        # 'mc_16',
+        # 'mc_32'
+        # 'boot',
+        # 'compare',
+        # 'risk_5'
+    ]
 
-    num_iters = 50
-    input_filenames = ['iter_{}.h5'.format(i) for i in range(num_iters)]
-    basedir = '../../data/datasets/bootstrap'
-    input_filepaths = [os.path.join(basedir, f) for f in input_filenames]
-    dataset_labels = ['{}_seconds'.format(i) for i in range(1, num_iters + 1)]
+    # num_iters = 100
+    # input_filenames = ['iter_{}.h5'.format(i) for i in range(num_iters)]
+    # basedir = '../../data/datasets/bootstrap_discount'
+    # input_filepaths = [os.path.join(basedir, f) for f in input_filenames]
+    # dataset_labels = ['{}_seconds'.format(i) for i in range(1, num_iters + 1)]
     
-    # check for / create output directory
+    # # check for / create output directory
     base_directory = '../../data/visualizations/'
     output_directory = os.path.join(
         base_directory, os.path.split(
             input_filepaths[0])[-1]).replace('.h5', '')
-    # output_directory = os.path.join(base_directory, 'risk_beh')
     if not os.path.exists(output_directory):
         os.mkdir(output_directory)
 
     # load in each dataset
-    debug_size = 5000000
+    load_likelihood_weights = False
+    debug_size = 500000
     datasets = [dataset_loaders.risk_dataset_loader(
         input_filepath, shuffle=False, train_split=1., 
-        debug_size=debug_size, normalize=False, timesteps=1) for 
+        debug_size=debug_size, normalize=False, timesteps=1,
+        load_likelihood_weights=load_likelihood_weights) for 
         input_filepath in input_filepaths]
+
+    feature_labels = h5py.File(input_filepaths[-1], 'r')['risk'].attrs['feature_names']
 
     # display basic info about the targets
     display_target_info(datasets, target_labels, dataset_labels, output_directory)
+
+    # # histogram the features
+    # visualize_features(datasets[-1], feature_labels, dataset_labels[-1],
+    #     output_directory)
+
+    # compare histogram of features across datasets
+    compare_feature_histograms(datasets, feature_labels, dataset_labels,
+        output_directory)
 
     # ## analyze behavior
     # for i, dataset in enumerate(datasets):
     #     print(dataset_labels[i])
     #     collision_probability_by_behavior(dataset)
 
-    # compute feature target correlations and write to file
+    # # compute feature target correlations and write to file
     # coeffs = compute_feature_target_correlations(datasets[-1])
     # output_filepath = os.path.join(output_directory, 'coeff.csv')
-    # utils.write_to_csv(output_filepath, coeffs, feature_labels, target_labels)
+    # feature_names = h5py.File(input_filepaths[-1], 'r')['risk'].attrs['feature_names']
+    # utils.write_to_csv(output_filepath, coeffs, feature_names, target_labels)
 
     # # visualize the datasets
     # visualize_datasets(datasets, dataset_labels, feature_labels, 
@@ -462,3 +612,8 @@ if __name__ == '__main__':
     # feature_labels_filepath = '../../data/datasets/features_multi.csv'
     # feature_labels_multi = utils.load_labels(feature_labels_filepath)
     # compare_dataset_features(datasets[0], datasets[1], feature_labels_multi, feature_labels)
+
+    # hist weights
+    # output_filepath = os.path.join(output_directory, 'sample_weights.png')
+    # histogram_weights(datasets[0], output_filepath)
+
