@@ -46,6 +46,7 @@ def main(argv=None):
         else:
             d = dataset.Dataset(data, FLAGS)
 
+    print('training set size: {}'.format(len(data['x_train'])))
     print('means:\n{}\n{}'.format(
         np.mean(d.data['y_train'], axis=0),
         np.mean(d.data['y_val'], axis=0)))

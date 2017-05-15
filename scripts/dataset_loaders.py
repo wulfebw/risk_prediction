@@ -27,10 +27,14 @@ CENSOR_MAP = {
 }
 
 def enforce_censor_values(features, feature_labels):
+    multi_timestep = len(features.shape) > 2
     for (fidx, feature_label) in enumerate(feature_labels):
         if feature_label in CENSOR_MAP.keys():
             low, high = CENSOR_MAP[feature_label]
-            features[:, fidx] = np.clip(features[:, fidx], low, high)
+            if multi_timestep:
+                features[:, :, fidx] = np.clip(features[:, :, fidx], low, high)
+            else:
+                features[:, fidx] = np.clip(features[:, fidx], low, high)
     return features
 
 def normalize_features(data, threshold=1e-8):
