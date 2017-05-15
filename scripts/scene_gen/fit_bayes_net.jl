@@ -44,7 +44,9 @@ function preprocess_features(
         max_vel::Float64 = 30.,
         max_Δvel::Float64 = 3.,
         min_dist::Float64 = 10.,
-        max_dist::Float64 = 60.
+        max_dist::Float64 = 60.,
+        min_len::Float64 = 2.5,
+        max_len::Float64 = 6.
     )
     # threshold based on collision probability if applicable
     valid_target_inds = find(sum(targets[1:3,:], 1) / 3. .<= max_collision_prob)
@@ -62,11 +64,16 @@ function preprocess_features(
     dist_ind = find(feature_names .== "fore_m_dist")[1]
     valid_dist_inds = find(min_dist .< features[dist_ind, :] .< max_dist)
 
+    # threshold vehicle lengths
+    len_ind = find(feature_names .== "length")[1]
+    valid_len_inds = find(min_len .< features[len_ind, :] .< max_len)
+
     valid_inds = intersect(
         valid_target_inds, 
         valid_vel_inds, 
         valid_rel_vel_inds, 
-        valid_dist_inds)
+        valid_dist_inds,
+        valid_len_inds)
     features = features[:, valid_inds]
     println("number of samples after thresholding: $(length(valid_inds))")
     return features
@@ -74,7 +81,8 @@ end
 
 function extract_base_features(features::Array{Float64}, 
         feature_names::Array{String})
-    bn_feature_names = ["velocity", "fore_m_vel", "fore_m_dist"]
+    bn_feature_names = ["velocity", "fore_m_vel", "fore_m_dist", "length", 
+        "width"]
     inds = [find(feature_names .== name)[1] for name in bn_feature_names]
     base_data = features[inds,:]
     base_data[1,:] .-= base_data[2,:] # convert velocity to relative velocity
@@ -135,7 +143,9 @@ function discretize_features(data::Array{Float64}, num_bins::Array{Int})
     var_edges[:relvelocity] = cutpoints[1]
     var_edges[:forevelocity] = cutpoints[2]
     var_edges[:foredistance] = cutpoints[3]
-    var_edges[:aggressiveness] = cutpoints[4]
+    var_edges[:vehlength] = cutpoints[4]
+    var_edges[:vehwidth] = cutpoints[5]
+    var_edges[:aggressiveness] = cutpoints[6]
 
     println("Edges from discretizing: ")
     for (k, v) in var_edges
@@ -178,7 +188,9 @@ function form_training_data(disc_data::Array{Int},
         relvelocity = disc_data[1,:], 
         forevelocity = disc_data[2,:],
         foredistance = disc_data[3,:], 
-        aggressiveness = disc_data[4,:],
+        vehlength = disc_data[4,:],
+        vehwidth = disc_data[5,:],
+        aggressiveness = disc_data[6,:],
         isattentive = is_attentive_values
     )
     return training_data
@@ -193,7 +205,8 @@ function fit_bn(training_data::DataFrame)
         # :aggressiveness=>:relvelocity,
         :foredistance=>:relvelocity,
         :forevelocity=>:relvelocity,
-        :forevelocity=>:foredistance
+        :forevelocity=>:foredistance,
+        :vehlength=>:vehwidth
         )
     )
     return bn
@@ -203,7 +216,7 @@ function fit_bn(input_filepath::String,
         output_filepath::String,
         viz_filepath::String;
         debug_size::Int = 1000000,
-        num_bins::Array{Int} = Int[10,10,12,4],
+        num_bins::Array{Int} = Int[10,10,12,5,5,4],
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
         stationary_p_attentive::Float64 = .97
