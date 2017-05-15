@@ -8,7 +8,7 @@ using JLD
 using PGFPlots
 
 function histogram_data(data::DataFrame, output_filepath::String; 
-        debug_size::Int = 10000)
+        debug_size::Int = 100000)
     debug_size = min(debug_size, length(data))
     g = GroupPlot(1, length(data), 
             groupStyle = "horizontal sep = 1.75cm, vertical sep = 1.5cm")
@@ -39,15 +39,15 @@ function preprocess_features(
         features::Array{Float64}, 
         targets::Array{Float64}, 
         feature_names::Array{String};
-        max_collision_prob::Float64 = .4,
-        min_vel::Float64 = 8.,
-        max_vel::Float64 = 25.,
-        max_Δvel::Float64 = 4.,
-        min_dist::Float64 = 8.,
-        max_dist::Float64 = 30.
+        max_collision_prob::Float64 = 0.,
+        min_vel::Float64 = 0.,
+        max_vel::Float64 = 30.,
+        max_Δvel::Float64 = 3.,
+        min_dist::Float64 = 10.,
+        max_dist::Float64 = 60.
     )
     # threshold based on collision probability if applicable
-    valid_target_inds = find(sum(targets[1:3,:], 1)/3. .< max_collision_prob)
+    valid_target_inds = find(sum(targets[1:3,:], 1) / 3. .<= max_collision_prob)
 
     # threshold velocities
     vel_ind = find(feature_names .== "velocity")[1]
@@ -115,7 +115,7 @@ function discretize_features(data::Array{Float64}, num_bins::Array{Int})
     disc_data = zeros(Int, num_variables, num_samples)
     cutpoints = []
     discs = []
-    algo = DiscretizeUniformWidth # DiscretizeUniformCount
+    algo = DiscretizeUniformWidth # DiscretizeUniformCount # 
     for vidx in 1:num_variables
         disc = LinearDiscretizer(binedges(algo(num_bins[vidx]), data[vidx,:]))
         push!(cutpoints, disc.binedges)
@@ -137,6 +137,11 @@ function discretize_features(data::Array{Float64}, num_bins::Array{Int})
     var_edges[:foredistance] = cutpoints[3]
     var_edges[:aggressiveness] = cutpoints[4]
 
+    println("Edges from discretizing: ")
+    for (k, v) in var_edges
+        println("variable: $(k)")
+        println("edges: $(v)\n")
+    end
     return disc_data, var_edges
 end
 
@@ -180,14 +185,16 @@ function form_training_data(disc_data::Array{Int},
 end
 
 function fit_bn(training_data::DataFrame)
-    params = 
     bn = fit(DiscreteBayesNet, training_data, 
-        (:isattentive=>:foredistance, 
-        :isattentive=>:relvelocity,
-        :aggressiveness=>:foredistance, 
-        :aggressiveness=>:relvelocity,
+        (
+        # :isattentive=>:foredistance, 
+        # :isattentive=>:relvelocity,
+        # :aggressiveness=>:foredistance, 
+        # :aggressiveness=>:relvelocity,
         :foredistance=>:relvelocity,
-        :forevelocity=>:relvelocity)
+        :forevelocity=>:relvelocity,
+        :forevelocity=>:foredistance
+        )
     )
     return bn
 end
@@ -195,8 +202,8 @@ end
 function fit_bn(input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
-        debug_size::Int = 10000000,
-        num_bins::Array{Int} = Int[8,8,8,3],
+        debug_size::Int = 1000000,
+        num_bins::Array{Int} = Int[8,10,12,4],
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
         stationary_p_attentive::Float64 = .97
@@ -220,7 +227,7 @@ end
 
 tic()
 fit_bn(
-    "../../data/datasets/may/ngsim_5_sec.h5", 
+    "../../data/datasets/may/ngsim_1_sec.h5", 
     "../../data/bayesnets/base_test.jld",
     "../../data/bayesnets/feature_histograms.pdf")
 toc()
