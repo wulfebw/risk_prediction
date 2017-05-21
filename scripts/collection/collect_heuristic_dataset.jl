@@ -159,11 +159,12 @@ function build_joint_generator(flags)
     # load the bayes nets
     d = JLD.load(flags["base_bn_filepath"]) 
     base_bn = d["bn"]
-    var_edges = d["var_edges"]
+    base_sampler = UniformAssignmentSampler(d["var_edges"])
 
     d = JLD.load(flags["prop_bn_filepath"]) 
     prop_bn = d["bn"]
-    sampler = UniformAssignmentSampler(var_edges)
+    prop_sampler = UniformAssignmentSampler(d["var_edges"])
+    
 
     # we want the simulation to be valid for prime_time + sampling_time 
     # the first vehicle in the scene is invalid after the first timestep 
@@ -195,7 +196,8 @@ function build_joint_generator(flags)
         overall_response_time = overall_response_time
     )
     behgen = CorrelatedBehaviorGenerator(min_p, max_p)
-    gen = BayesNetLaneGenerator(base_bn, prop_bn, sampler, num_veh_per_lane, behgen)
+    gen = BayesNetLaneGenerator(base_bn, base_sampler, prop_bn, prop_sampler,
+        num_veh_per_lane, behgen)
     return gen
 end
 

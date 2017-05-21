@@ -113,54 +113,6 @@ function extract_aggressiveness(features::Array{Float64},
    return aggressiveness_values
 end
 
-function discretize_features(data::Array{Float64}, 
-        discs::Array{LinearDiscretizer})
-    num_variables, num_samples = size(data)
-    disc_data = zeros(Int, num_variables, num_samples)
-    for vidx in 1:num_variables
-        disc_data[vidx, :] = encode(discs[vidx], data[vidx, :])
-    end
-    return disc_data
-end
-
-function get_discretizers(var_edges::Dict{Symbol,Vector{Float64}})
-    discs = Array{LinearDiscretizer}(length(keys(var_edges)))
-    discs[1] = LinearDiscretizer(var_edges[:relvelocity])
-    discs[2] = LinearDiscretizer(var_edges[:forevelocity])
-    discs[3] = LinearDiscretizer(var_edges[:foredistance])
-    discs[4] = LinearDiscretizer(var_edges[:vehlength])
-    discs[5] = LinearDiscretizer(var_edges[:vehwidth])
-    discs[6] = LinearDiscretizer(var_edges[:aggressiveness])
-    discs[7] = LinearDiscretizer(var_edges[:isattentive])
-    return discs
-end
-
-function get_discretizers(data::Array{Float64}, n_bins::Array{Int})
-    n_vars, _ = size(data)
-    discs = Array{LinearDiscretizer}(n_vars)
-    for vidx in 1:n_vars
-        low = minimum(data[vidx, :])
-        high = maximum(data[vidx, :])
-        discs[vidx] = LinearDiscretizer(linspace(low, high, n_bins[vidx]))
-    end
-    var_edges = Dict{Symbol,Vector{Float64}}()
-    var_edges[:relvelocity] = discs[1].binedges
-    var_edges[:forevelocity] = discs[2].binedges
-    var_edges[:foredistance] = discs[3].binedges
-    var_edges[:vehlength] = discs[4].binedges
-    var_edges[:vehwidth] = discs[5].binedges
-    var_edges[:aggressiveness] = discs[6].binedges
-    var_edges[:isattentive] = discs[7].binedges
-
-    println("Edges from discretizing: ")
-    for (k, v) in var_edges
-        println("variable: $(k)")
-        println("edges: $(v)\n")
-    end
-
-    return discs, var_edges
-end
-
 # get is_attentive separately since it's discrete
 function extract_is_attentive(features::Array{Float64},
         feature_names::Array{String};
@@ -191,6 +143,77 @@ function extract_is_attentive(features::Array{Float64},
             (1, length(is_attentive_values)))
 
     return is_attentive_values
+end
+
+function discretize_features(data::Array{Float64}, 
+        discs::Array{LinearDiscretizer})
+    num_variables, num_samples = size(data)
+    disc_data = zeros(Int, num_variables, num_samples)
+    for vidx in 1:num_variables
+        disc_data[vidx, :] = encode(discs[vidx], data[vidx, :])
+    end
+    return disc_data
+end
+
+function get_discretizers(var_edges::Dict{Symbol,Vector{Float64}})
+    discs = Array{LinearDiscretizer}(length(keys(var_edges)))
+    discs[1] = LinearDiscretizer(var_edges[:relvelocity])
+    discs[2] = LinearDiscretizer(var_edges[:forevelocity])
+    discs[3] = LinearDiscretizer(var_edges[:foredistance])
+    discs[4] = LinearDiscretizer(var_edges[:vehlength])
+    discs[5] = LinearDiscretizer(var_edges[:vehwidth])
+    discs[6] = LinearDiscretizer(var_edges[:aggressiveness])
+    discs[7] = LinearDiscretizer(var_edges[:isattentive])
+    return discs
+end
+
+function get_discretizers(data::Array{Float64})
+    n_vars, _ = size(data)
+    discs = Array{LinearDiscretizer}(n_vars)
+    for vidx in 1:n_vars
+        if vidx == 7 # isattentive only assumes values in {1,2}
+            discs[vidx] = LinearDiscretizer([1.,1.5,2.])
+        else
+            discs[vidx] = LinearDiscretizer(
+                binedges(DiscretizeUniformWidth(:sqrt), data[vidx,:]))
+        end
+    end
+    var_edges = Dict{Symbol,Vector{Float64}}()
+    var_edges[:relvelocity] = discs[1].binedges
+    var_edges[:forevelocity] = discs[2].binedges
+    var_edges[:foredistance] = discs[3].binedges
+    var_edges[:vehlength] = discs[4].binedges
+    var_edges[:vehwidth] = discs[5].binedges
+    var_edges[:aggressiveness] = discs[6].binedges
+    var_edges[:isattentive] = discs[7].binedges
+
+    return discs, var_edges
+end
+
+function get_discretizers(data::Array{Float64}, n_bins::Array{Int})
+    n_vars, _ = size(data)
+    discs = Array{LinearDiscretizer}(n_vars)
+    for vidx in 1:n_vars
+        low = minimum(data[vidx, :])
+        high = maximum(data[vidx, :])
+        discs[vidx] = LinearDiscretizer(linspace(low, high, n_bins[vidx] + 1))
+    end
+    var_edges = Dict{Symbol,Vector{Float64}}()
+    var_edges[:relvelocity] = discs[1].binedges
+    var_edges[:forevelocity] = discs[2].binedges
+    var_edges[:foredistance] = discs[3].binedges
+    var_edges[:vehlength] = discs[4].binedges
+    var_edges[:vehwidth] = discs[5].binedges
+    var_edges[:aggressiveness] = discs[6].binedges
+    var_edges[:isattentive] = discs[7].binedges
+
+    println("Edges from discretizing: ")
+    for (k, v) in var_edges
+        println("variable: $(k)")
+        println("edges: $(v)\n")
+    end
+
+    return discs, var_edges
 end
 
 function form_training_data(disc_data::Array{Int})
@@ -225,8 +248,8 @@ end
 function fit_bn(input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
-        debug_size::Int = 10000,
-        n_bins::Array{Int} = Int[10,10,12,5,5,4,3],
+        debug_size::Int = 100000,
+        n_bins::Array{Int} = Int[10,10,12,8,5,4,2],
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
         stationary_p_attentive::Float64 = .97
@@ -250,12 +273,12 @@ function fit_bn(input_filepath::String,
     JLD.save(output_filepath, "bn", bn, "var_edges", var_edges)
 end
 
-# tic()
-# fit_bn(
-#     "../../data/datasets/may/ngsim_1_sec.h5", 
-#     "../../data/bayesnets/base_test.jld",
-#     "../../data/bayesnets/feature_histograms.pdf")
-# toc()
+tic()
+fit_bn(
+    "../../data/datasets/may/ngsim_1_sec.h5", 
+    "../../data/bayesnets/base_test.jld",
+    "../../data/bayesnets/feature_histograms.pdf")
+toc()
 
 
 
