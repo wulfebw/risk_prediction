@@ -114,7 +114,7 @@ function extract_aggressiveness(features::Array{Float64},
         aggressiveness_values = infer_correlated_aggressiveness(politness_values);
     elseif rand_aggressiveness_if_unavailable
         num_samples = size(features, 2)
-        aggressiveness_values = clamp(randn(num_samples) + .5, 0, 1)
+        aggressiveness_values = clamp(randn(num_samples) * .1 + .5, 0, 1)
     else
         throw(ArgumentError("aggressiveness values not found 
             and random aggressiveness set to false"))
