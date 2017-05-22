@@ -114,7 +114,7 @@ function extract_aggressiveness(features::Array{Float64},
         aggressiveness_values = infer_correlated_aggressiveness(politness_values);
     elseif rand_aggressiveness_if_unavailable
         num_samples = size(features, 2)
-        aggressiveness_values = rand(num_samples)
+        aggressiveness_values = clamp(randn(num_samples) + .5, 0, 1)
     else
         throw(ArgumentError("aggressiveness values not found 
             and random aggressiveness set to false"))
@@ -176,13 +176,13 @@ end
 function get_discretizers(
         data::DataFrame,
         disc_types::Dict{Symbol,DataType};
-        disc_algo::Symbol = :auto,
+        discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks()
     )
     discs = Dict{Symbol, AbstractDiscretizer}()
+
     for var in names(data)
         if disc_types[var] == LinearDiscretizer{Float64,Int}
-            discs[var] = LinearDiscretizer(binedges(
-                DiscretizeUniformWidth(disc_algo), data[var]))
+            discs[var] = LinearDiscretizer(binedges(discalg, data[var]))
         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             discs[var] = CategoricalDiscretizer(data[var])
         else
@@ -257,24 +257,24 @@ function fit_bn(
         input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
-        debug_size::Int = 100000,
+        debug_size::Int = 500000,
         n_bins::Dict{Symbol,Int} = Dict(
-            :relvelocity=>10,
-            :forevelocity=>10,
+            :relvelocity=>12,
+            :forevelocity=>12,
             :foredistance=>12,
-            :vehlength=>8,
-            :vehwidth=>5,
-            :aggressiveness=>4,
+            :vehlength=>10,
+            :vehwidth=>8,
+            :aggressiveness=>5,
             :isattentive=>2
         ),
         disc_types::Dict{Symbol,DataType} = Dict(
-            :relvelocity=>LinearDiscretizer,
-            :forevelocity=>LinearDiscretizer,
-            :foredistance=>LinearDiscretizer,
-            :vehlength=>LinearDiscretizer,
-            :vehwidth=>LinearDiscretizer,
-            :aggressiveness=>LinearDiscretizer,
-            :isattentive=>CategoricalDiscretizer
+            :relvelocity=>LinearDiscretizer{Float64,Int},
+            :forevelocity=>LinearDiscretizer{Float64,Int},
+            :foredistance=>LinearDiscretizer{Float64,Int},
+            :vehlength=>LinearDiscretizer{Float64,Int},
+            :vehwidth=>LinearDiscretizer{Float64,Int},
+            :aggressiveness=>LinearDiscretizer{Float64,Int},
+            :isattentive=>CategoricalDiscretizer{Int,Int}
         ),
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
@@ -287,7 +287,8 @@ function fit_bn(
             :foredistance=>:relvelocity,
             :forevelocity=>:relvelocity,
             :forevelocity=>:foredistance,
-            :vehlength=>:vehwidth
+            :vehlength=>:vehwidth,
+            :vehlength=>:foredistance
         )
     )
     # load and preprocess

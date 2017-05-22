@@ -93,7 +93,7 @@ function run_cem(
         N::Int = 1000, 
         top_k_fraction::Float64 = .50, 
         target_indices::Vector{Int} = [1,2,3,4,5],
-        n_prior_samples::Int = 10000
+        n_prior_samples::Int = 5000
     )
     # initialize
     col = cols[1]
@@ -138,11 +138,9 @@ function run_cem(
             # evaluate this scene
             evaluate!(col.eval, col.scene, col.models, col.roadway, seed)
             
-            # extract the relevant information
-            # utilities[scene_idx] = mean(
-            #     col.eval.targets[target_indices, proposal_vehicle_index])
+            # extract utilities and weights
             utilities[scene_idx] = mean(
-                col.eval.features[4, proposal_vehicle_index])
+                col.eval.targets[target_indices, proposal_vehicle_index])
             weights[scene_idx] = col.gen.weights[proposal_vehicle_index]
 
             data[:, scene_idx] = extract_bn_features(
@@ -156,27 +154,14 @@ function run_cem(
         @spawnat 1 visualize_stats(stats, iter)
                 
         # select top fraction of population
-        # indices = reverse(sortperm(utilities .* weights))[1:top_k]
-        indices = reverse(sortperm(utilities))[1:top_k]
+        indices = reverse(sortperm(utilities .* weights))[1:top_k]
 
         # add that set to the prior, and remove older samples
         df_data = DataFrame(data[:, indices], FEATURE_NAMES)
         prior = vcat(prior, df_data)[(top_k + 1):end, :]
 
         # refit bayesnet and reset in the collectors
-        prop_bn, discs = fit_bn(
-            prior, 
-            disc_types, 
-            # n_bins = Dict(
-            #     :relvelocity=>5,
-            #     :forevelocity=>5,
-            #     :foredistance=>5,
-            #     :vehlength=>5,
-            #     :vehwidth=>5,
-            #     :aggressiveness=>5,
-            #     :isattentive=>2
-            # )
-        )
+        prop_bn, discs = fit_bn(prior, disc_types)
         for col in cols
             col.gen.prop_bn = prop_bn
             col.gen.prop_assignment_sampler = AssignmentSampler(discs)
@@ -210,16 +195,15 @@ function fit_proposal_bayes_net()
     flags["sampling_time"] = .5
     flags["prime_time"] = .5
 
-
     n_cols = max(1, nprocs() - 1)
     cols = [build_dataset_collector("", flags) for _ in 1:n_cols]
     prop_bn = run_cem(cols, 
-        10000000., 
+        .5, 
         max_iters = 500, 
-        N = 100, 
+        N = 500, 
         top_k_fraction = .5, 
         target_indices = [5],
-        n_prior_samples = 200
+        n_prior_samples = 5000
     )
     output_filepath = "../../data/bayesnets/cem_prop_test.jld"
     col = cols[1]
