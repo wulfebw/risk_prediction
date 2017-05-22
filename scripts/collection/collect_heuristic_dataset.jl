@@ -159,11 +159,11 @@ function build_joint_generator(flags)
     # load the bayes nets
     d = JLD.load(flags["base_bn_filepath"]) 
     base_bn = d["bn"]
-    base_sampler = UniformAssignmentSampler(d["var_edges"])
+    base_sampler = AssignmentSampler(d["discs"])
 
     d = JLD.load(flags["prop_bn_filepath"]) 
     prop_bn = d["bn"]
-    prop_sampler = UniformAssignmentSampler(d["var_edges"])
+    prop_sampler = AssignmentSampler(d["discs"])
     
 
     # we want the simulation to be valid for prime_time + sampling_time 

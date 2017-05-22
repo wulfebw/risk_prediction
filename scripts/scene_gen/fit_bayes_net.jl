@@ -13,7 +13,9 @@ function histogram_data(data::DataFrame, output_filepath::String;
     g = GroupPlot(1, length(data), 
             groupStyle = "horizontal sep = 1.75cm, vertical sep = 1.5cm")
     for name in names(data)
-        if name == :isattentive continue end
+        if name == :isattentive 
+            continue 
+        end
         vals = convert(Vector{Float64}, data[name][1:debug_size])
         a = Axis(Plots.Histogram(vals), title=string(name))
         push!(g, a)
@@ -86,6 +88,13 @@ function extract_base_features(features::Array{Float64},
     inds = [find(feature_names .== name)[1] for name in bn_feature_names]
     base_data = features[inds,:]
     base_data[1,:] .-= base_data[2,:] # convert velocity to relative velocity
+    base_data = DataFrame(
+        relvelocity = base_data[1,:],
+        forevelocity = base_data[2,:],
+        foredistance = base_data[3,:],
+        vehlength = base_data[4,:],
+        vehwidth = base_data[5,:]
+    )
     return base_data
 end
 
@@ -105,10 +114,6 @@ function extract_aggressiveness(features::Array{Float64},
         throw(ArgumentError("aggressiveness values not found 
             and random aggressiveness set to false"))
     end
-
-    # reshape for later stacking 
-    aggressiveness_values = reshape(aggressiveness_values, 
-            (1, length(aggressiveness_values)))
 
    return aggressiveness_values
 end
@@ -138,149 +143,155 @@ function extract_is_attentive(features::Array{Float64},
             and random attentiveness set to false"))
     end
 
-    # reshape for later stacking 
-    is_attentive_values = reshape(is_attentive_values, 
-            (1, length(is_attentive_values)))
-
     return is_attentive_values
 end
 
-function discretize_features(data::Array{Float64}, 
-        discs::Array{LinearDiscretizer})
-    num_variables, num_samples = size(data)
-    disc_data = zeros(Int, num_variables, num_samples)
-    for vidx in 1:num_variables
-        disc_data[vidx, :] = encode(discs[vidx], data[vidx, :])
+function Discretizers.encode(
+        df::DataFrame, 
+        discs::Dict{Symbol, AbstractDiscretizer}
+    )
+    enc_df = DataFrame()
+    for var_name in names(df)
+        enc_df[var_name] = encode(discs[var_name], df[var_name])
     end
-    return disc_data
+    return enc_df
 end
 
-function get_discretizers(var_edges::Dict{Symbol,Vector{Float64}})
-    discs = Array{LinearDiscretizer}(length(keys(var_edges)))
-    discs[1] = LinearDiscretizer(var_edges[:relvelocity])
-    discs[2] = LinearDiscretizer(var_edges[:forevelocity])
-    discs[3] = LinearDiscretizer(var_edges[:foredistance])
-    discs[4] = LinearDiscretizer(var_edges[:vehlength])
-    discs[5] = LinearDiscretizer(var_edges[:vehwidth])
-    discs[6] = LinearDiscretizer(var_edges[:aggressiveness])
-    discs[7] = LinearDiscretizer(var_edges[:isattentive])
+function get_discretizers(
+        data::DataFrame,
+        disc_types::Dict{Symbol,DataType};
+        disc_algo::Symbol = :auto,
+    )
+    discs = Dict{Symbol, AbstractDiscretizer}()
+    for var in names(data)
+        if disc_types[var] == LinearDiscretizer
+            discs[var] = LinearDiscretizer(binedges(
+                DiscretizeUniformWidth(disc_algo), data[var]))
+        elseif disc_types[var] == CategoricalDiscretizer
+            discs[var] = CategoricalDiscretizer(data[var])
+        else
+            throw(ArgumentError("$(disc_types[var]) not implemented"))
+        end
+    end
     return discs
 end
 
-function get_discretizers(data::Array{Float64})
-    n_vars, _ = size(data)
-    discs = Array{LinearDiscretizer}(n_vars)
-    for vidx in 1:n_vars
-        if vidx == 7 # isattentive only assumes values in {1,2}
-            discs[vidx] = LinearDiscretizer([1.,1.5,2.])
+function get_discretizers(
+        data::DataFrame, 
+        disc_types::Dict{Symbol,DataType},
+        n_bins::Dict{Symbol,Int}
+    )
+
+    discs = Dict{Symbol, AbstractDiscretizer}()
+    for var in names(data)
+        if disc_types[var] == LinearDiscretizer
+            # maps continuous to discrete bins
+            low = minimum(data[var])
+            high = maximum(data[var])
+            discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
+        elseif disc_types[var] == CategoricalDiscretizer
+            # identity mapping between bins
+            discs[var] = CategoricalDiscretizer(data[var])
         else
-            discs[vidx] = LinearDiscretizer(
-                binedges(DiscretizeUniformWidth(:sqrt), data[vidx,:]))
+            throw(ArgumentError("$(disc_types[var]) not implemented"))
         end
     end
-    var_edges = Dict{Symbol,Vector{Float64}}()
-    var_edges[:relvelocity] = discs[1].binedges
-    var_edges[:forevelocity] = discs[2].binedges
-    var_edges[:foredistance] = discs[3].binedges
-    var_edges[:vehlength] = discs[4].binedges
-    var_edges[:vehwidth] = discs[5].binedges
-    var_edges[:aggressiveness] = discs[6].binedges
-    var_edges[:isattentive] = discs[7].binedges
-
-    return discs, var_edges
+    return discs
 end
 
-function get_discretizers(data::Array{Float64}, n_bins::Array{Int})
-    n_vars, _ = size(data)
-    discs = Array{LinearDiscretizer}(n_vars)
-    for vidx in 1:n_vars
-        low = minimum(data[vidx, :])
-        high = maximum(data[vidx, :])
-        discs[vidx] = LinearDiscretizer(linspace(low, high, n_bins[vidx] + 1))
-    end
-    var_edges = Dict{Symbol,Vector{Float64}}()
-    var_edges[:relvelocity] = discs[1].binedges
-    var_edges[:forevelocity] = discs[2].binedges
-    var_edges[:foredistance] = discs[3].binedges
-    var_edges[:vehlength] = discs[4].binedges
-    var_edges[:vehwidth] = discs[5].binedges
-    var_edges[:aggressiveness] = discs[6].binedges
-    var_edges[:isattentive] = discs[7].binedges
-
-    println("Edges from discretizing: ")
-    for (k, v) in var_edges
-        println("variable: $(k)")
-        println("edges: $(v)\n")
-    end
-
-    return discs, var_edges
-end
-
-function form_training_data(disc_data::Array{Int})
-    training_data = DataFrame(
-        relvelocity = disc_data[1,:], 
-        forevelocity = disc_data[2,:],
-        foredistance = disc_data[3,:], 
-        vehlength = disc_data[4,:],
-        vehwidth = disc_data[5,:],
-        aggressiveness = disc_data[6,:],
-        isattentive = disc_data[7,:]
-    )
-    return training_data
-end
-
-function fit_bn(training_data::DataFrame)
-    bn = fit(DiscreteBayesNet, training_data, 
-        (
-        # :isattentive=>:foredistance, 
-        # :isattentive=>:relvelocity,
-        # :aggressiveness=>:foredistance, 
-        # :aggressiveness=>:relvelocity,
-        :foredistance=>:relvelocity,
-        :forevelocity=>:relvelocity,
-        :forevelocity=>:foredistance,
-        :vehlength=>:vehwidth
+function fit_bn(
+        data::DataFrame,
+        disc_types::Dict{Symbol,DataType};
+        n_bins::Dict{Symbol,Int} = Dict{Symbol,Int}(),
+        edges = (
+            # :isattentive=>:foredistance, 
+            # :isattentive=>:relvelocity,
+            # :aggressiveness=>:foredistance, 
+            # :aggressiveness=>:relvelocity,
+            :foredistance=>:relvelocity,
+            :forevelocity=>:relvelocity,
+            :forevelocity=>:foredistance,
+            :vehlength=>:vehwidth
         )
     )
-    return bn
+    # if n_bins not provided, infer binning from data
+    if isempty(n_bins)
+        discs = get_discretizers(data, disc_types)
+    else
+        discs = get_discretizers(data, disc_types, n_bins)
+    end
+
+    # print out
+    for (k, v) in discs
+        println("variable: $(k)")
+        if isa(v, LinearDiscretizer)
+            println("edges: $(v.binedges)\n")
+        elseif isa(v, CategoricalDiscretizer)
+            println("mapping: $(v.d2n)\n")
+        end
+    end
+    
+    # encode and fit a discrete bayes net
+    disc_data = encode(data, discs)
+    bn = fit(DiscreteBayesNet, disc_data, edges)
+    return bn, discs
 end
 
-function fit_bn(input_filepath::String, 
+function fit_bn(
+        input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
         debug_size::Int = 100000,
-        n_bins::Array{Int} = Int[10,10,12,8,5,4,2],
+        n_bins::Dict{Symbol,Int} = Dict(
+            :relvelocity=>10,
+            :forevelocity=>10,
+            :foredistance=>12,
+            :vehlength=>8,
+            :vehwidth=>5,
+            :aggressiveness=>4,
+            :isattentive=>2
+        ),
+        disc_types::Dict{Symbol,DataType} = Dict(
+            :relvelocity=>LinearDiscretizer,
+            :forevelocity=>LinearDiscretizer,
+            :foredistance=>LinearDiscretizer,
+            :vehlength=>LinearDiscretizer,
+            :vehwidth=>LinearDiscretizer,
+            :aggressiveness=>LinearDiscretizer,
+            :isattentive=>CategoricalDiscretizer
+        ),
         rand_aggressiveness_if_unavailable::Bool = true,
         rand_attentiveness_if_unavailable::Bool = true,
-        stationary_p_attentive::Float64 = .97
+        stationary_p_attentive::Float64 = .97,
+        edges = (
+            # :isattentive=>:foredistance, 
+            # :isattentive=>:relvelocity,
+            # :aggressiveness=>:foredistance, 
+            # :aggressiveness=>:relvelocity,
+            :foredistance=>:relvelocity,
+            :forevelocity=>:relvelocity,
+            :forevelocity=>:foredistance,
+            :vehlength=>:vehwidth
+        )
     )
+    # load and preprocess
     features, targets = load_dataset(input_filepath, debug_size = debug_size)
     feature_names = load_feature_names(input_filepath)
     features = preprocess_features(features, targets, feature_names)
+    
+    # formulate data
     base_data = extract_base_features(features, feature_names)
     aggressiveness_values = extract_aggressiveness(features, feature_names,
         rand_aggressiveness_if_unavailable = rand_aggressiveness_if_unavailable)
-    base_data = cat(1, base_data, aggressiveness_values)
+    base_data[:aggressiveness] = aggressiveness_values
     is_attentive_values = extract_is_attentive(features, feature_names,
         rand_attentiveness_if_unavailable = rand_attentiveness_if_unavailable,
         stationary_p_attentive = stationary_p_attentive)
-    base_data = cat(1, base_data, is_attentive_values)
-    discs, var_edges = get_discretizers(base_data, n_bins)
-    disc_data = discretize_features(base_data, discs)
-    training_data = form_training_data(disc_data)
-    histogram_data(training_data, viz_filepath)
-    bn = fit_bn(training_data)
-    JLD.save(output_filepath, "bn", bn, "var_edges", var_edges)
+    base_data[:isattentive] = is_attentive_values
+
+    # discretize and fit
+    bn, discs = fit_bn(base_data, disc_types, n_bins = n_bins, edges = edges)
+    
+    # save
+    JLD.save(output_filepath, "bn", bn, "discs", discs)
 end
-
-tic()
-fit_bn(
-    "../../data/datasets/may/ngsim_1_sec.h5", 
-    "../../data/bayesnets/base_test.jld",
-    "../../data/bayesnets/feature_histograms.pdf")
-toc()
-
-
-
-
-
