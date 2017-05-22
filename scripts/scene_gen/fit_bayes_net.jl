@@ -7,8 +7,11 @@ using HDF5
 using JLD
 using PGFPlots
 
-function histogram_data(data::DataFrame, output_filepath::String; 
-        debug_size::Int = 100000)
+function histogram_data(
+        data::DataFrame, 
+        output_filepath::String; 
+        debug_size::Int = 100000
+    )
     debug_size = min(debug_size, length(data))
     g = GroupPlot(1, length(data), 
             groupStyle = "horizontal sep = 1.75cm, vertical sep = 1.5cm")
@@ -81,10 +84,12 @@ function preprocess_features(
     return features
 end
 
-function extract_base_features(features::Array{Float64}, 
-        feature_names::Array{String})
-    bn_feature_names = ["velocity", "fore_m_vel", "fore_m_dist", "length", 
+function extract_base_features(
+        features::Array{Float64}, 
+        feature_names::Array{String};
+        bn_feature_names = ["velocity", "fore_m_vel", "fore_m_dist", "length", 
         "width"]
+    )
     inds = [find(feature_names .== name)[1] for name in bn_feature_names]
     base_data = features[inds,:]
     base_data[1,:] .-= base_data[2,:] # convert velocity to relative velocity
@@ -157,6 +162,17 @@ function Discretizers.encode(
     return enc_df
 end
 
+function Discretizers.decode(
+        df::DataFrame, 
+        discs::Dict{Symbol,AbstractDiscretizer}
+    )
+    dec_df = DataFrame()
+    for var in names(df)
+        dec_df[var] = decode(discs[var], df[var])
+    end
+    return dec_df
+end
+
 function get_discretizers(
         data::DataFrame,
         disc_types::Dict{Symbol,DataType};
@@ -164,10 +180,10 @@ function get_discretizers(
     )
     discs = Dict{Symbol, AbstractDiscretizer}()
     for var in names(data)
-        if disc_types[var] == LinearDiscretizer
+        if disc_types[var] == LinearDiscretizer{Float64,Int}
             discs[var] = LinearDiscretizer(binedges(
                 DiscretizeUniformWidth(disc_algo), data[var]))
-        elseif disc_types[var] == CategoricalDiscretizer
+        elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             discs[var] = CategoricalDiscretizer(data[var])
         else
             throw(ArgumentError("$(disc_types[var]) not implemented"))
@@ -184,12 +200,12 @@ function get_discretizers(
 
     discs = Dict{Symbol, AbstractDiscretizer}()
     for var in names(data)
-        if disc_types[var] == LinearDiscretizer
+        if disc_types[var] == LinearDiscretizer{Float64,Int}
             # maps continuous to discrete bins
             low = minimum(data[var])
             high = maximum(data[var])
             discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
-        elseif disc_types[var] == CategoricalDiscretizer
+        elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             # identity mapping between bins
             discs[var] = CategoricalDiscretizer(data[var])
         else

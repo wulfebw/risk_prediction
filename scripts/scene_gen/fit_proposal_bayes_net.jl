@@ -3,6 +3,7 @@ using AutoViz
 using CommandLineFlags
 using Discretizers
 using DataStructures
+using DataFrames
 using JLD
 using PGFPlots
 
@@ -10,8 +11,15 @@ include("../collection/collect_heuristic_dataset.jl")
 include("../collection/heuristic_dataset_config.jl")
 @everywhere include("../scene_gen/fit_bayes_net.jl")
 
-const FEATURE_NAMES = ["relvelocity", "forevelocity", "foredistance", "vehlength", 
-        "vehwidth", "aggressiveness", "isattentive"]
+const FEATURE_NAMES = [
+    "relvelocity", 
+    "forevelocity", 
+    "foredistance", 
+    "vehlength", 
+    "vehwidth", 
+    "aggressiveness", 
+    "isattentive"
+]
 
 function visualize_stats(
         stats::DefaultDict{String, Vector{Float64}}, 
@@ -55,25 +63,12 @@ function update_stats(
     push!(stats["weights"], mean(weights))
 end
 
-function swap_discretization(bin::Int, 
-        src::LinearDiscretizer, 
-        dest::LinearDiscretizer
-    )
-    src_mean = (src.binedges[bin] + src.binedges[bin+1]) / 2.
-    return encode(dest, src_mean)
-end
-
-function swap_discretization(df::DataFrame, src::Vector{LinearDiscretizer}, 
-    dest::Vector{LinearDiscretizer})
-    n_samples, n_vars = size(df)
-    outdf = DataFrame(df)
-    for vidx in 1:n_vars
-        for sidx in 1:n_samples
-            outdf[sidx, vidx] = swap_discretization(
-                df[sidx, vidx], src[vidx], dest[vidx])
-        end
+function DataFrame(data::Array{Float64}, var_names::Vector{String})
+    df = DataFrame()
+    for (index, v) in enumerate(var_names)
+        df[Symbol(v)] = data[index, :]
     end
-    return outdf
+    return df
 end
 
 # selects relevant features and adds to data
@@ -83,7 +78,7 @@ end
         index::Int
     )
     bn_features = zeros(7)
-    bn_features[1:5] = extract_base_features(features, feature_names)[:,index]
+    bn_features[1:5] = Array(extract_base_features(features, feature_names)[index,:])
     bn_features[6] = extract_aggressiveness(features, feature_names, 
         rand_aggressiveness_if_unavailable = false)[index]
     bn_features[7] = extract_is_attentive(features, feature_names, 
@@ -96,7 +91,7 @@ function run_cem(
         y::Float64;
         max_iters::Int = 10,
         N::Int = 1000, 
-        percentile::Float64 = .50, 
+        top_k_fraction::Float64 = .50, 
         target_indices::Vector{Int} = [1,2,3,4,5],
         n_prior_samples::Int = 10000
     )
@@ -104,13 +99,18 @@ function run_cem(
     col = cols[1]
     n_vars = length(keys(col.gen.base_bn.name_to_index))
     n_targets, n_vehicles = size(col.eval.targets)
-    top_k = Int(ceil(percentile * N))
+    top_k = Int(ceil(top_k_fraction * N))
     proposal_vehicle_index = get_target_vehicle_index(col.gen, col.roadway)
+
+    # derive prior values
+    disc_types = get_disc_types(col.gen.base_assignment_sampler)
+    discs = col.gen.base_assignment_sampler.discs
     prior = rand(col.gen.base_bn, n_prior_samples)
-    prev_discs = get_discretizers(col.gen.base_assignment_sampler.var_edges)
-    stats = DefaultDict{String, Vector{Float64}}(Vector{Float64})
+    prior = decode(prior, discs)
+    disc_types = get_disc_types(col.gen.base_assignment_sampler)
     
     # allocate containers
+    stats = DefaultDict{String, Vector{Float64}}(Vector{Float64})
     utilities = SharedArray(Float64, N)
     weights = SharedArray(Float64, N)
     data = SharedArray(Float64, n_vars, N)
@@ -144,6 +144,7 @@ function run_cem(
             utilities[scene_idx] = mean(
                 col.eval.features[4, proposal_vehicle_index])
             weights[scene_idx] = col.gen.weights[proposal_vehicle_index]
+
             data[:, scene_idx] = extract_bn_features(
                 col.eval.features[:,end,:], 
                 feature_names(col.eval.ext), 
@@ -154,24 +155,31 @@ function run_cem(
         update_stats(stats, data, utilities, weights)
         @spawnat 1 visualize_stats(stats, iter)
                 
-        # select top percentile of population
+        # select top fraction of population
         # indices = reverse(sortperm(utilities .* weights))[1:top_k]
         indices = reverse(sortperm(utilities))[1:top_k]
 
-        # refit bayesnet
-        discs, var_edges = get_discretizers(data[:, indices])
-        disc_features = discretize_features(data[:, indices], discs)
-        training_data = form_training_data(disc_features)
-        println(prev_discs)
-        prior = swap_discretization(prior, prev_discs, discs)
-        training_data = vcat(prior, training_data)
-        # update the prior as running set of prior and training data
-        prior = training_data[(top_k + 1):end, :]
-        prop_bn = fit_bn(training_data)
-        prev_discs = get_discretizers(var_edges)
+        # add that set to the prior, and remove older samples
+        df_data = DataFrame(data[:, indices], FEATURE_NAMES)
+        prior = vcat(prior, df_data)[(top_k + 1):end, :]
+
+        # refit bayesnet and reset in the collectors
+        prop_bn, discs = fit_bn(
+            prior, 
+            disc_types, 
+            # n_bins = Dict(
+            #     :relvelocity=>5,
+            #     :forevelocity=>5,
+            #     :foredistance=>5,
+            #     :vehlength=>5,
+            #     :vehwidth=>5,
+            #     :aggressiveness=>5,
+            #     :isattentive=>2
+            # )
+        )
         for col in cols
             col.gen.prop_bn = prop_bn
-            col.gen.prop_assignment_sampler = UniformAssignmentSampler(var_edges)
+            col.gen.prop_assignment_sampler = AssignmentSampler(discs)
         end
 
         # check if the target probability has been sufficiently optimized
@@ -199,7 +207,8 @@ function fit_proposal_bayes_net()
 
     # debug
     flags["num_lanes"] = 1
-    flags["sampling_time"] = .1
+    flags["sampling_time"] = .5
+    flags["prime_time"] = .5
 
 
     n_cols = max(1, nprocs() - 1)
@@ -207,10 +216,10 @@ function fit_proposal_bayes_net()
     prop_bn = run_cem(cols, 
         10000000., 
         max_iters = 500, 
-        N = 200, 
-        percentile = .1, 
+        N = 100, 
+        top_k_fraction = .5, 
         target_indices = [5],
-        n_prior_samples = 1000
+        n_prior_samples = 200
     )
     output_filepath = "../../data/bayesnets/cem_prop_test.jld"
     col = cols[1]
