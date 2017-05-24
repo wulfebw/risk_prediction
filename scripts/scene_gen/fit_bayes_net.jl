@@ -153,7 +153,7 @@ end
 
 function Discretizers.encode(
         df::DataFrame, 
-        discs::Dict{Symbol, AbstractDiscretizer}
+        discs::Dict{Symbol, LinCatDiscretizer}
     )
     enc_df = DataFrame()
     for var_name in names(df)
@@ -164,7 +164,7 @@ end
 
 function Discretizers.decode(
         df::DataFrame, 
-        discs::Dict{Symbol,AbstractDiscretizer}
+        discs::Dict{Symbol, LinCatDiscretizer}
     )
     dec_df = DataFrame()
     for var in names(df)
@@ -178,13 +178,14 @@ function get_discretizers(
         disc_types::Dict{Symbol,DataType};
         discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks()
     )
-    discs = Dict{Symbol, AbstractDiscretizer}()
+    discs = Dict{Symbol, LinCatDiscretizer}()
 
     for var in names(data)
         if disc_types[var] == LinearDiscretizer{Float64,Int}
             discs[var] = LinearDiscretizer(binedges(discalg, data[var]))
         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
-            discs[var] = CategoricalDiscretizer(data[var])
+            # assumes integer valued
+            discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
         else
             throw(ArgumentError("$(disc_types[var]) not implemented"))
         end
@@ -198,7 +199,7 @@ function get_discretizers(
         n_bins::Dict{Symbol,Int}
     )
 
-    discs = Dict{Symbol, AbstractDiscretizer}()
+    discs = Dict{Symbol, LinCatDiscretizer}()
     for var in names(data)
         if disc_types[var] == LinearDiscretizer{Float64,Int}
             # maps continuous to discrete bins
@@ -207,7 +208,7 @@ function get_discretizers(
             discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             # identity mapping between bins
-            discs[var] = CategoricalDiscretizer(data[var])
+            discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
         else
             throw(ArgumentError("$(disc_types[var]) not implemented"))
         end
@@ -257,7 +258,7 @@ function fit_bn(
         input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
-        debug_size::Int = 500000,
+        debug_size::Int = 100000,
         n_bins::Dict{Symbol,Int} = Dict(
             :relvelocity=>12,
             :forevelocity=>12,
