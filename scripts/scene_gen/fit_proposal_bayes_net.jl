@@ -1,5 +1,4 @@
 using AutoRisk
-using AutoViz
 using CommandLineFlags
 using Discretizers
 using DataStructures
@@ -172,7 +171,7 @@ function run_cem(
             break
         end
     end
-    return col.gen.prop_bn
+    return col.gen.prop_bn, discs
 end
 
 function fit_proposal_bayes_net()
@@ -192,22 +191,22 @@ function fit_proposal_bayes_net()
 
     # debug
     flags["num_lanes"] = 1
-    flags["sampling_time"] = .5
-    flags["prime_time"] = .5
+    flags["sampling_time"] = 5.
+    flags["prime_time"] = .0
 
     n_cols = max(1, nprocs() - 1)
     cols = [build_dataset_collector("", flags) for _ in 1:n_cols]
-    prop_bn = run_cem(cols, 
+    prop_bn, discs = run_cem(cols, 
         .5, 
-        max_iters = 500, 
+        max_iters = 100, 
         N = 500, 
         top_k_fraction = .5, 
-        target_indices = [5],
+        target_indices = [2,3,4,5],
         n_prior_samples = 5000
     )
     output_filepath = "../../data/bayesnets/cem_prop_test.jld"
     col = cols[1]
-    JLD.save(output_filepath, "bn", col.gen.prop_bn, "var_edges", col.gen.prop_assignment_sampler.var_edges)
+    JLD.save(output_filepath, "bn", col.gen.prop_bn, "discs", discs)
 end
 
 @time fit_proposal_bayes_net()

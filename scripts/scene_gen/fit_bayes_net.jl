@@ -44,12 +44,12 @@ function preprocess_features(
         features::Array{Float64}, 
         targets::Array{Float64}, 
         feature_names::Array{String};
-        max_collision_prob::Float64 = 0.,
+        max_collision_prob::Float64 = 0.1,
         min_vel::Float64 = 0.,
-        max_vel::Float64 = 30.,
-        max_Δvel::Float64 = 3.,
+        max_vel::Float64 = 40.,
+        max_Δvel::Float64 = 4.,
         min_dist::Float64 = 10.,
-        max_dist::Float64 = 60.,
+        max_dist::Float64 = 100.,
         min_len::Float64 = 2.5,
         max_len::Float64 = 6.
     )
@@ -258,11 +258,11 @@ function fit_bn(
         input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
-        debug_size::Int = 100000,
+        debug_size::Int = 1000000,
         n_bins::Dict{Symbol,Int} = Dict(
             :relvelocity=>12,
-            :forevelocity=>12,
-            :foredistance=>12,
+            :forevelocity=>14,
+            :foredistance=>14,
             :vehlength=>10,
             :vehwidth=>8,
             :aggressiveness=>5,
