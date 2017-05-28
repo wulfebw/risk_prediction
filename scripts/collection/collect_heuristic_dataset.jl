@@ -110,19 +110,19 @@ function build_factored_generator(flags)
     if behavior_type == "heuristic"
         if heuristic_behavior_type == "aggressive"
             params = [aggressive]
-            weights = WeightVec([1.])
+            weights = StatsBase.Weights([1.])
             behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "passive"
             params = [passive]
-            weights = WeightVec([1.])
+            weights = StatsBase.Weights([1.])
             behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "normal"
             params = [normal]
-            weights = WeightVec([1.])
+            weights = StatsBase.Weights([1.])
             behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "fixed_ratio"
             params = [aggressive, passive, normal]
-            weights = WeightVec([.2,.3,.5])
+            weights = StatsBase.Weights([.2,.3,.5])
             behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "correlated"
             behavior_gen = CorrelatedBehaviorGenerator(passive, aggressive)
@@ -226,6 +226,7 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
     bootstrap_discount = flags["bootstrap_discount"]
 
     feature_dim = length(ext)
+    target_ext = TargetExtractor()
     max_num_scenes = Int(ceil((prime_time + sampling_time) / sampling_period))
     rec = SceneRecord(max_num_scenes, sampling_period, max_num_veh)
     features = Array{Float64}(feature_dim, feature_timesteps, max_num_veh)
@@ -239,17 +240,18 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
             throw(ArgumentError(
                 "invalid prediction model type $(prediction_model_type)"))
         end
-        eval = BootstrappingMonteCarloEvaluator(ext, num_runs, prime_time,
+        eval = BootstrappingMonteCarloEvaluator(ext, target_ext, num_runs, prime_time,
             sampling_time, veh_idx_can_change, rec, features, targets, 
             agg_targets, prediction_model, discount = bootstrap_discount)
     else
-        eval = MonteCarloEvaluator(ext, num_runs, prime_time, sampling_time,
+        eval = MonteCarloEvaluator(ext, target_ext, num_runs, prime_time, sampling_time,
             veh_idx_can_change, rec, features, targets, agg_targets)
     end
 end
 
 function build_dataset(output_filepath::String, flags, 
-        ext::AbstractFeatureExtractor, weights::Union{Array{Float64},Void})
+        ext::AbstractFeatureExtractor, target_ext::AbstractFeatureExtractor,
+        weights::Union{Array{Float64},Void})
     # formulate attributes of the dataset
     feature_timesteps = flags["feature_timesteps"]
     chunk_dim = flags["chunk_dim"]
@@ -259,6 +261,7 @@ function build_dataset(output_filepath::String, flags,
     use_weights = typeof(weights) == Void ? false : true
     attrs = convert(Dict, flags)
     attrs["feature_names"] = feature_names(ext)
+    attrs["target_names"] = feature_names(target_ext)
     dataset = Dataset(output_filepath, feature_dim, feature_timesteps, target_dim,
         max_num_samples, chunk_dim = chunk_dim, init_file = false, attrs = attrs,
         use_weights = use_weights)
@@ -296,7 +299,8 @@ function build_dataset_collector(output_filepath::String, flags,
     gen = build_generator(flags)
     ext = build_extractor(flags)
     eval = build_evaluator(flags, ext)
-    dataset = build_dataset(output_filepath, flags, ext, get_weights(gen))
+    dataset = build_dataset(output_filepath, flags, ext, eval.target_ext, 
+        get_weights(gen))
     monitor = build_monitor(flags)
     seeds = Vector{Int}() # seeds are replaced by parallel collector
     scene = Scene(flags["max_num_vehicles"])
