@@ -15,7 +15,7 @@ import configs.risk_env_config
 config = configs.risk_env_config.Config()
 
 register(
-    id='RiskEnv-v0',
+    id=config.env_id,
     entry_point='envs.julia_env:JuliaEnv',
     max_episode_steps=config.max_timesteps,
     kwargs={
@@ -25,7 +25,7 @@ register(
     }
 )
 
-env = gym.make('RiskEnv-v0')
+env = gym.make(config.env_id)
 ep_rs = []
 means = []
 n_episodes = 10

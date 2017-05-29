@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 import cv2
 import go_vncdriver
-import tensorflow as tf
 import argparse
 import logging
 import sys, signal
 import time
 import os
 from a3c import A3C
-from envs import create_env
-import distutils.version
-use_tf12_api = distutils.version.LooseVersion(tf.VERSION) >= distutils.version.LooseVersion('0.12.0')
+from build_envs import create_env
+import tensorflow as tf
+
+sys.path.append('..')
+
+import configs.risk_env_config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -22,22 +24,20 @@ class FastSaver(tf.train.Saver):
         super(FastSaver, self).save(sess, save_path, global_step, latest_filename,
                                     meta_graph_suffix, False)
 
-def run(args, server):
-    env = create_env(args.env_id, client_id=str(args.task), remotes=args.remotes)
-    trainer = A3C(env, args.task, args.visualise)
+def run(args, server, config):
+    env = create_env(config)
+    trainer = A3C(env, args.task, config)
 
     # Variable names that start with "local" are not saved in checkpoints.
-    if use_tf12_api:
-        variables_to_save = [v for v in tf.global_variables() if not v.name.startswith("local")]
-        init_op = tf.variables_initializer(variables_to_save)
-        init_all_op = tf.global_variables_initializer()
-    else:
-        variables_to_save = [v for v in tf.all_variables() if not v.name.startswith("local")]
-        init_op = tf.initialize_variables(variables_to_save)
-        init_all_op = tf.initialize_all_variables()
+    variables_to_save = [v for v in tf.global_variables() 
+        if not v.name.startswith("local")]
+    init_op = tf.variables_initializer(variables_to_save)
+    init_all_op = tf.global_variables_initializer()
+    
     saver = FastSaver(variables_to_save)
 
-    var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
+    var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 
+        tf.get_variable_scope().name)
     logger.info('Trainable vars:')
     for v in var_list:
         logger.info('  %s %s', v.name, v.get_shape())
@@ -45,14 +45,12 @@ def run(args, server):
     def init_fn(ses):
         logger.info("Initializing all parameters.")
         ses.run(init_all_op)
+        logger.info("Finished initializing all parameters.")
 
-    config = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:{}/cpu:0".format(args.task)])
+    configproto = tf.ConfigProto(device_filters=["/job:ps", "/job:worker/task:{}/cpu:0".format(args.task)])
     logdir = os.path.join(args.log_dir, 'train')
 
-    if use_tf12_api:
-        summary_writer = tf.summary.FileWriter(logdir + "_%d" % args.task)
-    else:
-        summary_writer = tf.train.SummaryWriter(logdir + "_%d" % args.task)
+    summary_writer = tf.summary.FileWriter(logdir + "_%d" % args.task)
 
     logger.info("Events directory: %s_%s", logdir, args.task)
     sv = tf.train.Supervisor(is_chief=(args.task == 0),
@@ -67,14 +65,17 @@ def run(args, server):
                              save_model_secs=30,
                              save_summaries_secs=30)
 
-    num_global_steps = 100000000
+    num_global_steps = config.n_global_steps
 
     logger.info(
         "Starting session. If this hangs, we're mostly likely waiting to connect to the parameter server. " +
         "One common cause is that the parameter server DNS name isn't resolving yet, or is misspecified.")
-    with sv.managed_session(server.target, config=config) as sess, sess.as_default():
+    with sv.managed_session(server.target, config=configproto) as sess, sess.as_default():
+        logger.info("running sync op")
         sess.run(trainer.sync)
+        logger.info("starting trainer")
         trainer.start(sess, summary_writer)
+        logger.info("gathering global step")
         global_step = sess.run(trainer.global_step)
         logger.info("Starting training at step=%d", global_step)
         while not sv.should_stop() and (not num_global_steps or global_step < num_global_steps):
@@ -116,8 +117,8 @@ Setting up Tensorflow for data parallel work
     parser.add_argument('--task', default=0, type=int, help='Task index')
     parser.add_argument('--job-name', default="worker", help='worker or ps')
     parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
-    parser.add_argument('--log-dir', default="/tmp/pong", help='Log directory path')
-    parser.add_argument('--env-id', default="PongDeterministic-v3", help='Environment id')
+    parser.add_argument('--log-dir', default="/tmp/risk", help='Log directory path')
+    parser.add_argument('--env-id', default="RiskEnv-v0", help='Environment id')
     parser.add_argument('-r', '--remotes', default=None,
                         help='References to environments to create (e.g. -r 20), '
                              'or the address of pre-existing VNC servers and '
@@ -138,10 +139,12 @@ Setting up Tensorflow for data parallel work
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
+    config = configs.risk_env_config.Config()
+
     if args.job_name == "worker":
         server = tf.train.Server(cluster, job_name="worker", task_index=args.task,
                                  config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=2))
-        run(args, server)
+        run(args, server, config)
     else:
         server = tf.train.Server(cluster, job_name="ps", task_index=args.task,
                                  config=tf.ConfigProto(device_filters=["/job:ps"]))

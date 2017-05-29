@@ -1,8 +1,10 @@
 
-
 class Config(object):
     def __init__(self):
+
         # environment options
+        self.env_id = 'RiskEnv-v0'
+
         ## generation
         self.num_lanes = 1
         self.max_num_vehicles = 20
@@ -30,5 +32,15 @@ class Config(object):
         self.extract_car_lidar_range_rate = True
         self.extract_road_lidar = False
 
-        ## monitoring
+        # prediction
+        self.hidden_layer_sizes = [128, 64]
+        self.value_dim = 5
+        self.local_steps_per_update = 20
+        self.grad_clip_norm = 40
+        self.learning_rate = 1e4
+        self.discount = .99
+        self.n_global_steps = 100000000
+        self.summary_every = 11
+
+        # monitoring
         self.viz_dir = "../data/viz/test/"
