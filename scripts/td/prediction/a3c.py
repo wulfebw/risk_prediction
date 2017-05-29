@@ -1,5 +1,6 @@
 from __future__ import print_function
 from collections import namedtuple
+import copy
 import logging
 from model import LSTMPredictor
 import numpy as np
@@ -11,6 +12,8 @@ import threading
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+import build_envs
+
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
@@ -19,12 +22,12 @@ def process_rollout(rollout, gamma):
     given a rollout, compute its returns
     """
     batch_si = np.asarray(rollout.states)
-    batch_a = np.asarray(rollout.actions)
     rewards = np.asarray(rollout.rewards)
     batch_w = np.asarray(rollout.weights)
 
     rewards_plus_v = np.asarray(rollout.rewards + [rollout.r])
     batch_r = discount(rewards_plus_v, gamma)[:-1]
+
     features = rollout.features[0]
     return Batch(batch_si, batch_r, batch_w, rollout.terminal, features)
 
@@ -35,11 +38,11 @@ class PartialRollout(object):
     a piece of a complete rollout.  We run our agent, and process its experience
     once it has processed enough steps.
     """
-    def __init__(self):
+    def __init__(self, value_dim=5):
         self.states = []
         self.rewards = []
         self.weights = []
-        self.r = 0.0
+        self.r = np.zeros(value_dim)
         self.terminal = False
         self.features = []
 
@@ -50,58 +53,6 @@ class PartialRollout(object):
         self.terminal = terminal
         self.features += [features]
 
-    def extend(self, other):
-        assert not self.terminal
-        self.states.extend(other.states)
-        self.rewards.extend(other.rewards)
-        self.weights.extend(other.weights)
-        self.r = other.r
-        self.terminal = other.terminal
-        self.features.extend(other.features)
-
-class RunnerThread(threading.Thread):
-    """
-    One of the key distinctions between a normal environment and a universe environment
-    is that a universe environment is _real time_.  This means that there should be a thread
-    that would constantly interact with the environment and tell it what to do.  This thread is here.
-    """
-    def __init__(self, env, policy, num_local_steps):
-        threading.Thread.__init__(self)
-        self.queue = queue.Queue(5)
-        self.num_local_steps = num_local_steps
-        self.env = env
-        self.last_features = None
-        self.policy = policy
-        self.daemon = True
-        self.sess = None
-        self.summary_writer = None
-
-    def start_runner(self, sess, summary_writer):
-
-        logger.info("reset in start_runner")
-        print(self.env.reset())
-
-        self.sess = sess
-        self.summary_writer = summary_writer
-        logger.info("starting runner thread")
-        self.start()
-
-    def run(self):
-        logger.info("reset in run")
-        print(self.env.reset())
-
-        with self.sess.as_default():
-            self._run()
-
-    def _run(self):
-        rollout_provider = env_runner(self.env, self.policy, 
-            self.num_local_steps, self.summary_writer)
-        while True:
-            # the timeout variable exists because apparently, if one worker dies, the other workers
-            # won't die with it, unless the timeout is set to some large number.  This is an empirical
-            # observation.
-            self.queue.put(next(rollout_provider), timeout=600.0)
-
 def env_runner(env, policy, num_local_steps, summary_writer):
     """
     The logic of the thread runner.  In brief, it constantly keeps on running
@@ -111,7 +62,7 @@ def env_runner(env, policy, num_local_steps, summary_writer):
     last_state = env.reset()
     last_features = policy.get_initial_features()
     length = 0
-    rewards = 0
+    rewards = np.zeros(5)
 
     while True:
         terminal_end = False
@@ -121,13 +72,15 @@ def env_runner(env, policy, num_local_steps, summary_writer):
             features = policy.features(last_state, *last_features)
             state, reward, terminal, info = env.step(None)
 
-            print("state: {}".format(state))
-            print("reward: {}".format(reward))
-            print("terminal: {}".format(terminal))
-            print("info: {}".format(info))
-
             # collect the experience
-            rollout.add(last_state, reward, info['weight'], terminal, last_features)
+            # note that the deepcopies seem to be necessary
+            rollout.add(
+                copy.deepcopy(last_state), 
+                copy.deepcopy(reward), 
+                info['weight'], 
+                terminal, 
+                copy.deepcopy(last_features))
+            
             length += 1
             rewards += reward
 
@@ -148,7 +101,7 @@ def env_runner(env, policy, num_local_steps, summary_writer):
                 if length >= timestep_limit or not env.metadata.get('semantics.autoreset'):
                     last_state = env.reset()
                 last_features = policy.get_initial_features()
-                print("Episode finished. Sum of rewards: %d. Length: %d" % (rewards, length))
+                print("Episode finished. Sum of rewards: {}. Length: {}".format(rewards, length))
                 length = 0
                 rewards = 0
                 break
@@ -156,7 +109,7 @@ def env_runner(env, policy, num_local_steps, summary_writer):
         if not terminal_end:
             rollout.r = policy.value(last_state, *last_features)
 
-        # once we have enough experience, yield it, and have the ThreadRunner place it on a queue
+        # once we have enough experience, yield it
         yield rollout
 
 class A3C(object):
@@ -181,25 +134,44 @@ class A3C(object):
             self.w = tf.placeholder(tf.float32, [None], name='sample_weights')
 
             # loss of value function
-            self.loss = tf.reduce_sum(
-                tf.reduce_sum(tf.square(pi.vf - self.r), axis=1) * self.w)
-
-            # 20 represents the number of "local steps":  the number of timesteps
-            # we run the policy before we update the parameters.
-            # The larger local steps is, the lower is the variance in our policy gradients estimate
-            # on the one hand;  but on the other hand, we get less frequent parameter updates, which
-            # slows down learning.  In this code, we found that making local steps be much
-            # smaller than 20 makes the algorithm more difficult to tune and to get to work.
-            self.runner = RunnerThread(env, pi, config.local_steps_per_update)
+            print('self.w.shape ', self.w.shape)
+            print('pi.vf.shape ', pi.vf.shape)
+            print('self.r.shape ', self.r.shape)
+            td_error = tf.square(pi.vf - self.r)
+            self.loss = tf.reduce_sum(self.w * tf.reduce_sum(td_error, axis=-1))
+            print('self.loss.shape ', self.loss.shape)
 
             # grads
             grads = tf.gradients(self.loss, pi.var_list)
 
             # summaries
+            ## input summaries
+            tf.summary.histogram("model/sample_weights", self.w[0])
+            tf.summary.scalar("model/sample_weights", self.w[0])
+
+            julia_env = build_envs.get_julia_env(self.env)
+            for i, feature_name in enumerate(julia_env.obs_var_names()):
+                tf.summary.scalar("features/{}_value".format(
+                    feature_name.encode('utf-8')), 
+                    tf.reduce_mean(pi.x[:,i]))
+
+            ## target and loss summaries
+            tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
             bs = tf.to_float(tf.shape(pi.x)[0])
             tf.summary.scalar("model/value_loss", self.loss / bs)
+            mean_targets = tf.reduce_mean(self.r, axis=0)
+            mean_target_td_errors = tf.reduce_mean(td_error, axis=0)
+            for i, target_name in enumerate(julia_env.reward_names()):
+                tf.summary.scalar("targets/{}_value".format(target_name), 
+                    mean_targets[i])
+                tf.summary.scalar("targets/{}_loss".format(target_name), 
+                    mean_target_td_errors[i])
+
+            ## gradient and variable norm
             tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
             tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
+
+            # merge the summaries
             self.summary_op = tf.summary.merge_all()
 
             # loss
@@ -219,22 +191,9 @@ class A3C(object):
             self.local_steps = 0
 
     def start(self, sess, summary_writer):
-        logger.info("starting runner")
-        self.runner.start_runner(sess, summary_writer)
-        logger.info("finished starting runner")
+        self.rollout_provider = env_runner(self.env, self.local_network, 
+            self.config.local_steps_per_update, summary_writer)
         self.summary_writer = summary_writer
-
-    def pull_batch_from_queue(self):
-        """
-        self explanatory:  take a rollout from the queue of the thread runner.
-        """
-        rollout = self.runner.queue.get(timeout=600.0)
-        while not rollout.terminal:
-            try:
-                rollout.extend(self.runner.queue.get_nowait())
-            except queue.Empty:
-                break
-        return rollout
 
     def process(self, sess):
         """
@@ -244,7 +203,7 @@ class A3C(object):
         """
 
         sess.run(self.sync)  # copy weights from shared to local
-        rollout = self.pull_batch_from_queue()
+        rollout = next(self.rollout_provider)
         batch = process_rollout(rollout, gamma=self.config.discount)
 
         should_compute_summary = (self.task == 0 

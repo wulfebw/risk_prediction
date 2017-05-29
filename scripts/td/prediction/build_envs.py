@@ -11,6 +11,9 @@ logger.setLevel(logging.INFO)
 
 sys.path.append('..')
 
+import envs.julia_env
+import normalizing_wrapper
+
 def create_env(config):
     # register conditional on config, so have to wait until this point
     register(
@@ -24,4 +27,11 @@ def create_env(config):
         }
     )
     env = gym.make(config.env_id)
+    env = normalizing_wrapper.NormalizingWrapper(env)
     return env
+
+def get_julia_env(env):
+    julia_env = env
+    while type(julia_env) != envs.julia_env.JuliaEnv:
+        julia_env = julia_env.env
+    return julia_env

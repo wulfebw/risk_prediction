@@ -91,6 +91,8 @@ def create_commands(session, num_workers, remotes, env_id, logdir, shell='bash',
     for window, cmd in cmds_map:
         cmds += [cmd]
 
+    cmds += ["open http://localhost:12345"] # added
+
     return cmds, notes
 
 

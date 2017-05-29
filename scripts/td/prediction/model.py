@@ -24,6 +24,8 @@ class LSTMPredictor(object):
         for l, size in enumerate(config.hidden_layer_sizes):
             x = tf.nn.elu(linear(x, size, "{}_".format(l), 
                 normalized_columns_initializer(0.01)))
+            x = tf.nn.dropout(x, config.dropout_keep_prob)
+            x = tf.contrib.layers.batch_norm(x)
         size = config.hidden_layer_sizes[-1]
         
         # introduce a "fake" batch dimension of 1 to LSTM over time dim
@@ -44,10 +46,9 @@ class LSTMPredictor(object):
         lstm_c, lstm_h = lstm_state
         self.state_out = [lstm_c[:1, :], lstm_h[:1, :]]
         x = tf.reshape(lstm_outputs, [-1, size])
-        self.vf = tf.reshape(
-            linear(x, config.value_dim, 
-                "value", normalized_columns_initializer(1.0)), [-1])
-        self.var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
+        self.vf = linear(x, config.value_dim, "value", normalized_columns_initializer(1.0))
+        self.var_list = tf.get_collection(
+            tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
 
     def get_initial_features(self):
         return self.state_init
