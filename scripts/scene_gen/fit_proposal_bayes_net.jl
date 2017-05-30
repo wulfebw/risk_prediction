@@ -92,7 +92,8 @@ function run_cem(
         N::Int = 1000, 
         top_k_fraction::Float64 = .50, 
         target_indices::Vector{Int} = [1,2,3,4,5],
-        n_prior_samples::Int = 5000
+        n_prior_samples::Int = 5000,
+        weight_threshold::Float64 = 10.
     )
     # initialize
     col = cols[1]
@@ -148,12 +149,18 @@ function run_cem(
                 proposal_vehicle_index)
         end
 
+        # select samples with weight > weight_threshold
+        valid_indices = find(weights .< weight_threshold)
+
         # update and visualize stats
-        update_stats(stats, data, utilities, weights)
+        update_stats(stats, data[:, valid_indices], 
+            utilities[valid_indices], weights[valid_indices])
         @spawnat 1 visualize_stats(stats, iter)
                 
         # select top fraction of population
-        indices = reverse(sortperm(utilities .* weights))[1:top_k]
+        indices = reverse(sortperm(utilities .* weights))
+        indices = indices[valid_indices]
+        indices = indices[1:top_k]
 
         # add that set to the prior, and remove older samples
         df_data = DataFrame(data[:, indices], FEATURE_NAMES)
@@ -177,7 +184,7 @@ end
 function fit_proposal_bayes_net()
     # load flags from an existing dataset
     # these flags should be the ones ultimately used in evaluation
-    dataset_filepath = "../../data/datasets/may/bn_aug_5_sec_10_timestep_2.h5"
+    dataset_filepath = "../../data/datasets/may/bn_heursitc_high_prime_5_sec_10_timestep_2.h5"
     flags = h5readattr(dataset_filepath, "risk")
     fixup_types!(flags)
     # only collect a single timestep
@@ -192,19 +199,19 @@ function fit_proposal_bayes_net()
     # debug
     flags["num_lanes"] = 1
     flags["sampling_time"] = 5.
-    flags["prime_time"] = .0
+    flags["prime_time"] = .2
 
     n_cols = max(1, nprocs() - 1)
     cols = [build_dataset_collector("", flags) for _ in 1:n_cols]
     prop_bn, discs = run_cem(cols, 
         .5, 
         max_iters = 100, 
-        N = 500, 
+        N = 50, 
         top_k_fraction = .5, 
         target_indices = [2,3,4,5],
         n_prior_samples = 5000
     )
-    output_filepath = "../../data/bayesnets/cem_prop_test.jld"
+    output_filepath = "../../data/bayesnets/prop_test.jld"
     col = cols[1]
     JLD.save(output_filepath, "bn", col.gen.prop_bn, "discs", discs)
 end
