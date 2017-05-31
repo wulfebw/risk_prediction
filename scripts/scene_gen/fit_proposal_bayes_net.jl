@@ -206,10 +206,10 @@ function fit_proposal_bayes_net()
     prop_bn, discs = run_cem(cols, 
         .5, 
         max_iters = 100, 
-        N = 50, 
+        N = 500, 
         top_k_fraction = .5, 
         target_indices = [2,3,4,5],
-        n_prior_samples = 5000
+        n_prior_samples = 10000
     )
     output_filepath = "../../data/bayesnets/prop_test.jld"
     col = cols[1]
