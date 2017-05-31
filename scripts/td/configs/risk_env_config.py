@@ -20,6 +20,9 @@ class Config(object):
         self.sim_timesteps = 5
         self.num_veh_per_lane = 20
         self.max_timesteps = 50
+        self.hard_brake_threshold = -3.
+        self.hard_brake_n_past_frames = 2
+        self.ttc_threshold = 3.
 
         ## feature extraction
         self.extract_core = True
