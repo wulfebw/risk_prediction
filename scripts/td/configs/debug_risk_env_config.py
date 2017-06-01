@@ -1,27 +1,32 @@
+import math
 
 class Config(object):
     def __init__(self):
 
         # environment options
-        self.env_id = 'BayesNetRiskEnv-v0'
+        self.env_id = 'HeuristicRiskEnv-v0'
 
         ## generation
         self.num_lanes = 1
-        self.max_num_vehicles = 100
+        self.max_num_vehicles = 1
+        self.min_num_vehicles = 1
         self.base_bn_filepath = "../data/bayesnets/base_test.jld"
         self.prop_bn_filepath = "../data/bayesnets/prop_test.jld"
         self.lon_accel_std_dev = 1.
-        self.lat_accel_std_dev = .1
-        self.overall_response_time = .2
-        self.lon_response_time = .2
-        self.err_p_a_to_i = .01
-        self.err_p_i_to_a = .3
-        self.prime_timesteps = 0
-        self.sim_timesteps = 5
-        self.num_veh_per_lane = 20
-        self.max_timesteps = 50
-        self.hard_brake_threshold = -3.
-        self.hard_brake_n_past_frames = 2
+        self.lat_accel_std_dev = 0.
+        self.overall_response_time = .0
+        self.lon_response_time = .0
+        self.err_p_a_to_i = .0
+        self.err_p_i_to_a = .0
+        # prime_timesteps are the number of initial timesteps used for burn in
+        self.prime_timesteps = 300
+        # sim_timesteps is the number of timesteps that are simulated 
+        # for each call to step
+        self.sim_timesteps = 1
+        self.num_veh_per_lane = 1
+        self.max_timesteps = int(math.ceil(10000 / self.sim_timesteps))
+        self.hard_brake_threshold = -3.09
+        self.hard_brake_n_past_frames = 1
         self.ttc_threshold = 3.
 
         ### heuristic
@@ -36,7 +41,7 @@ class Config(object):
         self.min_vehicle_width = 2.5
         self.max_vehicle_width = 2.5
         self.min_init_dist = 10.
-        self.heuristic_behavior_type = "" # correlated behavior
+        self.heuristic_behavior_type = "normal"
 
         ## feature extraction
         self.extract_core = True
@@ -50,17 +55,20 @@ class Config(object):
         self.extract_road_lidar = False
 
         # prediction
-        self.hidden_layer_sizes = [256, 128, 64]
+        self.hidden_layer_sizes = [128, 64]
         self.value_dim = 5
-        self.local_steps_per_update = 500
+        self.local_steps_per_update = 20
         self.grad_clip_norm = 40
-        self.learning_rate = 1e-4
+        self.learning_rate = 2e-3 / self.local_steps_per_update
         self.batch_norm = True
         self.dropout_keep_prob = .5
-        self.discount = .99
+        # TODO: discount factor seems that it should depend upon sim_timesteps 
+        # as well 
+        self.discount = 599. / 600.
         self.n_global_steps = 100000000
         self.summary_every = 11
+        self.optimizer = 'adam'
 
         # monitoring
         self.viz_dir = "../data/viz/test/"
-        self.summarize_features = True
+        self.summarize_features = False

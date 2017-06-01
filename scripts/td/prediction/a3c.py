@@ -68,8 +68,9 @@ def env_runner(env, policy, num_local_steps, summary_writer):
         terminal_end = False
         rollout = PartialRollout()
 
-        for _ in range(num_local_steps):
-            features = policy.features(last_state, *last_features)
+        for local_step in range(num_local_steps):
+            if local_step == 0 or local_step == num_local_steps - 1:
+                features = policy.features(last_state, *last_features)
             state, reward, terminal, info = env.step(None)
 
             # collect the experience
@@ -138,7 +139,7 @@ class A3C(object):
             print('pi.vf.shape ', pi.vf.shape)
             print('self.r.shape ', self.r.shape)
             td_error = tf.square(pi.vf - self.r)
-            self.loss = tf.reduce_sum(self.w * tf.reduce_sum(td_error, axis=-1))
+            self.loss = tf.reduce_sum(self.w * tf.reduce_mean(td_error, axis=-1))
             print('self.loss.shape ', self.loss.shape)
 
             # grads
@@ -150,13 +151,18 @@ class A3C(object):
             tf.summary.scalar("model/sample_weights", self.w[0])
 
             julia_env = build_envs.get_julia_env(self.env)
-            for i, feature_name in enumerate(julia_env.obs_var_names()):
-                tf.summary.scalar("features/{}_value".format(
-                    feature_name.encode('utf-8')), 
-                    tf.reduce_mean(pi.x[:,i]))
+            if self.config.summarize_features:
+                for i, feature_name in enumerate(julia_env.obs_var_names()):
+                    tf.summary.scalar("features/{}_value".format(
+                        feature_name.encode('utf-8')), 
+                        tf.reduce_mean(pi.x[:,i]))
 
             ## target and loss summaries
+            mean_vf = tf.reduce_mean(pi.vf, axis=0)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
+            for i, target_name in enumerate(julia_env.reward_names()):
+                tf.summary.scalar("model/value_mean_{}".format(target_name), 
+                    mean_vf[i])
             bs = tf.to_float(tf.shape(pi.x)[0])
             tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_targets = tf.reduce_mean(self.r, axis=0)
@@ -185,7 +191,10 @@ class A3C(object):
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
             # each worker has a different set of adam optimizer parameters
-            opt = tf.train.AdamOptimizer(config.learning_rate)
+            if config.optimizer == 'adam':
+                opt = tf.train.AdamOptimizer(config.learning_rate)
+            elif config.optimizer == 'rmsprop':
+                opt = tf.train.RMSPropOptimizer(config.learning_rate, momentum=.9)
             self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)
             self.summary_writer = None
             self.local_steps = 0

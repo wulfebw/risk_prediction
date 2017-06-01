@@ -9,5 +9,6 @@ include("make.jl")
 include("env.jl")
 include("debug_envs.jl")
 include("risk_env.jl")
-
+include("bayes_net_risk_env.jl")
+include("heuristic_risk_env.jl")
 end

@@ -12,7 +12,8 @@ import tensorflow as tf
 
 sys.path.append('..')
 
-import configs.risk_env_config
+# from configs.risk_env_config import Config
+from configs.debug_risk_env_config import Config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -139,7 +140,7 @@ Setting up Tensorflow for data parallel work
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    config = configs.risk_env_config.Config()
+    config = Config()
 
     if args.job_name == "worker":
         server = tf.train.Server(cluster, job_name="worker", task_index=args.task,
