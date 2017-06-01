@@ -7,53 +7,39 @@ export
     render,
     obs_var_names,
     reward_names,
+    get_features,
+    get_targets,
+    get_weight,
+    get_ego_index,
     build_feature_extractor,
     build_target_extractor,
     build_behavior_generator,
-    build_scene_record
+    build_scene_record,
+    build_evaluator
 
 abstract RiskEnv <: Env
 
 function Base.reset(env::RiskEnv)
     env.n_episodes += 1
     empty!(env.rec)
-    seed = rand(1:typemax(Int))
-    rand!(env.gen, env.roadway, env.scene, env.models, seed)
+    env.seed = rand(1:typemax(Int))
+    rand!(env.gen, env.roadway, env.scene, env.models, env.seed)
     # simulate for prime time to populate features
     simulate!(Any, env.rec, env.scene, env.roadway, env.models, env.prime_time)
-    target_veh_id = get_target_vehicle_id(env.gen)
-    if target_veh_id == nothing
-        # random vehicle
-        env.ego_index = rand(1:length(env.scene))
-    else
-        env.ego_index = findfirst(env.scene, target_veh_id)
-    end
-    pull_features!(
-        env.feature_ext, env.rec, env.roadway, env.ego_index, env.models)
-    return env.feature_ext.features
+    env.ego_index = get_ego_index(env)
+    return get_features(env)
 end
 
 function Base.step(env::RiskEnv)
     env.n_local_steps += 1
     simulate!(Any, env.rec, env.scene, env.roadway, env.models, env.sim_time,
-        update_first_scene = false)
-    pull_features!(
-        env.feature_ext, env.rec, env.roadway, env.ego_index, env.models)
-    # TODO: this should pull targets from the past sim_timesteps
-    pull_features!(
-        env.target_ext, env.rec, env.roadway, env.ego_index)
-    weights = get_weights(env.gen)
-    if weights != nothing
-        weight = get_weights(env.gen)[env.ego_index]
-    else
-        weight = 1.
-    end
+        update_first_scene = false)    
     done = any(env.target_ext.features .> 0)
     return (
-        env.feature_ext.features, 
-        env.target_ext.features, 
+        get_features(env), 
+        get_targets(env), 
         done, 
-        Dict("weight"=>weight)
+        Dict("weight"=>get_weight(env), "seed"=>env.seed)
     )
 end
 
@@ -88,6 +74,37 @@ action_space_spec(env::RiskEnv) = (0,), "None"
 obs_var_names(env::RiskEnv) = feature_names(env.feature_ext)
 reward_names(env::RiskEnv) = feature_names(env.target_ext)
 
+function AutoRisk.get_features(env::RiskEnv)
+    pull_features!(env.feature_ext, env.rec, env.roadway, env.ego_index, env.models)
+    return env.feature_ext.features
+end
+
+function AutoRisk.get_targets(env::RiskEnv)
+    # TODO: this should pull targets from the past sim_timesteps
+    pull_features!(env.target_ext, env.rec, env.roadway, env.ego_index)
+    return env.target_ext.features
+end
+
+function get_weight(env::RiskEnv)
+    weights = get_weights(env.gen)
+    if weights != nothing
+        weight = weights[env.ego_index]
+    else
+        weight = 1.
+    end
+    return weight
+end
+
+function get_ego_index(env::RiskEnv)
+    target_veh_id = get_target_vehicle_id(env.gen)
+    if target_veh_id == nothing
+        # random vehicle
+        ego_index = rand(1:length(env.scene))
+    else
+        ego_index = findfirst(env.scene, target_veh_id)
+    end
+    return ego_index
+end
 
 function build_feature_extractor(params::Dict)
     feature_ext = MultiFeatureExtractor(
@@ -153,4 +170,33 @@ function build_scene_record(params::Dict, Δt::Float64)
         params["max_num_vehicles"]
     )
     return rec
+end
+
+function build_evaluator(
+        params::Dict, 
+        feature_ext::AbstractFeatureExtractor,
+        target_ext::AbstractFeatureExtractor,
+        Δt::Float64
+    )
+    rec = build_scene_record(params, Δt)
+    features = Array{Float64}(length(feature_ext))
+    targets = Array{Float64}(length(target_ext))
+    agg_targets = Array{Float64}(length(target_ext))
+
+    # priming is done in the reset function
+    prime_time = 0.
+    sampling_time = params["sim_timesteps"] * Δt
+    eval = MonteCarloEvaluator(
+        feature_ext, 
+        target_ext, 
+        params["n_monte_carlo_runs"], 
+        prime_time, 
+        sampling_time,
+        false, 
+        rec, 
+        features, 
+        targets, 
+        agg_targets
+    )
+    return eval
 end

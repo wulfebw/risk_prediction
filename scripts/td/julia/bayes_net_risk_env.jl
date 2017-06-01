@@ -17,6 +17,7 @@ type BayesNetRiskEnv <: RiskEnv
 
     n_local_steps::Int
     n_episodes::Int
+    seed::Int
 
     params::Dict
 
@@ -55,6 +56,7 @@ type BayesNetRiskEnv <: RiskEnv
             params["prime_timesteps"] * Δt, 
             0, 
             0, 
+            0,
             0,
             params
         )
