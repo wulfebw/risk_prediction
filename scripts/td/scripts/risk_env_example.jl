@@ -32,7 +32,7 @@ params["min_init_dist"] = 10.
 params["heuristic_behavior_type"] = "normal"
 
 # evaluator
-params["n_monte_carlo_runs"] = 10
+params["n_monte_carlo_runs"] = 2
 
 # feature extraction
 params["extract_core"] = true
@@ -51,15 +51,18 @@ params["ttc_threshold"] = 3.
 
 params["viz_dir"] = "../data/viz/test/"
 
-srand(1)
+srand(2)
 env = MonteCarloRiskEnv(params)
 x = reset(env)
 t = 0
 done = false
 max_t = 10000
-while !done && t < max_t
+while !any(done) && t < max_t
     t += 1
-    println(t)
     nx, r, done, info = step(env)
-    # frame = render(env)
+    # println(nx)
+    # println(r)
+    # println(done)
+    # readline()
+    frame = render(env)
 end

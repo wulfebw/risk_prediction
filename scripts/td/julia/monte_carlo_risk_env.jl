@@ -2,7 +2,11 @@ export
     MonteCarloRiskEnv,
     reset,
     step,
-    get_features
+    get_features,
+    observation_space_spec,
+    action_space_spec,
+    obs_var_names,
+    reward_names
 
 type MonteCarloRiskEnv <: RiskEnv
     gen::Generator
@@ -84,12 +88,11 @@ end
 
 function Base.step(env::MonteCarloRiskEnv)
     env.n_local_steps += 1
-    features = get_features(env)
-    done = evaluate!(env.eval, env.scene, env.models, env.roadway, env.ego_index)
+    features, targets, terminals = evaluate!(env.eval, env.scene, env.models, env.roadway, env.ego_index, env.seed)
     return (
         features, 
-        get_targets(env.eval), 
-        done, 
+        targets, 
+        terminals, 
         Dict("weight"=>get_weight(env), "seed"=>env.seed)
     )
 end
@@ -98,3 +101,8 @@ function AutoRisk.get_features(env::MonteCarloRiskEnv)
     pull_features!(env.eval.ext, env.eval.rec, env.roadway, env.ego_index, env.models)
     return env.eval.ext.features[:]
 end
+
+observation_space_spec(env::MonteCarloRiskEnv) = length(env.eval.ext), "Box"
+action_space_spec(env::MonteCarloRiskEnv) = (0,), "None"
+obs_var_names(env::MonteCarloRiskEnv) = feature_names(env.eval.ext)
+reward_names(env::MonteCarloRiskEnv) = feature_names(env.eval.target_ext)

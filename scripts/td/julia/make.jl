@@ -8,6 +8,8 @@ function make(env_id::String, env_params::Dict)
         return BayesNetRiskEnv(env_params)
     elseif env_id == "HeuristicRiskEnv"
         return HeuristicRiskEnv(env_params)
+    elseif env_id == "MonteCarloRiskEnv"
+        return MonteCarloRiskEnv(env_params)
     else
         throw(ArgumentError("Invalid env_id: $(env_id)"))
     end

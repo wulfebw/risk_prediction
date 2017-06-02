@@ -69,9 +69,36 @@ def env_runner(env, policy, num_local_steps, summary_writer):
         rollout = PartialRollout()
 
         for local_step in range(num_local_steps):
-            if local_step == 0 or local_step == num_local_steps - 1:
-                features = policy.features(last_state, *last_features)
+            features = policy.features(last_state, *last_features)
             state, reward, terminal, info = env.step(None)
+
+            if len(np.shape(terminal)) > 0:
+                # if any next state is terminal, then end the episode, bootstrap
+                # the other next states, and average their returns
+                if any(terminal):
+                    total_reward = np.zeros_like(reward[0])
+                    for i, t in enumerate(terminal):
+                        if t:
+                            total_reward += reward[i]
+                        else:
+                            total_reward += policy.value(state[i], *features)
+                    
+                    # set values as though this was the single state case
+                    # sample a random state to continue with
+                    next_state_index = np.random.randint(len(terminal))
+                    state = state[next_state_index]
+                    reward = total_reward / len(terminal)
+                    terminal = terminal[next_state_index]
+
+                # if no next state is terminal, then simply select the last of 
+                # each value, since that is the one that will be sampled 
+                # by the environment
+                else:
+                    state = state[-1]
+                    reward = reward[-1]
+                    terminal = terminal[-1]
+
+
 
             # collect the experience
             # note that the deepcopies seem to be necessary
@@ -139,7 +166,11 @@ class A3C(object):
             print('pi.vf.shape ', pi.vf.shape)
             print('self.r.shape ', self.r.shape)
             td_error = tf.square(pi.vf - self.r)
-            self.loss = tf.reduce_sum(self.w * tf.reduce_mean(td_error, axis=-1))
+            if config.target_loss_index is not None:
+                self.loss = tf.reduce_sum(self.w * tf.reduce_mean(
+                    td_error[:, config.target_loss_index], axis=-1))
+            else:
+                self.loss = tf.reduce_sum(self.w * tf.reduce_mean(td_error, axis=-1))
             print('self.loss.shape ', self.loss.shape)
 
             # grads

@@ -4,7 +4,7 @@ class Config(object):
     def __init__(self):
 
         # environment options
-        self.env_id = 'HeuristicRiskEnv-v0'
+        self.env_id = 'MonteCarloRiskEnv-v0'
 
         ## generation
         self.num_lanes = 1
@@ -43,6 +43,9 @@ class Config(object):
         self.min_init_dist = 10.
         self.heuristic_behavior_type = "normal"
 
+        ## evaluator
+        self.n_monte_carlo_runs = 10
+
         ## feature extraction
         self.extract_core = True
         self.extract_temporal = True
@@ -62,6 +65,7 @@ class Config(object):
         self.learning_rate = 2e-3 / self.local_steps_per_update
         self.batch_norm = True
         self.dropout_keep_prob = .5
+        self.target_loss_index = 3
         # TODO: discount factor seems that it should depend upon sim_timesteps 
         # as well 
         self.discount = 599. / 600.

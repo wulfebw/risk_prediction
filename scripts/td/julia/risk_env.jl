@@ -179,8 +179,8 @@ function build_evaluator(
         Δt::Float64
     )
     rec = build_scene_record(params, Δt)
-    features = Array{Float64}(length(feature_ext))
-    targets = Array{Float64}(length(target_ext))
+    features = Array{Float64}(params["n_monte_carlo_runs"], length(feature_ext))
+    targets = Array{Float64}(params["n_monte_carlo_runs"], length(target_ext))
     agg_targets = Array{Float64}(length(target_ext))
 
     # priming is done in the reset function
