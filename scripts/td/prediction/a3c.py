@@ -75,9 +75,9 @@ def env_runner(env, policy, num_local_steps, summary_writer):
             if len(np.shape(terminal)) > 0:
                 # if any next state is terminal, then end the episode, bootstrap
                 # the other next states, and average their returns
-                if any(terminal):
+                if any(terminal[:-1]):
                     total_reward = np.zeros_like(reward[0])
-                    for i, t in enumerate(terminal):
+                    for i, t in enumerate(terminal[:-1]):
                         if t:
                             total_reward += reward[i]
                         else:
@@ -86,7 +86,7 @@ def env_runner(env, policy, num_local_steps, summary_writer):
                     # set values as though this was the single state case
                     # where the last state is the one actually sampled
                     state = state[-1]
-                    reward = total_reward / len(terminal)
+                    reward = total_reward / len(terminal[:-1])
                     terminal = terminal[-1]
 
                 # if no next state is terminal, then simply select the last of 
