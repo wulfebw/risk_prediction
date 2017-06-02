@@ -84,11 +84,10 @@ def env_runner(env, policy, num_local_steps, summary_writer):
                             total_reward += policy.value(state[i], *features)
                     
                     # set values as though this was the single state case
-                    # sample a random state to continue with
-                    next_state_index = np.random.randint(len(terminal))
-                    state = state[next_state_index]
+                    # where the last state is the one actually sampled
+                    state = state[-1]
                     reward = total_reward / len(terminal)
-                    terminal = terminal[next_state_index]
+                    terminal = terminal[-1]
 
                 # if no next state is terminal, then simply select the last of 
                 # each value, since that is the one that will be sampled 
