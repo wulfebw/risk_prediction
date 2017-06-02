@@ -63,7 +63,7 @@ def env_runner(env, policy, num_local_steps, summary_writer):
     last_features = policy.get_initial_features()
     length = 0
     rewards = np.zeros(5)
-
+    
     while True:
         terminal_end = False
         rollout = PartialRollout()
@@ -73,31 +73,27 @@ def env_runner(env, policy, num_local_steps, summary_writer):
             state, reward, terminal, info = env.step(None)
 
             if len(np.shape(terminal)) > 0:
-                # if any next state is terminal, then end the episode, bootstrap
-                # the other next states, and average their returns
-                if any(terminal[:-1]):
-                    total_reward = np.zeros_like(reward[0])
-                    for i, t in enumerate(terminal[:-1]):
-                        if t:
-                            total_reward += reward[i]
-                        else:
-                            total_reward += policy.value(state[i], *features)
-                    
-                    # set values as though this was the single state case
-                    # where the last state is the one actually sampled
-                    state = state[-1]
-                    reward = total_reward / len(terminal[:-1])
-                    terminal = terminal[-1]
+                reward = np.sum(reward, axis=0) / len(terminal)
+                state = state[-1]
+                terminal = terminal[-1]
+                # total_reward = np.zeros_like(reward[0])
 
-                # if no next state is terminal, then simply select the last of 
-                # each value, since that is the one that will be sampled 
-                # by the environment
-                else:
-                    state = state[-1]
-                    reward = reward[-1]
-                    terminal = terminal[-1]
+                # for i, t in enumerate(terminal[:-1]):
+                #     if t:
+                #         total_reward += reward[i]
+                #     else:
+                #         total_reward += policy.value(state[i], *features)
 
+                # if terminal[-1]:
+                #     total_reward += reward[-1]
+                #     total_reward /= len(terminal)
+                # else:
+                #     total_reward /= len(terminal[:-1])
+                #     likelihood *= 1. / len(terminal)
 
+                # reward = total_reward
+                # state = state[-1]
+                # terminal = terminal[-1]
 
             # collect the experience
             # note that the deepcopies seem to be necessary
