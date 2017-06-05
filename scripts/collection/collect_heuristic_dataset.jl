@@ -224,9 +224,16 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
     target_dim = flags["target_dim"]
     feature_timesteps = flags["feature_timesteps"]
     bootstrap_discount = flags["bootstrap_discount"]
+    hard_brake_threshold = flags["hard_brake_threshold"]
+    hard_brake_n_past_frames = flags["hard_brake_n_past_frames"]
+    ttc_threshold = flags["ttc_threshold"]
 
     feature_dim = length(ext)
-    target_ext = TargetExtractor()
+    target_ext = TargetExtractor(
+        hard_brake_threshold = hard_brake_threshold,
+        hard_brake_n_past_frames = hard_brake_n_past_frames,
+        ttc_threshold = ttc_threshold
+        )
     max_num_scenes = Int(ceil((prime_time + sampling_time) / sampling_period))
     rec = SceneRecord(max_num_scenes, sampling_period, max_num_veh)
     features = Array{Float64}(feature_dim, feature_timesteps, max_num_veh)

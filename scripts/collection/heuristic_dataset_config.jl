@@ -191,6 +191,15 @@ add_entry!(FLAGS,
     "target_dim", 5, Int64, 
     "Number of target values (e.g., p(collision).")
 add_entry!(FLAGS, 
+    "hard_brake_threshold", -3., Float64, 
+    "Accel defining hard brake")
+add_entry!(FLAGS, 
+    "hard_brake_n_past_frames", 2, Int64, 
+    "Number of consecutive frames defining hard brake")
+add_entry!(FLAGS, 
+    "ttc_threshold", 3., Float64, 
+    "Threshold defining ttc")
+add_entry!(FLAGS, 
     "chunk_dim", 1, Int64, 
     "Dimension of dataset chunking.")
 add_entry!(FLAGS, 

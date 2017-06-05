@@ -63,14 +63,37 @@ def env_runner(env, policy, num_local_steps, summary_writer):
     last_features = policy.get_initial_features()
     length = 0
     rewards = np.zeros(5)
-
+    
     while True:
         terminal_end = False
         rollout = PartialRollout()
 
-        for _ in range(num_local_steps):
+        for local_step in range(num_local_steps):
             features = policy.features(last_state, *last_features)
             state, reward, terminal, info = env.step(None)
+
+            if len(np.shape(terminal)) > 0:
+                reward = np.sum(reward, axis=0) / len(terminal)
+                state = state[-1]
+                terminal = terminal[-1]
+                # total_reward = np.zeros_like(reward[0])
+
+                # for i, t in enumerate(terminal[:-1]):
+                #     if t:
+                #         total_reward += reward[i]
+                #     else:
+                #         total_reward += policy.value(state[i], *features)
+
+                # if terminal[-1]:
+                #     total_reward += reward[-1]
+                #     total_reward /= len(terminal)
+                # else:
+                #     total_reward /= len(terminal[:-1])
+                #     likelihood *= 1. / len(terminal)
+
+                # reward = total_reward
+                # state = state[-1]
+                # terminal = terminal[-1]
 
             # collect the experience
             # note that the deepcopies seem to be necessary
@@ -138,7 +161,11 @@ class A3C(object):
             print('pi.vf.shape ', pi.vf.shape)
             print('self.r.shape ', self.r.shape)
             td_error = tf.square(pi.vf - self.r)
-            self.loss = tf.reduce_sum(self.w * tf.reduce_sum(td_error, axis=-1))
+            if config.target_loss_index is not None:
+                self.loss = tf.reduce_sum(self.w * tf.reduce_mean(
+                    td_error[:, config.target_loss_index], axis=-1))
+            else:
+                self.loss = tf.reduce_sum(self.w * tf.reduce_mean(td_error, axis=-1))
             print('self.loss.shape ', self.loss.shape)
 
             # grads
@@ -150,13 +177,18 @@ class A3C(object):
             tf.summary.scalar("model/sample_weights", self.w[0])
 
             julia_env = build_envs.get_julia_env(self.env)
-            for i, feature_name in enumerate(julia_env.obs_var_names()):
-                tf.summary.scalar("features/{}_value".format(
-                    feature_name.encode('utf-8')), 
-                    tf.reduce_mean(pi.x[:,i]))
+            if self.config.summarize_features:
+                for i, feature_name in enumerate(julia_env.obs_var_names()):
+                    tf.summary.scalar("features/{}_value".format(
+                        feature_name.encode('utf-8')), 
+                        tf.reduce_mean(pi.x[:,i]))
 
             ## target and loss summaries
+            mean_vf = tf.reduce_mean(pi.vf, axis=0)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
+            for i, target_name in enumerate(julia_env.reward_names()):
+                tf.summary.scalar("model/value_mean_{}".format(target_name), 
+                    mean_vf[i])
             bs = tf.to_float(tf.shape(pi.x)[0])
             tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_targets = tf.reduce_mean(self.r, axis=0)
@@ -185,7 +217,10 @@ class A3C(object):
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
             # each worker has a different set of adam optimizer parameters
-            opt = tf.train.AdamOptimizer(config.learning_rate)
+            if config.optimizer == 'adam':
+                opt = tf.train.AdamOptimizer(config.learning_rate)
+            elif config.optimizer == 'rmsprop':
+                opt = tf.train.RMSPropOptimizer(config.learning_rate, momentum=.9)
             self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)
             self.summary_writer = None
             self.local_steps = 0

@@ -21,7 +21,7 @@ def create_env(config):
         entry_point='envs.julia_env:JuliaEnv',
         max_episode_steps=config.max_timesteps,
         kwargs={
-            'env_id': 'RiskEnv',
+            'env_id': config.env_id.replace('-v0',''),
             'env_params': config.__dict__,
             'julia_envs_path': '../julia/JuliaEnvs.jl'
         }

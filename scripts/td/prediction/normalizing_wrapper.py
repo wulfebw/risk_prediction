@@ -31,12 +31,22 @@ class NormalizingWrapper(gym.Wrapper):
         # clip the values 
         obs = self._clip(obs)
 
+        # check if observation is actually multiple observations
+        if len(np.shape(obs)) > 1:
+            multidim = True
+        else:
+            multidim = False
+
         # update statistics
         if self.count < self.stationary_after:
             tmp_means = self.means[:]
             diff = obs - tmp_means
+            if multidim:
+                diff = diff.mean(0)
             self.means += diff / self.count
             new_diff = obs - self.means
+            if multidim:
+                new_diff = new_diff.mean(0)
             self.diff_sums += diff * new_diff
             self.stds = np.sqrt(self.diff_sums / max(1, self.count - 2))
         obs = (obs - self.means) / self.stds

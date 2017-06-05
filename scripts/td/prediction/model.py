@@ -46,6 +46,7 @@ class LSTMPredictor(object):
         lstm_c, lstm_h = lstm_state
         self.state_out = [lstm_c[:1, :], lstm_h[:1, :]]
         x = tf.reshape(lstm_outputs, [-1, size])
+        x = tf.nn.elu(linear(x, config.value_dim, "hidden_value", normalized_columns_initializer(1.0)))
         self.vf = linear(x, config.value_dim, "value", normalized_columns_initializer(1.0))
         self.var_list = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES, tf.get_variable_scope().name)
