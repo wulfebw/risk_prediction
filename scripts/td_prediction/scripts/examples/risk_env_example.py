@@ -8,20 +8,21 @@ np.set_printoptions(suppress=True, precision=5)
 import sys 
 import time 
 
-sys.path.append('..')
+sys.path.append('../')
+sys.path.append('../..')
 
 import envs.julia_env
-import configs.risk_env_config
-config = configs.risk_env_config.Config()
+from training.configs.risk_env_config import Config
 
+config = Config()
 register(
     id=config.env_id,
     entry_point='envs.julia_env:JuliaEnv',
     max_episode_steps=config.max_timesteps,
     kwargs={
-        'env_id': 'RiskEnv',
+        'env_id': 'HeuristicRiskEnv',
         'env_params': config.__dict__,
-        'julia_envs_path': '../julia/JuliaEnvs.jl'
+        'julia_envs_path': '../../julia/RiskEnvs.jl/RiskEnvs.jl'
     }
 )
 

@@ -6,14 +6,12 @@ import logging
 import sys, signal
 import time
 import os
-from a3c import A3C
-from build_envs import create_env
 import tensorflow as tf
 
-sys.path.append('..')
+sys.path.append('../../')
 
-# from configs.risk_env_config import Config
-from configs.debug_risk_env_config import Config
+import prediction.a3c
+import prediction.build_envs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -25,9 +23,32 @@ class FastSaver(tf.train.Saver):
         super(FastSaver, self).save(sess, save_path, global_step, latest_filename,
                                     meta_graph_suffix, False)
 
-def run(args, server, config):
-    env = create_env(config)
-    trainer = A3C(env, args.task, config)
+def build_config(args):
+
+    try:
+        config_path = 'configs.{}'.format(args.config)
+        config_module = __import__(config_path, fromlist=["configs"])
+    except ImportError as e:
+        print('error importing config file: {}'.format(args.config))
+        print('make sure that the file exists')
+        print('the argument should not end in \'.py\'')
+        print('but should just be the name without \'.py\'')
+        print('(though the actual file should of course have \'.py\')')
+        raise(e)
+
+    try:
+        config = config_module.Config()
+    except AttributeError as e:
+        print('invalid config file: {}'.format(args.config))
+        print('config file must have a class named \'Config\'')
+        raise(e)
+
+    return config
+
+def run(args, server):
+    config = build_config(args)
+    env = prediction.build_envs.create_env(config)
+    trainer = prediction.a3c.A3C(env, args.task, config)
 
     # Variable names that start with "local" are not saved in checkpoints.
     variables_to_save = [v for v in tf.global_variables() 
@@ -120,6 +141,8 @@ Setting up Tensorflow for data parallel work
     parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
     parser.add_argument('--log-dir', default="/tmp/risk", help='Log directory path')
     parser.add_argument('--env-id', default="RiskEnv-v0", help='Environment id')
+    parser.add_argument('-c', '--config', type=str, default='',
+                    help="config filename, without \'.py\' extension. The default behavior is to match the config file to the choosen policy")
     parser.add_argument('-r', '--remotes', default=None,
                         help='References to environments to create (e.g. -r 20), '
                              'or the address of pre-existing VNC servers and '
@@ -140,12 +163,11 @@ Setting up Tensorflow for data parallel work
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    config = Config()
 
     if args.job_name == "worker":
         server = tf.train.Server(cluster, job_name="worker", task_index=args.task,
                                  config=tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=2))
-        run(args, server, config)
+        run(args, server)
     else:
         server = tf.train.Server(cluster, job_name="ps", task_index=args.task,
                                  config=tf.ConfigProto(device_filters=["/job:ps"]))

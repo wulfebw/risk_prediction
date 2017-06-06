@@ -1,5 +1,5 @@
-include("../julia/JuliaEnvs.jl")
-using JuliaEnvs
+include("../../julia/RiskEnvs.jl/RiskEnvs.jl")
+using RiskEnvs
 
 params = Dict()
 params["num_lanes"] = 1
@@ -49,7 +49,7 @@ params["hard_brake_threshold"] = -3.090232306168
 params["hard_brake_n_past_frames"] = 1
 params["ttc_threshold"] = 3.
 
-params["viz_dir"] = "../data/viz/test/"
+params["viz_dir"] = "../../data/viz/test/"
 
 srand(2)
 env = MonteCarloRiskEnv(params)

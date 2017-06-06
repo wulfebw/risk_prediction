@@ -25,7 +25,6 @@ class LSTMPredictor(object):
             x = tf.nn.elu(linear(x, size, "{}_".format(l), 
                 normalized_columns_initializer(0.01)))
             x = tf.nn.dropout(x, config.dropout_keep_prob)
-            x = tf.contrib.layers.batch_norm(x)
         size = config.hidden_layer_sizes[-1]
         
         # introduce a "fake" batch dimension of 1 to LSTM over time dim

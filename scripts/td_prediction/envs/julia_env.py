@@ -28,7 +28,7 @@ class JuliaEnv(gym.Env):
         self.j.eval('include(\"{}\")'.format(
             os.path.join(os.path.expanduser('~/.juliarc.jl'))))
         self.j.eval('include(\"{}\")'.format(julia_envs_path))
-        self.j.using("JuliaEnvs")
+        self.j.using("RiskEnvs")
 
         # initialize environment
         self.env = self.j.make(env_id, env_params)

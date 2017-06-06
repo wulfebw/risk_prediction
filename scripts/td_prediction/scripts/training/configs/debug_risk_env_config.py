@@ -10,8 +10,8 @@ class Config(object):
         self.num_lanes = 1
         self.max_num_vehicles = 1
         self.min_num_vehicles = 1
-        self.base_bn_filepath = "../data/bayesnets/base_test.jld"
-        self.prop_bn_filepath = "../data/bayesnets/prop_test.jld"
+        self.base_bn_filepath = "../../data/bayesnets/base_test.jld"
+        self.prop_bn_filepath = "../../data/bayesnets/prop_test.jld"
         self.lon_accel_std_dev = 1.
         self.lat_accel_std_dev = 0.
         self.overall_response_time = .0

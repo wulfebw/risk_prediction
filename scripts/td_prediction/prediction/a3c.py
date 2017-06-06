@@ -2,7 +2,6 @@ from __future__ import print_function
 from collections import namedtuple
 import copy
 import logging
-from model import LSTMPredictor
 import numpy as np
 import six.moves.queue as queue
 import scipy.signal
@@ -12,7 +11,8 @@ import threading
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-import build_envs
+from . import model
+from . import build_envs
 
 def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
@@ -143,13 +143,13 @@ class A3C(object):
         worker_device = "/job:worker/task:{}/cpu:0".format(task)
         with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
             with tf.variable_scope("global"):
-                self.network = LSTMPredictor(env.observation_space.shape, config)
+                self.network = model.LSTMPredictor(env.observation_space.shape, config)
                 self.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32),
                                                    trainable=False)
 
         with tf.device(worker_device):
             with tf.variable_scope("local"):
-                self.local_network = pi = LSTMPredictor(
+                self.local_network = pi = model.LSTMPredictor(
                     env.observation_space.shape, config)
                 pi.global_step = self.global_step
 
@@ -217,10 +217,7 @@ class A3C(object):
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
             # each worker has a different set of adam optimizer parameters
-            if config.optimizer == 'adam':
-                opt = tf.train.AdamOptimizer(config.learning_rate)
-            elif config.optimizer == 'rmsprop':
-                opt = tf.train.RMSPropOptimizer(config.learning_rate, momentum=.9)
+            opt = tf.train.AdamOptimizer(config.learning_rate)
             self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)
             self.summary_writer = None
             self.local_steps = 0
