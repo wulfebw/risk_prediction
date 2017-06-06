@@ -8,8 +8,8 @@ class Config(object):
         ## generation
         self.num_lanes = 1
         self.max_num_vehicles = 100
-        self.base_bn_filepath = "../data/bayesnets/base_test.jld"
-        self.prop_bn_filepath = "../data/bayesnets/prop_test.jld"
+        self.base_bn_filepath = "../../data/bayesnets/base_test.jld"
+        self.prop_bn_filepath = "../../data/bayesnets/prop_test.jld"
         self.lon_accel_std_dev = 1.
         self.lat_accel_std_dev = .1
         self.overall_response_time = .2
@@ -60,7 +60,8 @@ class Config(object):
         self.discount = .99
         self.n_global_steps = 100000000
         self.summary_every = 11
+        self.target_loss_index = 3
 
         # monitoring
-        self.viz_dir = "../data/viz/test/"
+        self.viz_dir = "../../data/viz/test/"
         self.summarize_features = True

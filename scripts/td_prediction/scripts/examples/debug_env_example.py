@@ -1,13 +1,13 @@
 
 import sys 
-sys.path.append('..')
+sys.path.append('../../')
 
 import envs.julia_env
 
 env = envs.julia_env.JuliaEnv(
     env_id = 'DeterministicSingleStepDebugEnv', 
     env_params = {}, 
-    julia_envs_path = '../julia/JuliaEnvs.jl'
+    julia_envs_path = '../../julia/RiskEnvs.jl/RiskEnvs.jl'
 )
 
 x = env.reset()

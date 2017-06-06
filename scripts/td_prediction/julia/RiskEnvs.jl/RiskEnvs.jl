@@ -1,5 +1,5 @@
 __precompile__(true)
-module JuliaEnvs
+module RiskEnvs
 
 using AutoRisk
 using AutoViz
