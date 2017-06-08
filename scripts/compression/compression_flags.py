@@ -23,8 +23,8 @@ flags_list = [
         '../../data/summaries/test',
         """Path to directory where to save summaries."""),
     ('julia_weights_filepath',
-     '../../data/networks/test.weights',
-     """Path to file where to save julia weights."""),
+        '../../data/networks/test.weights',
+        """Path to file where to save julia weights."""),
     ('save_every',
         1000000,
         """Number of epochs between network saves."""),
@@ -79,7 +79,6 @@ flags_list = [
     ('decay_lr_ratio',
         1.,
          """Learning rate decay factor."""),
-
     ('min_lr', 
         .000005, 
         """Minimum learning rate value."""),
@@ -105,7 +104,6 @@ flags_list = [
         1e-8,
         """Minimum probability value."""),
 
-
 # dataset constants
     ('dataset_filepath',
         '../../data/datasets/risk.jld',
@@ -115,34 +113,27 @@ flags_list = [
         """Dimension of input."""),
     ('timesteps',
         1,
-        """Number of input timesteps."""
-        ),
+        """Number of input timesteps."""),
     ('output_dim',
         5,
-        """Dimension of output."""
-        ),
+        """Dimension of output."""),
     ('use_priority',
         False,
-        """Wether or not to use a prioritized dataset."""
-        ),
+        """Wether or not to use a prioritized dataset."""),
     ('priority_alpha',
         0.25,
-        """Alpha parameter for prioritization."""
-        ),
+        """Alpha parameter for prioritization."""),
     ('priority_beta',
         1.0,
-         """Beta parameter for prioritization."""
-         ),
+         """Beta parameter for prioritization."""),
     ('use_likelihood_weights',
         False,
-        """Wether or not to load likelihood ratio weights."""
-        ),
+        """Wether or not to load likelihood ratio weights."""),
 
 # bootstrapping constants
     ('bootstrap_iterations',
         10,
-        """Number of iterations of collecting a bootstrapped dataset and fitting it."""
-        ),
+        """Number of iterations of collecting a bootstrapped dataset and fitting it."""),
     ('num_proc',
         1,
         """Number of processes to use for dataset collection."""),
