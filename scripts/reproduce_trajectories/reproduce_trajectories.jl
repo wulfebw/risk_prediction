@@ -7,7 +7,7 @@ For these scripts to work the following should hold:
 =#
 using AutoRisk
 
-include("../collection/collect_heuristic_dataset.jl")
+include("../collection/collect_dataset.jl")
 
 function write_seeds_veh_indices_file(output_filepath::String, 
         seeds::Array{Int}, veh_idxs::Array{Int}, probs::Array{Float64})

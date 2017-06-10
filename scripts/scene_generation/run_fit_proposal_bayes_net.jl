@@ -1,5 +1,8 @@
+using CommandLineFlags
 using JLD
 
+include("../collection/collect_dataset.jl")
+include("../collection/dataset_config.jl")
 @everywhere include("fit_proposal_bayes_net.jl")
 
 function fit_proposal_bayes_net(

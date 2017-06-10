@@ -1,4 +1,7 @@
-
+"""
+This scripts selects same from a dataset that are associated with a likelihood
+weight that is not 1. This task is performed after dataset collection for now.
+"""
 import h5py
 import numpy as np
 

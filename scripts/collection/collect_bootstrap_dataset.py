@@ -1,14 +1,5 @@
 """
-
-# outline
-1. while loop
-2. collect dataset with julia
-    - initial collection without network
-    - subsequently with filepath to network
-    - each with output filepath for dataset
-3. train a network to convergence on that dataset
-    - load flags from run_compression.py
-    - then just do a normal tf setup where you frun fit on each dataset
+This script collects a bootstrap dataset.
 
 # flags
 - python flags

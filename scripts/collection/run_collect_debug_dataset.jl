@@ -2,7 +2,7 @@ using AutoRisk
 using CommandLineFlags
 
 push!(LOAD_PATH, ".")
-include("heuristic_dataset_config.jl")
+include("dataset_config.jl")
 
 function build_debug_collector(flags::Flags)
     # build evaluator

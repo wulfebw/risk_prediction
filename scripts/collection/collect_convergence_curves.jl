@@ -1,3 +1,6 @@
+"""
+This is a script to collect convergence curves.
+"""
 
 using PGFPlots
 using TikzPictures
@@ -5,8 +8,8 @@ using TikzPictures
 using AutoRisk
 using CommandLineFlags
 
-include("collect_heuristic_dataset.jl")
-include("heuristic_dataset_config.jl")
+include("collect_dataset.jl")
+include("dataset_config.jl")
 
 const TARGET_NAMES = [
     "Lane Change Collision",

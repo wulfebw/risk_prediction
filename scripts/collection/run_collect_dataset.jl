@@ -1,8 +1,8 @@
 using AutoRisk
 using CommandLineFlags
 
-include("collect_heuristic_dataset.jl")
-include("heuristic_dataset_config.jl")
+include("collect_dataset.jl")
+include("dataset_config.jl")
 
 function analyze_risk_dataset(output_filepath)
     dataset = h5open(output_filepath)

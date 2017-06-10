@@ -1,12 +1,8 @@
 using AutoRisk
-using CommandLineFlags
 using Discretizers
-# using DataStructures
 using DataFrames
 using PGFPlots
 
-include("../collection/collect_heuristic_dataset.jl")
-include("../collection/heuristic_dataset_config.jl")
 include("fit_bayes_net.jl")
 
 const FEATURE_NAMES = [
