@@ -80,7 +80,7 @@
 
 ## CEM Applied to Fitting a Proposal BN
 - Fitting a proposal BN requires a base BN, so first fit a BN from data using the approach described above, and then fit the proposal BN
-- Given the base BN, fit a proposal BN by running `fit_proposal_bayes_net.jl`
+- Given the base BN, fit a proposal BN by running `run_fit_proposal_bayes_net.jl`
 - Currently, this file loads settings from a dataset, this dataset should be the one used to fit the normal BN
     + This is not strictly necessary, but it is convenient because fitting a proposal BN via CEM requires running simulations, and the settings for this simulation must be defined
 - Next, certain parameters of CEM are set, and the proposal network is generated

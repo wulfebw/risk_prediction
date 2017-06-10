@@ -4,7 +4,6 @@ using DataFrames
 using Discretizers
 using Distributions
 using HDF5
-using JLD
 using PGFPlots
 
 function histogram_data(
@@ -44,7 +43,7 @@ function preprocess_features(
         features::Array{Float64}, 
         targets::Array{Float64}, 
         feature_names::Array{String};
-        max_collision_prob::Float64 = 0.1,
+        max_collision_prob::Float64 = 1.,
         min_vel::Float64 = 0.,
         max_vel::Float64 = 40.,
         max_Δvel::Float64 = 4.,
@@ -221,10 +220,10 @@ function fit_bn(
         disc_types::Dict{Symbol,DataType};
         n_bins::Dict{Symbol,Int} = Dict{Symbol,Int}(),
         edges = (
-            # :isattentive=>:foredistance, 
-            # :isattentive=>:relvelocity,
-            # :aggressiveness=>:foredistance, 
+            :isattentive=>:foredistance, 
+            :aggressiveness=>:foredistance, 
             # :aggressiveness=>:relvelocity,
+            # :isattentive=>:relvelocity,
             :foredistance=>:relvelocity,
             :forevelocity=>:relvelocity,
             :forevelocity=>:foredistance,
@@ -252,64 +251,4 @@ function fit_bn(
     disc_data = encode(data, discs)
     bn = fit(DiscreteBayesNet, disc_data, edges)
     return bn, discs
-end
-
-function fit_bn(
-        input_filepath::String, 
-        output_filepath::String,
-        viz_filepath::String;
-        debug_size::Int = 1000000,
-        n_bins::Dict{Symbol,Int} = Dict(
-            :relvelocity=>12,
-            :forevelocity=>14,
-            :foredistance=>14,
-            :vehlength=>10,
-            :vehwidth=>8,
-            :aggressiveness=>5,
-            :isattentive=>2
-        ),
-        disc_types::Dict{Symbol,DataType} = Dict(
-            :relvelocity=>LinearDiscretizer{Float64,Int},
-            :forevelocity=>LinearDiscretizer{Float64,Int},
-            :foredistance=>LinearDiscretizer{Float64,Int},
-            :vehlength=>LinearDiscretizer{Float64,Int},
-            :vehwidth=>LinearDiscretizer{Float64,Int},
-            :aggressiveness=>LinearDiscretizer{Float64,Int},
-            :isattentive=>CategoricalDiscretizer{Int,Int}
-        ),
-        rand_aggressiveness_if_unavailable::Bool = true,
-        rand_attentiveness_if_unavailable::Bool = true,
-        stationary_p_attentive::Float64 = .97,
-        edges = (
-            # :isattentive=>:foredistance, 
-            # :isattentive=>:relvelocity,
-            # :aggressiveness=>:foredistance, 
-            # :aggressiveness=>:relvelocity,
-            :foredistance=>:relvelocity,
-            :forevelocity=>:relvelocity,
-            :forevelocity=>:foredistance,
-            :vehlength=>:vehwidth,
-            :vehlength=>:foredistance
-        )
-    )
-    # load and preprocess
-    features, targets = load_dataset(input_filepath, debug_size = debug_size)
-    feature_names = load_feature_names(input_filepath)
-    features = preprocess_features(features, targets, feature_names)
-    
-    # formulate data
-    base_data = extract_base_features(features, feature_names)
-    aggressiveness_values = extract_aggressiveness(features, feature_names,
-        rand_aggressiveness_if_unavailable = rand_aggressiveness_if_unavailable)
-    base_data[:aggressiveness] = aggressiveness_values
-    is_attentive_values = extract_is_attentive(features, feature_names,
-        rand_attentiveness_if_unavailable = rand_attentiveness_if_unavailable,
-        stationary_p_attentive = stationary_p_attentive)
-    base_data[:isattentive] = is_attentive_values
-
-    # discretize and fit
-    bn, discs = fit_bn(base_data, disc_types, n_bins = n_bins, edges = edges)
-    
-    # save
-    JLD.save(output_filepath, "bn", bn, "discs", discs)
 end
