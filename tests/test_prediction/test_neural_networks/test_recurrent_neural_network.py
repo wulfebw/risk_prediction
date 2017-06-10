@@ -6,9 +6,9 @@ import sys
 import tensorflow as tf
 import unittest
 
-path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'scripts')
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
-path = os.path.join(os.path.dirname(__file__), os.pardir)
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 sys.path.append(os.path.abspath(path))
 
 from prediction.batch import dataset
@@ -41,7 +41,7 @@ class TestRecurrentNeuralNetwork(unittest.TestCase):
         flags.verbose = False
         flags.save_weights_every = 100000
         flags.snapshot_dir = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), os.pardir, 'data','snapshots','test'))
+            os.path.dirname(__file__), os.pardir, os.pardir, 'data','snapshots','test'))
 
         # each sample is a sequence of random normal values
         # if sum of inputs < 0 -> output is 0

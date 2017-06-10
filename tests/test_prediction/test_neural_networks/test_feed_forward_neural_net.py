@@ -5,9 +5,9 @@ import sys
 import tensorflow as tf
 import unittest
 
-path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'scripts')
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
-path = os.path.join(os.path.dirname(__file__), os.pardir)
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 sys.path.append(os.path.abspath(path))
 
 from prediction.batch import dataset
@@ -144,7 +144,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.l2_reg = 0.0
         flags.save_weights_every = 100000
         flags.snapshot_dir = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), os.pardir, 'data','snapshots','test'))
+            os.path.dirname(__file__), os.pardir, os.pardir, 'data','snapshots','test'))
 
         x = np.vstack(
             (np.ones((flags.batch_size // 2, flags.input_dim)), 
@@ -178,7 +178,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.verbose = False
         flags.save_weights_every = 100000
         flags.snapshot_dir = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), os.pardir, 'data','snapshots','test'))
+            os.path.dirname(__file__), os.pardir, os.pardir, 'data','snapshots','test'))
 
         x = np.random.randn(1000).reshape(-1, 1)
         y = np.ones(x.shape)

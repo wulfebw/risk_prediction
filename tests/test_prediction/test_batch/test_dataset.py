@@ -4,7 +4,9 @@ import os
 import sys
 import unittest
 
-path = os.path.join(os.path.dirname(__file__), os.pardir, 'scripts')
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'scripts')
+sys.path.append(os.path.abspath(path))
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import testing_flags

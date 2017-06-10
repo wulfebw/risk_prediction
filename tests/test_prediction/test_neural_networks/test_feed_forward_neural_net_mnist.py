@@ -8,9 +8,9 @@ import sys
 import tensorflow as tf
 import unittest
 
-path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'scripts')
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
-path = os.path.join(os.path.dirname(__file__), os.pardir)
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 sys.path.append(os.path.abspath(path))
 
 from prediction.batch import dataset

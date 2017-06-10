@@ -4,22 +4,28 @@ import os
 import sys
 import unittest
 
-path = os.path.join(os.path.dirname(__file__), os.pardir, 'scripts')
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
 
 from utils import util
 from prediction.batch import dataset_loaders
 
+
+
+DEBUG_FILEPATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 
+    'data', 'debug.h5')
+
 class TestRiskDatasetLoader(unittest.TestCase):
 
     def setUp(self):
-        url = "https://s3.us-east-2.amazonaws.com/autorisk/debug.h5"
-        input_filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'datasets', 'debug.h5'))
-        util.download_if_necessary(url, input_filepath)
+        # commenting out because the file is out of date
+        # url = "https://s3.us-east-2.amazonaws.com/autorisk/debug.h5"
+        # input_filepath = os.path.abspath(DEBUG_FILEPATH)
+        # util.download_if_necessary(url, input_filepath)
+        pass
 
     def test_risk_dataset_loader(self):
-        input_filepath = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), 'data', 'datasets', 'debug.h5'))
+        input_filepath = DEBUG_FILEPATH
         data = dataset_loaders.risk_dataset_loader(
             input_filepath, train_split=.8)
         keys = ['x_train', 'y_train', 'x_val', 'y_val']
@@ -30,8 +36,7 @@ class TestRiskDatasetLoader(unittest.TestCase):
         self.assertAlmostEqual(num_train / (num_train + num_val), .8, 2)
 
     def test_normalization(self):
-        input_filepath = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), 'data', 'datasets', 'debug.h5'))
+        input_filepath = DEBUG_FILEPATH
         data_unnorm = dataset_loaders.risk_dataset_loader(
             input_filepath, normalize=False)
         data_norm = dataset_loaders.risk_dataset_loader(
