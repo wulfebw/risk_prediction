@@ -8,7 +8,7 @@ path = os.path.join(os.path.dirname(__file__), os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
 
 import testing_flags
-import dataset
+from prediction.batch import dataset
 
 def get_debug_data(flags, train_samples=10, val_samples=5):
     data = {'x_train': np.zeros((train_samples, flags.input_dim)),

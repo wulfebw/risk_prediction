@@ -11,8 +11,8 @@ sys.path.append(os.path.abspath(path))
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
-import dataset
-import neural_networks.recurrent_neural_network as rnn
+from prediction.batch import dataset
+from prediction.neural_networks import recurrent_neural_network as rnn
 import testing_flags
 import testing_utils
 

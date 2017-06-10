@@ -13,8 +13,8 @@ sys.path.append(os.path.abspath(path))
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
-import dataset
-import neural_networks.feed_forward_neural_network as ffnn
+from prediction.batch import dataset
+from prediction.neural_networks import feed_forward_neural_network as ffnn
 import testing_flags
 import testing_utils
 

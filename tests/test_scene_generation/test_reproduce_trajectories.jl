@@ -1,7 +1,7 @@
 using HDF5
 using Base.Test
 
-include("../../scripts/scene_gen/reproduce_trajectories.jl")
+include("../../scripts/clustering/reproduce_trajectories.jl")
 
 function test_select_seeds_veh_indices()
     target_index = 5

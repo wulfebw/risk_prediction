@@ -10,11 +10,7 @@ import sys
 import sklearn.metrics
 import seaborn as sns
 
-
-path = os.path.join(os.path.dirname(__file__), os.pardir)
-sys.path.append(os.path.abspath(path))
-
-import dataset_loaders
+from . import dataset_loaders
 
 TARGET_LABELS = [
     'lane change collision',

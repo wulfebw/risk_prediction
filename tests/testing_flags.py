@@ -5,7 +5,7 @@ import sys
 path = os.path.join(os.path.dirname(__file__), os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
 
-from compression.run_compression import FLAGS
+from prediction.batch.fit_predictor import FLAGS
 
 FLAGS.snapshot_filepath = '../data/snapshots/test.weights'
 FLAGS.summary_dir = '../data/summaries'
