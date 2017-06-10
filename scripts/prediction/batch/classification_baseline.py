@@ -13,7 +13,7 @@ path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import dataset_loaders
-from compression import compression_metrics
+import prediction_metrics
 
 MODEL_TYPES = [
     'gradient_boosting',
@@ -29,7 +29,7 @@ def fit(model, data, viz_dir, name):
     model.fit(x_train, y_train)
     y_pred = model.predict(x_val)
     y_probs = model.predict_proba(x_val).reshape(len(y_pred), 5, 2)
-    compression_metrics.classification_score(y_val, y_pred, y_probs, 
+    prediction_metrics.classification_score(y_val, y_pred, y_probs, 
         np.ones(len(y_pred)), name, viz_dir)
 
 def build_model(model_type, num_targets = 1):

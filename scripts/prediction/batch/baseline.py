@@ -18,7 +18,6 @@ path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
 import dataset_loaders
-# from compression import compression_metrics
 
 MODEL_TYPES = [
     'linear_regression', 
