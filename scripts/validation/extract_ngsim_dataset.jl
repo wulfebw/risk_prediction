@@ -9,10 +9,13 @@ prime = 25 # .5 second prime to compute all features
 feature_timesteps = 20
 frameskip = 300 # /10 = seconds to skip between samples
 framecollect = 300 # /10 = seconds to collect
+frameoffset = 400 # from ends of the trajectories
 @assert frameskip >= framecollect
 @assert prime >= feature_timesteps + 2
-frameoffset = 400
-output_filepath = "../../data/datasets/ngsim_$(Int(ceil(framecollect / 10)))_sec_$(feature_timesteps)_feature_timesteps.h5"
+@assert frameoffset >= framecollect
+
+output_filename = "ngsim_$(Int(ceil(framecollect / 10)))_sec_$(feature_timesteps)_feature_timesteps.h5"
+output_filepath = joinpath("../../data/datasets/", output_filename)
 
 println("Extracting NGSIM dataset with the following settings:")
 println("prime steps: $(prime)")
@@ -36,7 +39,7 @@ dataset_filepaths = String[]
 tic()
 @parallel (+) for trajdata_index in 1 : 6
     # dataset for storing feature => target pairs
-    dataset_filepath = "../../data/datasets/may/ngsim_$(Int(ceil(framecollect / 10)))_sec_traj_$(trajdata_index).h5"
+    dataset_filepath = replace(output_filepath, ".h5", "_traj_$(trajdata_index).h5")
     push!(dataset_filepaths, dataset_filepath)
     dataset = Dataset(
             dataset_filepath,
