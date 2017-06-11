@@ -61,22 +61,41 @@ tic()
     scene = Scene(max_n_objects)
     rec = SceneRecord(prime + framecollect, 0.1, max_n_objects)
     features = zeros(length(ext), feature_timesteps, max_n_objects)
-    targets = zeros(5, max_n_objects)
-    veh_id_to_idx = Dict{Int,Int}()
+    targets = zeros(length(target_ext), max_n_objects)
     final_frame = nframes(trajdata) - frameoffset
     for initial_frame in frameoffset : frameskip : final_frame
         println("traj: $(trajdata_index) / 6\tframe $(initial_frame) / $(final_frame)")
-        # reset
-        empty!(veh_id_to_idx)
             
-        # prime
+        # get the relevant scene
         get!(scene, trajdata, initial_frame - prime)
+
+        # collect a mapping of vehicle ids to indices in the scene prior to 
+        # priming, and then intersect this with the set that are present 
+        # after priming
+        veh_id_to_idx_before = get_veh_id_to_idx(scene, Dict{Int,Int}())
+
+        # prime
         for frame in (initial_frame - prime):initial_frame
             AutomotiveDrivingModels.update!(rec, get!(scene, trajdata, frame))
         end
 
-        # collect a mapping of vehicle ids to indices in the scene
-        get_veh_id_to_idx(scene, veh_id_to_idx)
+        # collect a mapping of vehicle ids to indices in the scene after 
+        # priming
+        veh_id_to_idx_after = get_veh_id_to_idx(scene, Dict{Int,Int}())
+
+        # only want vehicles in the scene both before and after priming 
+        # this means their id must be present in both
+        # as for the index, take that of the after dictionary 
+        veh_id_to_idx = Dict{Int,Int}()
+        for (id, idx) in veh_id_to_idx_after
+            if in(id, keys(veh_id_to_idx_before))
+                veh_id_to_idx[id] = idx
+            end
+        end
+
+        # as a result of this, only a subset of the features extracted will be 
+        # valid, so to account for this need those valid idxs for use in subselect
+        valid_idxs = collect(values(veh_id_to_idx))
             
         # extract features
         pull_features!(ext, rec, roadway, models, features, feature_timesteps)
@@ -90,10 +109,13 @@ tic()
         extract_targets!(target_ext, rec, roadway, targets, veh_id_to_idx, true)
             
         # update dataset with features, targets
-        actual_num_veh = length(veh_id_to_idx)
         saveframe = trajdata_index * 100000 + initial_frame
-        update!(dataset, features[:, :, 1:actual_num_veh], 
-            targets[:, 1:actual_num_veh], saveframe)
+        # actual_num_veh = length(veh_id_to_idx)
+        # update!(dataset, features[:, :, 1:actual_num_veh], 
+        #     targets[:, 1:actual_num_veh], saveframe)
+        update!(dataset, features[:, :, valid_idxs], 
+            targets[:, valid_idxs], saveframe)
+        break
     end
     finalize!(dataset)
     0 # for @parallel purposes
