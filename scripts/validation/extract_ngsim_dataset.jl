@@ -12,6 +12,13 @@ framecollect = 300 # /10 = seconds to collect
 @assert frameskip >= framecollect
 @assert prime >= feature_timesteps + 2
 frameoffset = 400
+output_filepath = "../../data/datasets/ngsim_$(Int(ceil(framecollect / 10)))_sec_$(feature_timesteps)_feature_timesteps.h5"
+
+println("Extracting NGSIM dataset with the following settings:")
+println("prime steps: $(prime)")
+println("feature steps: $(feature_timesteps)")
+println("sampling steps: $(framecollect)")
+println("output filepath: $(output_filepath)")
 
 # feature extractor (note the lack of behavioral features)
 subexts = [
@@ -83,5 +90,9 @@ tic()
             targets[:, 1:actual_num_veh], saveframe)
     end
     finalize!(dataset)
+    0 # for @parallel purposes
 end
+
+# collect datasets into one
+aggregate_datasets(dataset_filepaths, output_filepath)
 toc()
