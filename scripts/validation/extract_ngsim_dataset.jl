@@ -5,10 +5,10 @@ using NGSIM
 
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
-prime = 8 # .5 second prime to compute all features
-feature_timesteps = 5
-frameskip = 20 # / 10 = seconds to skip between samples
-framecollect = 10 # /10 = seconds to collect
+prime = 25 # .5 second prime to compute all features
+feature_timesteps = 20
+frameskip = 300 # /10 = seconds to skip between samples
+framecollect = 300 # /10 = seconds to collect
 @assert frameskip >= framecollect
 @assert prime >= feature_timesteps + 2
 frameoffset = 400
@@ -22,6 +22,7 @@ subexts = [
         CarLidarFeatureExtractor()
     ]
 ext = MultiFeatureExtractor(subexts)
+target_ext = TargetExtractor()
 
 # extract 
 dataset_filepaths = String[]
@@ -34,10 +35,11 @@ tic()
             dataset_filepath,
             length(ext),
             feature_timesteps,
-            5,
+            length(target_ext),
             500000,
             init_file = false,
             attrs = Dict("feature_names"=>feature_names(ext), 
+                "target_names"=>feature_names(target_ext),
                 "framecollect"=>framecollect))
 
     trajdata = load_trajdata(trajdata_index)
@@ -72,7 +74,7 @@ tic()
         end
             
         # extract targets
-        extract_targets!(rec, roadway, targets, veh_id_to_idx, true)
+        extract_targets!(target_ext, rec, roadway, targets, veh_id_to_idx, true)
             
         # update dataset with features, targets
         actual_num_veh = length(veh_id_to_idx)

@@ -46,9 +46,9 @@ function preprocess_features(
         max_collision_prob::Float64 = 1.,
         min_vel::Float64 = 0.,
         max_vel::Float64 = 40.,
-        max_Δvel::Float64 = 4.,
-        min_dist::Float64 = 10.,
-        max_dist::Float64 = 100.,
+        max_Δvel::Float64 = 5.,
+        min_dist::Float64 = 7.5,
+        max_dist::Float64 = 40.,
         min_len::Float64 = 2.5,
         max_len::Float64 = 6.
     )

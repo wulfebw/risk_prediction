@@ -9,10 +9,10 @@ function fit_bn(
         viz_filepath::String;
         debug_size::Int = 1000000,
         n_bins::Dict{Symbol,Int} = Dict(
-            :relvelocity=>12,
-            :forevelocity=>14,
-            :foredistance=>14,
-            :vehlength=>10,
+            :relvelocity=>8,
+            :forevelocity=>10,
+            :foredistance=>15,
+            :vehlength=>8,
             :vehwidth=>8,
             :aggressiveness=>5,
             :isattentive=>2
@@ -64,7 +64,7 @@ function fit_bn(
 end
 
 @time fit_bn(
-    "../../data/datasets/risk.h5", 
+    "../../data/datasets/june/30_second_5_lane_heuristic.h5", 
     "../../data/bayesnets/base_test.jld",
     "../../data/bayesnets/feature_histograms.pdf"
 )
