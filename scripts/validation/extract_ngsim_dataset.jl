@@ -2,7 +2,6 @@ using AutomotiveDrivingModels
 using AutoRisk
 using NGSIM
 
-
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 prime = 25 # /10 = seconds to prime to make all features available
@@ -34,15 +33,19 @@ subexts = [
 ext = MultiFeatureExtractor(subexts)
 target_ext = TargetExtractor()
 
-# extract 
+# set the dataset names for the individual trajectories
 dataset_filepaths = String[]
-tic()
-@parallel (+) for trajdata_index in 1 : 6
-    # dataset for storing feature => target pairs
+for trajdata_index in 1:6
     dataset_filepath = replace(output_filepath, ".h5", "_traj_$(trajdata_index).h5")
     push!(dataset_filepaths, dataset_filepath)
+end
+
+tic()
+# extract 
+@parallel (+) for trajdata_index in 1:6
+    # dataset for storing feature => target pairs
     dataset = Dataset(
-            dataset_filepath,
+            dataset_filepaths[trajdata_index],
             length(ext),
             feature_timesteps,
             length(target_ext),
