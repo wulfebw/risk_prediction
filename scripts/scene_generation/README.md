@@ -18,9 +18,9 @@
 - fitting a bayes net model first requires a dataset
 - there are two options
 1. fit a BN to NGSIM data
-    - see docs/validation for how to extract a dataset from NGSIM
+    - see validation readme for how to extract a dataset from NGSIM
 2. fit a BN to heuristically generated data
-    - see docs/collection for how to collect a heuristically generated dataset
+    - see collection readme for how to collect a heuristically generated dataset
 
 ## Bayes Net Description
 - A bayesian network is a probabilistic graphical model 

@@ -5,8 +5,8 @@ using NGSIM
 
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
-prime = 25 # .5 second prime to compute all features
-feature_timesteps = 20
+prime = 25 # /10 = seconds to prime to make all features available
+feature_timesteps = 20 # number of timesteps to record features
 frameskip = 300 # /10 = seconds to skip between samples
 framecollect = 300 # /10 = seconds to collect
 frameoffset = 400 # from ends of the trajectories
