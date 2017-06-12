@@ -3,8 +3,8 @@ import gym
 import numpy as np
 
 class NormalizingWrapper(gym.Wrapper):
-    def __init__(self, env, std_bound=5, stationary_after=1e7, clip_after=1e4,
-            global_max_clip=300):
+    def __init__(self, env, std_bound=5, stationary_after=1e7, clip_after=1e5,
+            global_max_clip=200):
         super(NormalizingWrapper, self).__init__(env)
         assert len(np.shape(env.observation_space.high)) == 1, 'only single dim spaces implemented'
         self.obs_dim = len(env.observation_space.high)
@@ -59,6 +59,55 @@ class NormalizingWrapper(gym.Wrapper):
         obs, r, done, info = self.env.step(action)
         return self._normalize(obs), r, done, info
 
+class RangeNormalizingWrapper(gym.Wrapper):
+    def __init__(self, env, stationary_after=1e6, clip_after=1e5, global_max_clip=200, eps=1e-8):
+        super(RangeNormalizingWrapper, self).__init__(env)
+        assert len(np.shape(env.observation_space.high)) == 1, 'only single dim spaces implemented'
+        self.obs_dim = len(env.observation_space.high)
+        self.stationary_after = stationary_after
+        self.clip_after = clip_after
+        self.global_max_clip = global_max_clip
+        self.eps = eps
+
+        self.high = np.zeros(self.obs_dim)
+        self.low = np.zeros(self.obs_dim)
+        self.count = 0.
+
+    def _clip(self, obs):
+        if self.count > self.clip_after:
+            obs = np.clip(obs, -self.global_max_clip, self.global_max_clip)
+            obs = np.clip(obs, self.low, self.high)
+        return obs
+
+    def _normalize(self, obs):
+        self.count += 1
+
+        # clip the values 
+        obs = self._clip(obs)
+
+        # check if observation is actually multiple observations
+        if len(np.shape(obs)) > 1:
+            multidim = True
+        else:
+            multidim = False
+
+        # update statistics
+        if self.count < self.stationary_after:
+            self.high = np.max(np.vstack((self.high, obs)), axis=0)
+            self.low = np.min(np.vstack((self.low, obs)), axis=0)
+
+        means = (self.high + self.low) / 2.
+        scales = (self.high - self.low) / 2. + self.eps
+        obs = (obs - means) / scales
+        obs = np.clip(obs, -1, 1)
+        return obs
+
+    def _reset(self):
+        return self._normalize(self.env.reset())
+
+    def _step(self, action):
+        obs, r, done, info = self.env.step(action)
+        return self._normalize(obs), r, done, info
 
 if __name__ == '__main__':
 
@@ -68,7 +117,12 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     env = gym.make('CartPole-v0')
-    env = NormalizingWrapper(env)
+    wrapper_type = 'range_normalizing'
+
+    if wrapper_type == 'range_normalizing':
+        env = RangeNormalizingWrapper(env)
+    elif wrapper_type == 'normalizing':
+        env = NormalizingWrapper(env)
 
     n_steps = 50000
     means = []
@@ -78,8 +132,15 @@ if __name__ == '__main__':
         _, _, done, _ = env.step(env.action_space.sample())
         if done: 
             env.reset()
-        means.append(copy.deepcopy(env.means))
-        stds.append(copy.deepcopy(env.stds))
+        if wrapper_type == 'normalizing':
+            means.append(copy.deepcopy(env.means))
+            stds.append(copy.deepcopy(env.stds))
+        elif wrapper_type == 'range_normalizing':
+            mean = (env.high + env.low) / 2.
+            scale = (env.high - env.low) / 2.
+            means.append(copy.deepcopy(mean))
+            stds.append(copy.deepcopy(scale))
+
 
     for vals in [means, stds]:
         vals = np.array(vals)

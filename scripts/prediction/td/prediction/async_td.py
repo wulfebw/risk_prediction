@@ -202,10 +202,17 @@ class AsyncTD(object):
             bs = tf.to_float(tf.shape(pi.x)[0])
             tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_vf = tf.reduce_mean(pi.vf, axis=0)
+
+            
+            if self.config.loss_type == 'ce':
+                mean_vf = tf.nn.sigmoid(mean_vf)
+            mean_vf = tf.Print(mean_vf, [mean_vf], message='value mean: ', summarize=5)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
             for i, target_name in enumerate(julia_env.reward_names()):
                 tf.summary.scalar("model/value_mean_{}".format(target_name), 
                     mean_vf[i])
+                tf.summary.scalar("model/value_{}".format(target_name), 
+                    pi.vf[0,i])
             
 
             ## gradient and variable norm

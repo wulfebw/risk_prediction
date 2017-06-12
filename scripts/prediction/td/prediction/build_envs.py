@@ -27,7 +27,10 @@ def create_env(config):
         }
     )
     env = gym.make(config.env_id)
-    env = normalizing_wrapper.NormalizingWrapper(env)
+    if config.normalization_type == 'std':
+        env = normalizing_wrapper.NormalizingWrapper(env)
+    elif config.normalization_type == 'range':
+        env = normalizing_wrapper.RangeNormalizingWrapper(env)
     return env
 
 def get_julia_env(env):

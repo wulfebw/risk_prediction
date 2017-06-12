@@ -60,7 +60,21 @@ class Config(object):
         self.n_global_steps = 100000000
         self.summary_every = 11
         self.target_loss_index = 3
+        self.l2_reg = 0.
+        self.eps = 1e-8
+        self.loss_type = 'mse'
+
+        ## optimizers
+        self.optimizer = 'adam'
+        self.adam_beta1 = .99
+        self.adam_beta2 = .999
+        self.adam_epsilon = 1e-8
+        self.rmsprop_decay = .9
+        self.rmsprop_momentum = 0.
 
         # monitoring
-        self.viz_dir = "../../data/viz/test/"
+        self.viz_dir = "videos/"
         self.summarize_features = True
+
+        # testing
+        self.testing = False

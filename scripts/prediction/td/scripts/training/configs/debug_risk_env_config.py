@@ -60,10 +60,10 @@ class Config(object):
         # prediction
         self.hidden_layer_sizes = [128, 64]
         self.value_dim = 5
-        self.local_steps_per_update = 20
+        self.local_steps_per_update = 1
         self.grad_clip_norm = 40
-        self.learning_rate = 5e-4 / self.local_steps_per_update
-        self.dropout_keep_prob = 1.
+        self.learning_rate = 1e-3 # / self.local_steps_per_update
+        self.dropout_keep_prob = .5
         self.l2_reg = 0.
         self.target_loss_index = 3
         self.eps = 1e-8
@@ -76,14 +76,14 @@ class Config(object):
 
         ## optimizers
         self.optimizer = 'adam'
-        self.adam_beta1 = .999
+        self.adam_beta1 = .995
         self.adam_beta2 = .999
         self.adam_epsilon = 1e-8
         self.rmsprop_decay = .9
-        self.rmsprop_momentum = 0.
+        self.rmsprop_momentum = 0.99
 
         # monitoring
-        self.viz_dir = "../data/viz/test/"
+        self.viz_dir = "videos/"
         self.summarize_features = False
 
         # testing
