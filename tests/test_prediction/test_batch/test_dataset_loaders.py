@@ -6,11 +6,11 @@ import unittest
 
 path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'scripts')
 sys.path.append(os.path.abspath(path))
+path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, 'scripts', 'prediction', 'batch')
+sys.path.append(os.path.abspath(path))
 
 from utils import util
 from prediction.batch import dataset_loaders
-
-
 
 DEBUG_FILEPATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 
     'data', 'debug.h5')

@@ -20,7 +20,7 @@ class TestAsyncTD(unittest.TestCase):
         # reset graph before each test case
         tf.set_random_seed(1)
         np.random.seed(1)
-        tf.python.reset_default_graph()
+        tf.reset_default_graph()
 
     def test_prediction_single_step_hard_brake(self):
         config = TestConfig()
