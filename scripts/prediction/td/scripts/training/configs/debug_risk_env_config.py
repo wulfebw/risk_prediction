@@ -4,7 +4,7 @@ class Config(object):
     def __init__(self):
 
         # environment options
-        self.env_id = 'MonteCarloRiskEnv-v0'
+        self.env_id = 'HeuristicRiskEnv-v0'
 
         ## generation
         self.num_lanes = 1
@@ -25,7 +25,7 @@ class Config(object):
         self.sim_timesteps = 1
         self.num_veh_per_lane = 1
         self.max_timesteps = int(math.ceil(10000 / self.sim_timesteps))
-        self.hard_brake_threshold = -3.09
+        self.hard_brake_threshold = 0. # -3.09
         self.hard_brake_n_past_frames = 1
         self.ttc_threshold = 3.
 
@@ -50,7 +50,7 @@ class Config(object):
         self.extract_core = True
         self.extract_temporal = True
         self.extract_well_behaved = True
-        self.extract_neighbor = True
+        self.extract_neighbor = False
         self.extract_behavioral = False
         self.extract_neighbor_behavioral = False
         self.extract_car_lidar = True
@@ -62,17 +62,29 @@ class Config(object):
         self.value_dim = 5
         self.local_steps_per_update = 20
         self.grad_clip_norm = 40
-        self.learning_rate = 2e-3 / self.local_steps_per_update
-        self.batch_norm = True
-        self.dropout_keep_prob = .5
+        self.learning_rate = 5e-4 / self.local_steps_per_update
+        self.dropout_keep_prob = 1.
+        self.l2_reg = 0.
         self.target_loss_index = 3
+        self.eps = 1e-8
+        self.loss_type = 'mse'
         # TODO: discount factor seems that it should depend upon sim_timesteps 
         # as well 
-        self.discount = 599. / 600.
+        self.discount = 0.
         self.n_global_steps = 100000000
         self.summary_every = 11
+
+        ## optimizers
         self.optimizer = 'adam'
+        self.adam_beta1 = .999
+        self.adam_beta2 = .999
+        self.adam_epsilon = 1e-8
+        self.rmsprop_decay = .9
+        self.rmsprop_momentum = 0.
 
         # monitoring
         self.viz_dir = "../data/viz/test/"
         self.summarize_features = False
+
+        # testing
+        self.testing = False

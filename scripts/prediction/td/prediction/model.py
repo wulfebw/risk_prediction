@@ -18,13 +18,18 @@ def linear(x, size, name, initializer=None, bias_init=0):
 
 class LSTMPredictor(object):
     def __init__(self, ob_space, config):
+        self.config = config
         self.x = x = tf.placeholder(tf.float32, [None] + list(ob_space))
+        self.dropout_keep_prob_ph = tf.placeholder(tf.float32, 
+            shape=(), 
+            name='dropout_keep_prob_ph'
+        )
 
         # hidden layers before lstm
         for l, size in enumerate(config.hidden_layer_sizes):
             x = tf.nn.elu(linear(x, size, "{}_".format(l), 
                 normalized_columns_initializer(0.01)))
-            x = tf.nn.dropout(x, config.dropout_keep_prob)
+            x = tf.nn.dropout(x, self.dropout_keep_prob_ph)
         size = config.hidden_layer_sizes[-1]
         
         # introduce a "fake" batch dimension of 1 to LSTM over time dim
@@ -58,15 +63,22 @@ class LSTMPredictor(object):
         return sess.run(self.state_out, {
             self.x: [ob], 
             self.state_in[0]: c, 
-            self.state_in[1]: h
+            self.state_in[1]: h,
+            self.dropout_keep_prob_ph: 1.
         })
 
     def value(self, ob, c, h):
         sess = tf.get_default_session()
-        return sess.run(self.vf, {
+        v = sess.run(self.vf, {
             self.x: [ob], 
             self.state_in[0]: c, 
-            self.state_in[1]: h
+            self.state_in[1]: h,
+            self.dropout_keep_prob_ph: 1.
         })[0]
+        if self.config.loss_type == 'log_mse':
+            v = np.exp(v)
+        elif self.config.loss_type == 'ce':
+            v = 1 / (1 + np.exp(-v))
+        return v
 
 

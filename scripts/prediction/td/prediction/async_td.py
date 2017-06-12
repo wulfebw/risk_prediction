@@ -3,6 +3,7 @@ from collections import namedtuple
 import copy
 import logging
 import numpy as np
+np.set_printoptions(precision=6, suppress=True)
 import six.moves.queue as queue
 import scipy.signal
 import tensorflow as tf
@@ -53,7 +54,7 @@ class PartialRollout(object):
         self.terminal = terminal
         self.features += [features]
 
-def env_runner(env, policy, num_local_steps, summary_writer):
+def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
     """
     The logic of the thread runner.  In brief, it constantly keeps on running
     the policy, and as long as the rollout exceeds a certain length, the thread
@@ -62,6 +63,9 @@ def env_runner(env, policy, num_local_steps, summary_writer):
     last_state = env.reset()
     last_features = policy.get_initial_features()
     length = 0
+    total_rewards = np.zeros(5)
+    total_length = 0
+    ep_count = 0
     rewards = np.zeros(5)
     
     while True:
@@ -72,11 +76,11 @@ def env_runner(env, policy, num_local_steps, summary_writer):
             features = policy.features(last_state, *last_features)
             state, reward, terminal, info = env.step(None)
 
-            if len(np.shape(terminal)) > 0:
-                reward = np.sum(reward, axis=0) / len(terminal)
-                state = state[-1]
-                terminal = terminal[-1]
-                # total_reward = np.zeros_like(reward[0])
+            # if len(np.shape(terminal)) > 0:
+            #     reward = np.sum(reward, axis=0) / len(terminal)
+            #     state = state[-1]
+            #     terminal = terminal[-1]
+            #     # total_reward = np.zeros_like(reward[0])
 
                 # for i, t in enumerate(terminal[:-1]):
                 #     if t:
@@ -121,10 +125,19 @@ def env_runner(env, policy, num_local_steps, summary_writer):
                 'wrapper_config.TimeLimit.max_episode_steps')
             if terminal or length >= timestep_limit:
                 terminal_end = True
+                ep_count += 1
                 if length >= timestep_limit or not env.metadata.get('semantics.autoreset'):
                     last_state = env.reset()
                 last_features = policy.get_initial_features()
-                print("Episode finished. Sum of rewards: {}. Length: {}".format(rewards, length))
+                
+                total_rewards += rewards
+                total_length += length
+                avg_rewards = total_rewards / total_length
+                avg_length = total_length / ep_count
+                if verbose:
+                    print("Episode finished\tSum of rewards: {}\tLength: {}\tAverage Rewards: {}\tAverage Length: {:.2f}".format(
+                        rewards, length, avg_rewards, avg_length))
+
                 length = 0
                 rewards = 0
                 break
@@ -135,17 +148,28 @@ def env_runner(env, policy, num_local_steps, summary_writer):
         # once we have enough experience, yield it
         yield rollout
 
-class A3C(object):
+class AsyncTD(object):
     def __init__(self, env, task, config):
         self.env = env
         self.task = task
         self.config = config
-        worker_device = "/job:worker/task:{}/cpu:0".format(task)
-        with tf.device(tf.train.replica_device_setter(1, worker_device=worker_device)):
+
+
+        # when testing only on localhost, use simple worker device
+        if config.testing:
+            worker_device = "/job:localhost/replica:0/task:0/cpu:0"
+            global_device = worker_device
+        else:
+            worker_device = "/job:worker/task:{}/cpu:0".format(task)
+            global_device = tf.train.replica_device_setter(
+                1, worker_device=worker_device)
+
+        with tf.device(global_device):
             with tf.variable_scope("global"):
                 self.network = model.LSTMPredictor(env.observation_space.shape, config)
-                self.global_step = tf.get_variable("global_step", [], tf.int32, initializer=tf.constant_initializer(0, dtype=tf.int32),
-                                                   trainable=False)
+                self.global_step = tf.get_variable("global_step", [], tf.int32,
+                    initializer=tf.constant_initializer(0, dtype=tf.int32),
+                    trainable=False)
 
         with tf.device(worker_device):
             with tf.variable_scope("local"):
@@ -157,16 +181,7 @@ class A3C(object):
             self.w = tf.placeholder(tf.float32, [None], name='sample_weights')
 
             # loss of value function
-            print('self.w.shape ', self.w.shape)
-            print('pi.vf.shape ', pi.vf.shape)
-            print('self.r.shape ', self.r.shape)
-            td_error = tf.square(pi.vf - self.r)
-            if config.target_loss_index is not None:
-                self.loss = tf.reduce_sum(self.w * tf.reduce_mean(
-                    td_error[:, config.target_loss_index], axis=-1))
-            else:
-                self.loss = tf.reduce_sum(self.w * tf.reduce_mean(td_error, axis=-1))
-            print('self.loss.shape ', self.loss.shape)
+            self.loss = self._build_loss()
 
             # grads
             grads = tf.gradients(self.loss, pi.var_list)
@@ -184,20 +199,14 @@ class A3C(object):
                         tf.reduce_mean(pi.x[:,i]))
 
             ## target and loss summaries
+            bs = tf.to_float(tf.shape(pi.x)[0])
+            tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_vf = tf.reduce_mean(pi.vf, axis=0)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
             for i, target_name in enumerate(julia_env.reward_names()):
                 tf.summary.scalar("model/value_mean_{}".format(target_name), 
                     mean_vf[i])
-            bs = tf.to_float(tf.shape(pi.x)[0])
-            tf.summary.scalar("model/value_loss", self.loss / bs)
-            mean_targets = tf.reduce_mean(self.r, axis=0)
-            mean_target_td_errors = tf.reduce_mean(td_error, axis=0)
-            for i, target_name in enumerate(julia_env.reward_names()):
-                tf.summary.scalar("targets/{}_value".format(target_name), 
-                    mean_targets[i])
-                tf.summary.scalar("targets/{}_loss".format(target_name), 
-                    mean_target_td_errors[i])
+            
 
             ## gradient and variable norm
             tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
@@ -217,7 +226,21 @@ class A3C(object):
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
             # each worker has a different set of adam optimizer parameters
-            opt = tf.train.AdamOptimizer(config.learning_rate)
+            optimizers = {
+                'adam': tf.train.AdamOptimizer(
+                    config.learning_rate, 
+                    beta1=config.adam_beta1,
+                    beta2=config.adam_beta2,
+                    epsilon=config.adam_epsilon
+                ),
+                'rmsprop': tf.train.RMSPropOptimizer(
+                    config.learning_rate,
+                    decay=config.rmsprop_decay,
+                    momentum=config.rmsprop_momentum
+                ),
+            }
+
+            opt = optimizers[config.optimizer]
             self.train_op = tf.group(opt.apply_gradients(grads_and_vars), inc_step)
             self.summary_writer = None
             self.local_steps = 0
@@ -252,6 +275,7 @@ class A3C(object):
             self.w: batch.w,
             self.local_network.state_in[0]: batch.features[0],
             self.local_network.state_in[1]: batch.features[1],
+            self.local_network.dropout_keep_prob_ph: self.config.dropout_keep_prob
         }
 
         fetched = sess.run(fetches, feed_dict=feed_dict)
@@ -261,3 +285,89 @@ class A3C(object):
                 tf.Summary.FromString(fetched[0]), fetched[-1])
             self.summary_writer.flush()
         self.local_steps += 1
+
+    def _build_squared_error_loss_component(self, scores, targets, w, 
+            target_loss_index):
+        td_error = tf.square(scores - targets)
+        if target_loss_index is not None:
+            loss = tf.reduce_sum(w * tf.reduce_mean(
+                    td_error[:, target_loss_index], axis=-1))
+        else:
+            loss = tf.reduce_sum(w * tf.reduce_mean(td_error, axis=-1))
+
+        julia_env = build_envs.get_julia_env(self.env)
+        mean_targets = tf.reduce_mean(self.r, axis=0)
+        mean_target_td_errors = tf.reduce_mean(td_error, axis=0)
+        for i, target_name in enumerate(julia_env.reward_names()):
+            tf.summary.scalar("targets/{}_value".format(target_name), 
+                mean_targets[i])
+            tf.summary.scalar("targets/{}_loss".format(target_name), 
+                mean_target_td_errors[i])
+
+        return loss
+
+    def _build_cross_entropy_loss_component(self, scores, targets, w, 
+            target_loss_index):
+        if target_loss_index is not None:
+            loss = tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=scores[:, target_loss_index], 
+                labels=targets[:, target_loss_index])
+        else:
+            loss = tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=scores, labels=targets)
+
+        loss = loss * w
+
+        julia_env = build_envs.get_julia_env(self.env)
+        mean_targets = tf.reduce_mean(self.r, axis=0)
+        mean_target_ce_errors = tf.reduce_mean(loss, axis=0)
+        done = False
+        target_names = julia_env.reward_names()
+        for i, target_name in enumerate(target_names):
+            tf.summary.scalar("targets/{}_value".format(target_name), 
+                mean_targets[i])
+            if target_loss_index is not None:
+                if not done:
+                    tf.summary.scalar("targets/{}_loss".format(target_name), 
+                        mean_target_ce_errors)
+                    done = True
+            else:
+                tf.summary.scalar("targets/{}_loss".format(target_name), 
+                    mean_target_ce_errors[i])
+
+        if target_loss_index is None:
+            loss = tf.reduce_mean(loss, axis=-1)
+        loss = tf.reduce_sum(loss)
+        return loss
+
+    def _build_loss(self):
+        pi = self.local_network
+
+        # log mse
+        if self.config.loss_type == 'log_mse':
+            r = tf.log(tf.clip_by_value(self.r, self.config.eps, 1))
+            loss = self._build_squared_error_loss_component(
+                pi.vf, self.r, self.w, self.config.target_loss_index)
+            
+        # cross entropy loss
+        if self.config.loss_type == 'ce':
+            loss = self._build_cross_entropy_loss_component(
+                pi.vf, self.r, self.w, self.config.target_loss_index)
+
+        # mse / brier
+        elif self.config.loss_type == 'mse':
+            loss = self._build_squared_error_loss_component(
+                pi.vf, self.r, self.w, self.config.target_loss_index)
+
+        # l2 regularization loss
+        reg_loss = tf.contrib.layers.apply_regularization(
+            tf.contrib.layers.l2_regularizer(self.config.l2_reg),
+            tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, 
+            tf.get_variable_scope().name))
+        loss += reg_loss
+        tf.summary.scalar("model/l2_reg_loss", reg_loss)
+
+        return loss
+
+        
+        

@@ -34,11 +34,11 @@ function Base.step(env::RiskEnv)
     env.n_local_steps += 1
     simulate!(Any, env.rec, env.scene, env.roadway, env.models, env.sim_time,
         update_first_scene = false)    
+    
+    features = get_features(env)
+    targets = get_targets(env)
     done = any(env.target_ext.features .> 0)
-    return (
-        get_features(env), 
-        get_targets(env), 
-        done, 
+    return (features, targets, done,
         Dict("weight"=>get_weight(env), "seed"=>env.seed)
     )
 end

@@ -10,7 +10,7 @@ import tensorflow as tf
 
 sys.path.append('../../')
 
-import prediction.a3c
+import prediction.async_td
 import prediction.build_envs
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def build_config(args):
 def run(args, server):
     config = build_config(args)
     env = prediction.build_envs.create_env(config)
-    trainer = prediction.a3c.A3C(env, args.task, config)
+    trainer = prediction.async_td.AsyncTD(env, args.task, config)
 
     # Variable names that start with "local" are not saved in checkpoints.
     variables_to_save = [v for v in tf.global_variables() 

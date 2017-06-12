@@ -17,7 +17,7 @@ class Config(object):
         self.err_p_a_to_i = .01
         self.err_p_i_to_a = .3
         self.prime_timesteps = 0
-        self.sim_timesteps = 5
+        self.sim_timesteps = 1
         self.num_veh_per_lane = 20
         self.max_timesteps = 50
         self.hard_brake_threshold = -3.
@@ -55,7 +55,6 @@ class Config(object):
         self.local_steps_per_update = 500
         self.grad_clip_norm = 40
         self.learning_rate = 1e-4
-        self.batch_norm = True
         self.dropout_keep_prob = .5
         self.discount = .99
         self.n_global_steps = 100000000
