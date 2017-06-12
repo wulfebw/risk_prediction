@@ -373,6 +373,16 @@ def compare_feature_histograms(datasets, feature_labels, dataset_labels,
     total_kls = np.zeros(len(datasets) - 1)
     kls_list = [[] for _ in range(len(datasets) - 1)]
     for fidx in range(num_features):
+
+        # if 'turn_rate' in feature_labels[fidx]:
+        #     vals = datasets[1]['x_train'][:,fidx]
+        #     print(np.max(vals))
+        #     print(np.min(vals))
+        #     plt.hist(vals, 50)
+        #     plt.show()
+        # else:
+        #     continue
+
         # track first hist b/c this is what the rest are compared with
         first_hist = None 
         for didx, dataset in enumerate(datasets):
@@ -511,10 +521,13 @@ if __name__ == '__main__':
 
     ## the dataset filepaths to visualize along with labels
     input_filepaths = [
-        # '../../data/datasets/may/proposal_five_sec_bn.h5',
-        '../../data/datasets/may/ngsim_5_sec_10_timestep.h5',
-        '../../data/datasets/may/bn_aug_5_sec_10_timestep.h5',
-        '../../data/datasets/may/additional_5_sec_10_timestep.h5',
+        # '../../data/datasets/may/proposal_bn_prop_5_sec_10_timestep.h5',
+        '../../data/datasets/may/heursitic_single_lane_5_sec_10_timestep.h5',
+        # '../../data/datasets/may/bn_heursitc_high_prime_5_sec_10_timestep_2.h5',
+        # '../../data/datasets/may/bn_heursitc_low_prime_5_sec_10_timestep_2.h5',
+        # '../../data/datasets/may/bn_aug_5_sec_10_timestep_2.h5',
+        # '../../data/datasets/may/bn_aug_5_sec_10_timestep_3.h5',
+        # '../../data/datasets/may/additional_5_sec_10_timestep.h5',
         # '../../data/datasets/may/safe_additional_5_sec_10_timestep.h5'
         # '../../data/datasets/april/risk_20_sec_large.h5',
         # '../../data/datasets/april/risk_mc_1.h5',
@@ -528,10 +541,12 @@ if __name__ == '__main__':
         # '../../data/datasets/march/risk_20_sec_3_timesteps.h5',
     ]
     dataset_labels = [
-        # 'proposal_five_seconds',
-        'ngsim_5_second',
-        'bayesnet',
-        'heuristic',
+        'prop',
+        # 'heuristic',
+        # 'high_prime',
+        # 'low_prime',
+        # 'bayesnet3',
+        # 'heuristic',
         # 'safe_heuristic'
         # '20_sec_large'
         # 'mc_1',
@@ -577,9 +592,9 @@ if __name__ == '__main__':
     # visualize_features(datasets[-1], feature_labels, dataset_labels[-1],
     #     output_directory)
 
-    # compare histogram of features across datasets
-    compare_feature_histograms(datasets, feature_labels, dataset_labels,
-        output_directory)
+    # # compare histogram of features across datasets
+    # compare_feature_histograms(datasets, feature_labels, dataset_labels,
+    #     output_directory)
 
     # ## analyze behavior
     # for i, dataset in enumerate(datasets):
