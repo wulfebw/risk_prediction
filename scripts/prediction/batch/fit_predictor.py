@@ -9,10 +9,10 @@ import tensorflow as tf
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
-from . import prediction_metrics
-from . import prediction_flags
-from . import dataset
-from . import dataset_loaders
+import prediction_metrics
+import prediction_flags
+import dataset
+import dataset_loaders
 import neural_networks.feed_forward_neural_network as ffnn
 import neural_networks.recurrent_neural_network as rnn
 import neural_networks.utils

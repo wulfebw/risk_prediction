@@ -90,7 +90,7 @@ class NeuralNetwork(object):
             # update hyperparameters
             self.update()
 
-    def predict(self, inputs):
+    def predict(self, inputs, predict_labels=False):
         """
         Description:
             - Predict output values for a set of inputs.
@@ -104,6 +104,8 @@ class NeuralNetwork(object):
         """
         num_samples = len(inputs)
         outputs = np.empty((num_samples, self.flags.output_dim))
+        if predict_labels:
+            pred_y = np.empty((num_samples, self.flags.output_dim))
         num_batches = int(num_samples / self.flags.batch_size)
         if num_batches * self.flags.batch_size < num_samples:
             num_batches += 1
@@ -114,7 +116,12 @@ class NeuralNetwork(object):
             outputs[s:e, :] = self.session.run(
                 self._probs, feed_dict={self._input_ph: inputs[s:e],
                 self._dropout_ph: 1.})
-        return outputs
+            if predict_labels:
+                pred_y[s:e, :] = np.argmax(outputs[s:e, :], axis=-1).reshape(-1,1)
+        if predict_labels:
+            return pred_y, outputs
+        else:
+            return outputs
 
     def save(self, epoch):
         """
@@ -407,7 +414,7 @@ class ClassificationFeedForwardNeuralNetwork(FeedForwardNeuralNetwork):
         super(ClassificationFeedForwardNeuralNetwork, self).__init__(
             session, flags)
 
-    def predict(self, inputs):
+    def predict(self, inputs, predict_labels=True):
         """
         Description:
             - Predict output values for a set of inputs.
