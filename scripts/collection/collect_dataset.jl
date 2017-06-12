@@ -234,6 +234,8 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
         hard_brake_n_past_frames = hard_brake_n_past_frames,
         ttc_threshold = ttc_threshold
         )
+    # must prime for at least feature_timesteps
+    @assert feature_timesteps < prime_time / sampling_period
     max_num_scenes = Int(ceil((prime_time + sampling_time) / sampling_period))
     rec = SceneRecord(max_num_scenes, sampling_period, max_num_veh)
     features = Array{Float64}(feature_dim, feature_timesteps, max_num_veh)

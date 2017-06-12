@@ -42,11 +42,14 @@ function fit_bn(
         )
     )
     # load and preprocess
+    println("loading data...")
     features, targets = load_dataset(input_filepath, debug_size = debug_size)
     feature_names = load_feature_names(input_filepath)
+    println("preprocessing data...")
     features = preprocess_features(features, targets, feature_names)
     
     # formulate data
+    println("formating data...")
     base_data = extract_base_features(features, feature_names)
     aggressiveness_values = extract_aggressiveness(features, feature_names,
         rand_aggressiveness_if_unavailable = rand_aggressiveness_if_unavailable)
@@ -57,14 +60,16 @@ function fit_bn(
     base_data[:isattentive] = is_attentive_values
 
     # discretize and fit
+    println("training bayesnet...")
     bn, discs = fit_bn(base_data, disc_types, n_bins = n_bins, edges = edges)
     
     # save
+    println("saving...")
     JLD.save(output_filepath, "bn", bn, "discs", discs)
 end
 
 @time fit_bn(
-    "../../data/datasets/june/30_second_5_lane_heuristic.h5", 
+    "../../data/datasets/june/ngsim_1_sec_1_feature_timesteps.h5", 
     "../../data/bayesnets/base_test.jld",
     "../../data/bayesnets/feature_histograms.pdf"
 )
