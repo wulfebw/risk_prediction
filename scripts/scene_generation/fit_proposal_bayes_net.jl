@@ -169,6 +169,7 @@ function run_cem(
 
         # select samples with weight > weight_threshold
         valid_indices = find(weights .< weight_threshold)
+        invalid_indices = find(weights .> weight_threshold)
 
         # update and visualize stats
         update_stats(stats, data[:, valid_indices], 
@@ -176,8 +177,8 @@ function run_cem(
         @spawnat 1 visualize_stats(stats, iter)
                 
         # select top fraction of population
+        weights[invalid_indices] = 0.
         indices = reverse(sortperm(utilities .* weights))
-        indices = indices[valid_indices]
         indices = indices[1:top_k]
 
         # add that set to the prior, and remove older samples

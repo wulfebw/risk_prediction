@@ -13,11 +13,11 @@ function fit_proposal_bayes_net(
         prime_time::Union{Float64,Void} = nothing,
         sampling_time::Union{Float64,Void} = nothing,
         num_lanes::Union{Int,Void} = nothing,
-        y::Float64 = .25,
+        y::Float64 = .5,
         max_iters::Int = 100,
         N::Int = 1000,
         top_k_fraction::Float64 = .5,
-        target_indices::Vector{Int} = [2,3,4,5],
+        target_indices::Vector{Int} = [4],
         n_prior_samples::Int = 10000
     )
     # load flags from an existing dataset
@@ -69,8 +69,9 @@ function fit_proposal_bayes_net(
 end
 
 @time fit_proposal_bayes_net(
-    "../../data/datasets/risk.h5",
+    "../../data/datasets/june/bn_30_second_1_lane_heuristic.h5",
     base_bn_filepath = "../../data/bayesnets/base_test.jld",
-    sampling_time = 5.,
+    sampling_time = 1.,
+    prime_time = .1,
     num_lanes = 1
 )
