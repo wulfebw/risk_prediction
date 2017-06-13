@@ -148,6 +148,9 @@ add_entry!(FLAGS,
     "feature_timesteps", 1, Int64, 
     "Number of timesteps over which to collect features.")
 add_entry!(FLAGS, 
+    "feature_step_size", 1, Int64, 
+    "Number of timesteps between consecutive collected features.")
+add_entry!(FLAGS, 
     "bootstrap_discount", 1., Float64, 
     "Discount applied to predicted values (note that this is not the ideal way for this to work).")
 

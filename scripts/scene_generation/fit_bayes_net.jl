@@ -44,14 +44,21 @@ function preprocess_features(
         targets::Array{Float64}, 
         feature_names::Array{String};
         max_collision_prob::Float64 = 1.,
-        min_vel::Float64 = 0.,
+        min_vel::Float64 = 3.,
         max_vel::Float64 = 40.,
-        max_Δvel::Float64 = 5.,
-        min_dist::Float64 = 7.5,
+        max_Δvel::Float64 = 6.,
+        min_dist::Float64 = 4.,
         max_dist::Float64 = 40.,
         min_len::Float64 = 2.5,
         max_len::Float64 = 6.
     )
+    # first check that the necessary features are in the dataset
+    msg = "Dataset missing required feature"
+    @assert in("velocity", feature_names) msg
+    @assert in("fore_m_vel", feature_names) msg
+    @assert in("fore_m_dist", feature_names) msg
+    @assert in("length", feature_names) msg
+
     # threshold based on collision probability if applicable
     valid_target_inds = find(sum(targets[1:3,:], 1) / 3. .<= max_collision_prob)
 

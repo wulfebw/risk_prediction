@@ -223,6 +223,7 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
     max_num_veh = flags["max_num_vehicles"]
     target_dim = flags["target_dim"]
     feature_timesteps = flags["feature_timesteps"]
+    feature_step_size = flags["feature_step_size"]
     bootstrap_discount = flags["bootstrap_discount"]
     hard_brake_threshold = flags["hard_brake_threshold"]
     hard_brake_n_past_frames = flags["hard_brake_n_past_frames"]
@@ -235,7 +236,12 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
         ttc_threshold = ttc_threshold
         )
     # must prime for at least feature_timesteps
-    @assert feature_timesteps < prime_time / sampling_period
+    # @assert feature_timesteps < prime_time / sampling_period
+    if feature_timesteps < (prime_time / sampling_period)
+        println("feature_timesteps < (prime_time / sampling_period)")
+        println("you should be sure that you intended to do this")
+        println("because some features may be invalid in this case")
+    end
     max_num_scenes = Int(ceil((prime_time + sampling_time) / sampling_period))
     rec = SceneRecord(max_num_scenes, sampling_period, max_num_veh)
     features = Array{Float64}(feature_dim, feature_timesteps, max_num_veh)
@@ -254,7 +260,8 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
             agg_targets, prediction_model, discount = bootstrap_discount)
     else
         eval = MonteCarloEvaluator(ext, target_ext, num_runs, prime_time, sampling_time,
-            veh_idx_can_change, rec, features, targets, agg_targets)
+            veh_idx_can_change, rec, features, targets, agg_targets, 
+            feature_step_size = feature_step_size)
     end
 end
 

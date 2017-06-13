@@ -14,11 +14,11 @@ function fit_proposal_bayes_net(
         sampling_time::Union{Float64,Void} = nothing,
         num_lanes::Union{Int,Void} = nothing,
         y::Float64 = .5,
-        max_iters::Int = 100,
-        N::Int = 1000,
+        max_iters::Int = 500,
+        N::Int = 100,
         top_k_fraction::Float64 = .5,
         target_indices::Vector{Int} = [4],
-        n_prior_samples::Int = 10000
+        n_prior_samples::Int = 5000
     )
     # load flags from an existing dataset
     # these flags should be the ones ultimately used in evaluation
@@ -44,6 +44,7 @@ function fit_proposal_bayes_net(
         flags["prop_bn_filepath"] = flags["base_bn_filepath"]
     else
         flags["prop_bn_filepath"] = base_bn_filepath
+        flags["base_bn_filepath"] = base_bn_filepath
     end
     # determines for how many runs each scene should be simulated
     flags["num_monte_carlo_runs"] = num_monte_carlo_runs
@@ -69,9 +70,9 @@ function fit_proposal_bayes_net(
 end
 
 @time fit_proposal_bayes_net(
-    "../../data/datasets/june/bn_30_second_1_lane_heuristic.h5",
-    base_bn_filepath = "../../data/bayesnets/base_test.jld",
-    sampling_time = 1.,
-    prime_time = .1,
+    "../../data/datasets/june/heuristic_bn_training.h5",
+    base_bn_filepath = "../../data/bayesnets/heuristic_1_lane.jld",
+    sampling_time = 5.,
+    prime_time = .0,
     num_lanes = 1
 )

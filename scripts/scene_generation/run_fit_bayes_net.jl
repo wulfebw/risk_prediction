@@ -69,7 +69,7 @@ function fit_bn(
 end
 
 @time fit_bn(
-    "../../data/datasets/june/ngsim_1_sec_1_feature_timesteps.h5", 
-    "../../data/bayesnets/base_test.jld",
+    "../../data/datasets/june/heuristic_bn_training.h5", 
+    "../../data/bayesnets/heuristic_1_lane.jld",
     "../../data/bayesnets/feature_histograms.pdf"
 )
