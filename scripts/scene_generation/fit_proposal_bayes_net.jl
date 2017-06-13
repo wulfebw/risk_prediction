@@ -128,11 +128,12 @@ function run_cem(
     prior = decode(prior, discs)
     disc_types = get_disc_types(col.gen.base_assignment_sampler)
     
-    # allocate containers
+    # allocate containers / single compute values
     stats = DefaultDict{String, Vector{Float64}}(Vector{Float64})
     utilities = SharedArray(Float64, N)
     weights = SharedArray(Float64, N)
     data = SharedArray(Float64, n_vars, N)
+    ext_feature_names = feature_names(col.eval.ext)
     for iter in 1:max_iters
         println("\niter: $(iter) / $(max_iters) \ty_hat: $(mean(utilities))")
         
@@ -164,7 +165,7 @@ function run_cem(
 
             data[:, scene_idx] = extract_bn_features(
                 col.eval.features[:,end,:], 
-                feature_names(col.eval.ext), 
+                ext_feature_names, 
                 proposal_vehicle_index)
         end
 
