@@ -111,7 +111,8 @@ function run_cem(
         top_k_fraction::Float64 = .5, 
         target_indices::Vector{Int} = [1,2,3,4,5],
         n_prior_samples::Int = 10000,
-        weight_threshold::Float64 = 1.
+        weight_threshold::Float64 = 1.,
+        output_filepath::String = "../../data/bayesnets/prop_test.jld"
     )
     # initialize
     col = cols[1]
@@ -191,6 +192,9 @@ function run_cem(
             col.gen.prop_bn = prop_bn
             col.gen.prop_assignment_sampler = AssignmentSampler(discs)
         end
+
+        # save checkpoint
+        JLD.save(output_filepath, "bn", prop_bn, "discs", discs)
 
         # check if the target probability has been sufficiently optimized
         if mean(utilities) > y

@@ -27,6 +27,7 @@ function fit_proposal_bayes_net(
     fixup_types!(flags)
     # only collect a single timestep
     flags["feature_timesteps"] = 1
+    flags["feature_step_size"] = 1
     # ensure joint generator
     flags["generator_type"] = "joint"
     # changing prime time may be reasonable because want to generate scenes 
@@ -48,7 +49,16 @@ function fit_proposal_bayes_net(
     end
     # determines for how many runs each scene should be simulated
     flags["num_monte_carlo_runs"] = num_monte_carlo_runs
+
+    # only extract necessary features
+    flags["extract_core"] = true
+    flags["extract_temporal"] = false
     flags["extract_behavioral"] = true
+    flags["extract_well_behaved"] = false
+    flags["extract_neighbor"] = true
+    flags["extract_neighbor_behavioral"] = false
+    flags["extract_car_lidar"] = false
+    flags["extract_road_lidar"] = false
 
     # debug options mostly
     if num_lanes != nothing
@@ -63,7 +73,8 @@ function fit_proposal_bayes_net(
         N = N, 
         top_k_fraction = top_k_fraction, 
         target_indices = target_indices,
-        n_prior_samples = n_prior_samples
+        n_prior_samples = n_prior_samples,
+        output_filepath = output_filepath
     )
     col = cols[1]
     JLD.save(output_filepath, "bn", col.gen.prop_bn, "discs", discs)
@@ -74,5 +85,10 @@ end
     base_bn_filepath = "../../data/bayesnets/heuristic_1_lane.jld",
     sampling_time = 5.,
     prime_time = .0,
-    num_lanes = 1
+    num_lanes = 1,
+    N = 2000,
+    max_iters = 100,
+    num_monte_carlo_runs = 2,
+    top_k_fraction = .5,
+    n_prior_samples = 50000
 )

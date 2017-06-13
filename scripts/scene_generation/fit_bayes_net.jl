@@ -182,13 +182,19 @@ end
 function get_discretizers(
         data::DataFrame,
         disc_types::Dict{Symbol,DataType};
-        discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks()
+        discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks(),
+        max_data_size::Int = 10000
     )
     discs = Dict{Symbol, LinCatDiscretizer}()
 
     for var in names(data)
         if disc_types[var] == LinearDiscretizer{Float64,Int}
-            discs[var] = LinearDiscretizer(binedges(discalg, data[var]))
+            # compute bins using only a subset of the data because it the 
+            # bayesian blocks algorithm doesn't seem to scale that well
+            data_size = length(data[var])
+            data_size = min(data_size, max_data_size)
+            discs[var] = LinearDiscretizer(
+                binedges(discalg, data[var][1:data_size]))
         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             # assumes integer valued
             discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
