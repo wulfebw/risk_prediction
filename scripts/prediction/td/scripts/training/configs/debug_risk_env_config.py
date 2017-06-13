@@ -73,6 +73,7 @@ class Config(object):
         self.discount = 0.
         self.n_global_steps = 100000000
         self.summary_every = 11
+        self.normalization_type = 'range'
 
         ## optimizers
         self.optimizer = 'adam'

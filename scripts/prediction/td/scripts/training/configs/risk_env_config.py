@@ -9,7 +9,7 @@ class Config(object):
         self.num_lanes = 1
         self.max_num_vehicles = 100
         self.base_bn_filepath = "../../data/bayesnets/base_test.jld"
-        self.prop_bn_filepath = "../../data/bayesnets/prop_test.jld"
+        self.prop_bn_filepath = "../../data/bayesnets/base_test.jld"
         self.lon_accel_std_dev = 1.
         self.lat_accel_std_dev = .1
         self.overall_response_time = .2
@@ -19,7 +19,7 @@ class Config(object):
         self.prime_timesteps = 0
         self.sim_timesteps = 1
         self.num_veh_per_lane = 20
-        self.max_timesteps = 50
+        self.max_timesteps = 10000
         self.hard_brake_threshold = -3.
         self.hard_brake_n_past_frames = 2
         self.ttc_threshold = 3.
@@ -42,7 +42,7 @@ class Config(object):
         self.extract_core = True
         self.extract_temporal = True
         self.extract_well_behaved = True
-        self.extract_neighbor = True
+        self.extract_neighbor = False
         self.extract_behavioral = False
         self.extract_neighbor_behavioral = False
         self.extract_car_lidar = True
@@ -50,19 +50,20 @@ class Config(object):
         self.extract_road_lidar = False
 
         # prediction
-        self.hidden_layer_sizes = [256, 128, 64]
+        self.hidden_layer_sizes = [128, 64]
         self.value_dim = 5
-        self.local_steps_per_update = 500
+        self.local_steps_per_update = 20
         self.grad_clip_norm = 40
         self.learning_rate = 1e-4
-        self.dropout_keep_prob = .5
-        self.discount = .99
+        self.dropout_keep_prob = .95
+        self.discount = 299. / 300
         self.n_global_steps = 100000000
         self.summary_every = 11
         self.target_loss_index = 3
-        self.l2_reg = 0.
+        self.l2_reg = 1e-5
         self.eps = 1e-8
         self.loss_type = 'mse'
+        self.normalization_type = 'range'
 
         ## optimizers
         self.optimizer = 'adam'
