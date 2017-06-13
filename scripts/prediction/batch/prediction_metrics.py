@@ -221,7 +221,12 @@ def evaluate_classification_fit(network, data, flags):
     classification_score(y, y_pred, y_probs, lw, 'validation', flags.viz_dir)
 
     # print out indices that performed poorly
-    report_poorly_performing_classification_indices(network, data, flags)
+    try:
+        report_poorly_performing_classification_indices(network, data, flags)
+    except Exception as e:
+        print('exception raised in reporting indices')
+        print('was this dataset subselected?')
+        raise(e)
 
 def evaluate_regression_fit(network, data, flags):
     # final train loss
@@ -260,7 +265,7 @@ def evaluate_fit(network, data, flags):
         compare_classification_output(network, data, flags)
         evaluate_classification_fit(network, data, flags)
     else:
-        # evaluate_regression_fit(network, data, flags)
+        evaluate_regression_fit(network, data, flags)
         data['y_train'] = np.round(data['y_train']).astype(int)
         data['y_val'] = np.round(data['y_val']).astype(int)
         evaluate_classification_fit(network, data, flags)
