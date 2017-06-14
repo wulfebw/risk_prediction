@@ -5,6 +5,30 @@ include("../collection/collect_dataset.jl")
 include("../collection/dataset_config.jl")
 @everywhere include("fit_proposal_bayes_net.jl")
 
+FLAGS = Flags()
+add_entry!(FLAGS, "dataset_filepath", "../../data/datasets/risk.h5", 
+    String, "training data filepath")
+add_entry!(FLAGS, "base_bn_filepath", "../../data/bayesnets/base_test.jld", 
+    String, "base bayesnet against which to fit")
+add_entry!(FLAGS, "output_filepath", "../../data/bayesnets/prop_test.jld", 
+    String, "where to save the prop bayes net")
+add_entry!(FLAGS, "num_monte_carlo_runs", 1, 
+    Int, "num times to run each scene")
+add_entry!(FLAGS, "prime_time", 0., 
+    Float64, "how long to prime a scene")
+add_entry!(FLAGS, "sampling_time", 5.,
+    Float64, "how long to simulate a scene and track collisions")
+add_entry!(FLAGS, "cem_end_prob", .5,
+    Float64, "event probability at which to stop training")
+add_entry!(FLAGS, "max_iters", 500,
+    Int, "max iterations of cem")
+add_entry!(FLAGS, "population_size", 200,
+    Int, "pop size of cem")
+add_entry!(FLAGS, "top_k_fraction", .5,
+    Float64, "fraction of pop to keep (.2 means keep top 20%)")
+add_entry!(FLAGS, "n_prior_samples", 50000,
+    Int, "number of samples from the base bn to start with")
+
 function fit_proposal_bayes_net(
         dataset_filepath::String;
         base_bn_filepath::Union{String,Void} = nothing,
@@ -15,7 +39,7 @@ function fit_proposal_bayes_net(
         num_lanes::Union{Int,Void} = nothing,
         y::Float64 = .5,
         max_iters::Int = 500,
-        N::Int = 100,
+        N::Int = 1000,
         top_k_fraction::Float64 = .5,
         target_indices::Vector{Int} = [4],
         n_prior_samples::Int = 5000
@@ -80,15 +104,18 @@ function fit_proposal_bayes_net(
     JLD.save(output_filepath, "bn", col.gen.prop_bn, "discs", discs)
 end
 
+parse_flags!(FLAGS, ARGS)
+
 @time fit_proposal_bayes_net(
-    "../../data/datasets/june/heuristic_bn_training.h5",
-    base_bn_filepath = "../../data/bayesnets/heuristic_1_lane.jld",
-    sampling_time = 5.,
-    prime_time = .0,
-    num_lanes = 1,
-    N = 2000,
-    max_iters = 100,
-    num_monte_carlo_runs = 2,
-    top_k_fraction = .5,
-    n_prior_samples = 50000
+    FLAGS["dataset_filepath"],
+    base_bn_filepath = FLAGS["base_bn_filepath"],
+    output_filepath = FLAGS["output_filepath"],
+    num_monte_carlo_runs = FLAGS["num_monte_carlo_runs"],
+    prime_time = FLAGS["prime_time"],
+    sampling_time = FLAGS["sampling_time"],
+    y = FLAGS["cem_end_prob"],
+    N = FLAGS["population_size"],
+    max_iters = FLAGS["max_iters"],
+    top_k_fraction = FLAGS["top_k_fraction"],
+    n_prior_samples = FLAGS["n_prior_samples"]
 )
