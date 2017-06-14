@@ -25,7 +25,6 @@ def process_rollout(rollout, gamma):
     batch_si = np.asarray(rollout.states)
     rewards = np.asarray(rollout.rewards)
     batch_w = np.asarray(rollout.weights)
-
     rewards_plus_v = np.asarray(rollout.rewards + [rollout.r])
     batch_r = discount(rewards_plus_v, gamma)[:-1]
 
@@ -54,7 +53,7 @@ class PartialRollout(object):
         self.terminal = terminal
         self.features += [features]
 
-def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
+def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, verbose=True):
     """
     The logic of the thread runner.  In brief, it constantly keeps on running
     the policy, and as long as the rollout exceeds a certain length, the thread
@@ -63,14 +62,14 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
     last_state = env.reset()
     last_features = policy.get_initial_features()
     length = 0
-    total_rewards = np.zeros(5)
+    total_rewards = np.zeros(value_dim)
     total_length = 0
     ep_count = 0
-    rewards = np.zeros(5)
+    rewards = np.zeros(value_dim)
     
     while True:
         terminal_end = False
-        rollout = PartialRollout()
+        rollout = PartialRollout(value_dim=value_dim)
 
         for local_step in range(num_local_steps):
             features = policy.features(last_state, *last_features)
@@ -110,6 +109,8 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
             
             length += 1
             rewards += reward
+            
+            
 
             last_state = state
             last_features = features
@@ -139,7 +140,7 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
                         rewards, length, avg_rewards, avg_length))
 
                 length = 0
-                rewards = 0
+                rewards = np.zeros(value_dim)
                 break
 
         if not terminal_end:
@@ -153,7 +154,6 @@ class AsyncTD(object):
         self.env = env
         self.task = task
         self.config = config
-
 
         # when testing only on localhost, use simple worker device
         if config.testing:
@@ -192,7 +192,7 @@ class AsyncTD(object):
             tf.summary.scalar("model/sample_weights", self.w[0])
 
             julia_env = build_envs.get_julia_env(self.env)
-            if self.config.summarize_features:
+            if self.config.summarize_features and julia_env is not None:
                 for i, feature_name in enumerate(julia_env.obs_var_names()):
                     tf.summary.scalar("features/{}_value".format(
                         feature_name.encode('utf-8')), 
@@ -208,7 +208,12 @@ class AsyncTD(object):
                 mean_vf = tf.nn.sigmoid(mean_vf)
             mean_vf = tf.Print(mean_vf, [mean_vf], message='value mean: ', summarize=5)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
-            for i, target_name in enumerate(julia_env.reward_names()):
+            if julia_env is not None:
+                target_names = julia_env.reward_names()
+            else:
+                target_names = range(self.config.value_dim)
+
+            for i, target_name in enumerate(target_names):
                 tf.summary.scalar("model/value_mean_{}".format(target_name), 
                     mean_vf[i])
                 tf.summary.scalar("model/value_{}".format(target_name), 
@@ -232,16 +237,26 @@ class AsyncTD(object):
             grads_and_vars = list(zip(grads, self.network.var_list))
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
+            # learning rate decay
+            learning_rate = tf.train.polynomial_decay(
+                self.config.learning_rate, 
+                self.global_step,
+                end_learning_rate=config.learning_rate_end,
+                decay_steps=self.config.n_global_steps,
+                power=2
+            )
+            tf.summary.scalar("model/learning_rate", learning_rate)
+
             # each worker has a different set of adam optimizer parameters
             optimizers = {
                 'adam': tf.train.AdamOptimizer(
-                    config.learning_rate, 
+                    learning_rate, 
                     beta1=config.adam_beta1,
                     beta2=config.adam_beta2,
                     epsilon=config.adam_epsilon
                 ),
                 'rmsprop': tf.train.RMSPropOptimizer(
-                    config.learning_rate,
+                    learning_rate,
                     decay=config.rmsprop_decay,
                     momentum=config.rmsprop_momentum
                 ),
@@ -254,7 +269,8 @@ class AsyncTD(object):
 
     def start(self, sess, summary_writer):
         self.rollout_provider = env_runner(self.env, self.local_network, 
-            self.config.local_steps_per_update, summary_writer)
+            self.config.local_steps_per_update, summary_writer, 
+            value_dim=self.config.value_dim)
         self.summary_writer = summary_writer
 
     def process(self, sess):
@@ -293,6 +309,44 @@ class AsyncTD(object):
             self.summary_writer.flush()
         self.local_steps += 1
 
+    def validate(self, sess, data):
+        """
+        Validates the model against a given dataset.
+        """
+        if data is None:
+            return
+
+        # copy weights from shared to local
+        sess.run(self.sync)  
+
+        # compute the average rmse between the predicted and true values 
+        # across the validation dataset
+        total_loss = 0
+        total_w = 0
+        # predict value for each sample in the dataset
+        # x.shape = (n_timesteps, input_dim)
+        # y.shape = (value_dim,)
+        # w is a scalar giving the weight of this sample
+        for (x, y, w) in data.next_batch():
+            # compute the value
+            v = self.local_network.value(x, 
+                self.local_network.state_init[0],
+                self.local_network.state_init[1],
+                sequence=True)
+
+            total_loss += np.mean(np.sqrt((v - y) ** 2)) * w
+            total_w += w
+        avg_loss = total_loss / total_w
+        print('Average Validation Loss: {}'.format(avg_loss))
+
+        # write the summary
+        summary = tf.Summary(value=[
+            tf.Summary.Value(tag="val/validation_loss", simple_value=avg_loss), 
+        ])
+        self.summary_writer.add_summary(summary)
+        self.summary_writer.flush()
+        return avg_loss
+
     def _build_squared_error_loss_component(self, scores, targets, w, 
             target_loss_index):
         td_error = tf.square(scores - targets)
@@ -302,10 +356,17 @@ class AsyncTD(object):
         else:
             loss = tf.reduce_sum(w * tf.reduce_mean(td_error, axis=-1))
 
-        julia_env = build_envs.get_julia_env(self.env)
+        
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_td_errors = tf.reduce_mean(td_error, axis=0)
-        for i, target_name in enumerate(julia_env.reward_names()):
+
+        julia_env = build_envs.get_julia_env(self.env)
+        if julia_env is not None:
+            target_names = julia_env.reward_names()
+        else:
+            target_names = range(self.config.value_dim)
+
+        for i, target_name in enumerate(target_names):
             tf.summary.scalar("targets/{}_value".format(target_name), 
                 mean_targets[i])
             tf.summary.scalar("targets/{}_loss".format(target_name), 
@@ -325,11 +386,14 @@ class AsyncTD(object):
 
         loss = loss * w
 
-        julia_env = build_envs.get_julia_env(self.env)
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_ce_errors = tf.reduce_mean(loss, axis=0)
         done = False
-        target_names = julia_env.reward_names()
+        julia_env = build_envs.get_julia_env(self.env)
+        if julia_env is not None:
+            target_names = julia_env.reward_names()
+        else:
+            target_names = range(self.config.value_dim)
         for i, target_name in enumerate(target_names):
             tf.summary.scalar("targets/{}_value".format(target_name), 
                 mean_targets[i])

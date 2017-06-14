@@ -1,4 +1,5 @@
 
+import gym
 import numpy as np
 import os
 import sys
@@ -12,7 +13,9 @@ sys.path.append(os.path.abspath(path))
 
 from prediction import async_td
 from prediction import build_envs
+from prediction import validation
 from test_config import TestConfig
+from envs import debug_envs
 
 class TestAsyncTD(unittest.TestCase):
 
@@ -90,6 +93,60 @@ class TestAsyncTD(unittest.TestCase):
                 value = trainer.network.value(test_state, c, h)
                 print(value)
             # self.assertTrue(value[3] > .5 and value[3] < .6)
+
+    def test_validate(self):
+        # config
+        config = TestConfig()
+        config.n_global_steps = 5000
+        config.env_id = 'SeqSumDebugEnv-v0'
+        config.discount = 1.
+        config.value_dim = 1
+        self.adam_beta1 = .99
+        config.local_steps_per_update = 100000
+        config.hidden_layer_sizes = [128]
+        config.learning_rate = 5e-4
+        config.learning_rate_end = 5e-6
+        config.loss_type = 'mse'
+        config.target_loss_index = None
+
+        # build env
+        env = gym.make(config.env_id)
+
+        # build validation set
+        # in this case just sequences of either 1s or 0s (const per sequence)
+        # e.g.,
+        # horizon = 4, and seeing 1s: [1 1 1 1] 
+        # then after seeing [1 1], should predict a value from this point of 2
+        # because that is the amount of reward expect to accrue in the future
+        horizon = 4
+        n_samples = 2
+        n_timesteps = 2 # predict after seeing this many timesteps
+        input_dim = 1
+        # half ones and half neg ones
+        x = np.ones((n_samples, n_timesteps, input_dim))
+        x[int(n_samples / 2):] = -1
+        # expect value to be how many timesteps have left * -1 or 1
+        y = x[:,0,:] * (horizon - n_timesteps + 1)
+        w = np.ones(n_samples)
+        dataset = validation.Dataset(x, y, w)
+
+        # run it
+        summary_writer = tf.summary.FileWriter('/tmp/test')
+        avg_loss = -1
+        with tf.Session() as sess:
+            trainer = async_td.AsyncTD(env, 0, config)
+            sess.run(tf.global_variables_initializer())
+            sess.run(trainer.sync)
+            trainer.start(sess, summary_writer)
+            global_step = sess.run(trainer.global_step)
+            while global_step < config.n_global_steps:
+                trainer.process(sess)
+                if global_step % 10 == 0:
+                    avg_loss = trainer.validate(sess, dataset)
+                global_step = sess.run(trainer.global_step)
+
+        self.assertTrue(avg_loss < .1)
+                
             
 
 if __name__ == '__main__':

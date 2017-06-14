@@ -36,5 +36,7 @@ def create_env(config):
 def get_julia_env(env):
     julia_env = env
     while type(julia_env) != envs.julia_env.JuliaEnv:
+        if not hasattr(julia_env, 'env'):
+            return None
         julia_env = julia_env.env
     return julia_env

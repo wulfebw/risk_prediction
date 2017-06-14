@@ -64,7 +64,7 @@ class TestAsyncTD(unittest.TestCase):
                     val_loss, val_vf = fetched
                     return val_loss, val_vf
 
-            n_epochs = 100
+            n_epochs = 10
             n_train = int(n_samples * .8)
             n_val = n_samples - n_train
             verbose = False

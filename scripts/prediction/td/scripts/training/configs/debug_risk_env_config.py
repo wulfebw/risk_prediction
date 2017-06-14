@@ -63,6 +63,7 @@ class Config(object):
         self.local_steps_per_update = 1
         self.grad_clip_norm = 40
         self.learning_rate = 1e-3 # / self.local_steps_per_update
+        self.learning_rate_end = 1e-5
         self.dropout_keep_prob = .5
         self.l2_reg = 0.
         self.target_loss_index = 3

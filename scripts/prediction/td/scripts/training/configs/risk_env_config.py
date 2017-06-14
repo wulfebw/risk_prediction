@@ -55,6 +55,7 @@ class Config(object):
         self.local_steps_per_update = 20
         self.grad_clip_norm = 40
         self.learning_rate = 1e-4
+        self.learning_rate_end = 1e-5
         self.dropout_keep_prob = .95
         self.discount = 299. / 300
         self.n_global_steps = 100000000

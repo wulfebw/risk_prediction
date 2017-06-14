@@ -24,7 +24,6 @@ class FastSaver(tf.train.Saver):
                                     meta_graph_suffix, False)
 
 def build_config(args):
-
     try:
         config_path = 'configs.{}'.format(args.config)
         config_module = __import__(config_path, fromlist=["configs"])
