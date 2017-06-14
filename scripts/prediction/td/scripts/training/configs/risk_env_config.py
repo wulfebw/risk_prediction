@@ -9,7 +9,7 @@ class Config(object):
         self.num_lanes = 1
         self.max_num_vehicles = 100
         self.base_bn_filepath = "../../data/bayesnets/base_test.jld"
-        self.prop_bn_filepath = "../../data/bayesnets/base_test.jld"
+        self.prop_bn_filepath = "../../data/bayesnets/prop_test.jld"
         self.lon_accel_std_dev = 1.
         self.lat_accel_std_dev = .1
         self.overall_response_time = .2
@@ -57,7 +57,7 @@ class Config(object):
         self.learning_rate = 1e-4
         self.learning_rate_end = 1e-5
         self.dropout_keep_prob = .95
-        self.discount = 299. / 300
+        self.discount = 49. / 50
         self.n_global_steps = 100000000
         self.summary_every = 11
         self.target_loss_index = 3
@@ -79,8 +79,9 @@ class Config(object):
         self.summarize_features = True
 
         # validation
-        self.validation_dataset_filepath = ''
+        self.validation_dataset_filepath = '/Users/wulfebw/Dropbox/School/Stanford/research/risk/risk_prediction/data/datasets/june/prop_heuristic_5_sec_1_lane.h5'
         self.validate_every = 1000
+        self.max_validation_samples = 100
 
         # testing
         self.testing = False

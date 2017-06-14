@@ -1,4 +1,5 @@
 
+import h5py
 import os
 
 from . import build_envs

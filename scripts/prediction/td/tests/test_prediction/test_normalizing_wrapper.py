@@ -51,5 +51,14 @@ class TestRangeNormalizingWrapper(unittest.TestCase):
         expected = [[-1, 1],[1,-1]]
         np.testing.assert_array_almost_equal(actual, expected)
 
+        shape = (4,3,2)
+        x = np.ones(shape)
+        x[:,:,1] = -3
+        actual = wrapper._normalize(x)
+        expected = np.ones(shape)
+        expected[:,:,0] = 1
+        expected[:,:,1] = -1
+        np.testing.assert_array_almost_equal(actual, expected)
+
 if __name__ == '__main__':
     unittest.main()

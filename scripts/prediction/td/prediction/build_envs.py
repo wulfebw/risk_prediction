@@ -52,9 +52,9 @@ def get_target_names(env, target_dim):
     else:
         return julia_env.reward_names()
 
-def get_obs_var_names(env, obs_dim):
+def get_obs_var_names(env):
     julia_env = get_julia_subenv(env)
     if julia_env is None:
-        return range(obs_dim)
+        return range(env.observation_space.shape[0])
     else:
         return julia_env.obs_var_names()

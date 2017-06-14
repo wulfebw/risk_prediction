@@ -90,7 +90,8 @@ class Config(object):
 
         # validation
         self.validation_dataset_filepath = ''
-        self.validate_every = 100
+        self.validate_every = 1000
+        self.max_validation_samples = 100
 
         # testing
         self.testing = False

@@ -321,7 +321,7 @@ class AsyncTD(object):
                 self.local_network.state_init[1],
                 sequence=True)
 
-            total_loss += np.mean(np.sqrt((v - y) ** 2), axis=0) * w
+            total_loss += np.sqrt((v - y) ** 2) * w
             total_w += w
             total_v += v * w
         avg_loss = total_loss / total_w
@@ -338,8 +338,9 @@ class AsyncTD(object):
             summaries += [tf.Summary.Value(
                 tag="val/{}_value".format(target_name), 
                 simple_value=avg_value[i])]
+        summary = tf.Summary(value=summaries)
 
-        self.summary_writer.add_summary(summaries)
+        self.summary_writer.add_summary(summary)
         self.summary_writer.flush()
         return avg_loss
 

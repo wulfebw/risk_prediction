@@ -237,7 +237,7 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
         )
     # must prime for at least feature_timesteps
     # @assert feature_timesteps < prime_time / sampling_period
-    if feature_timesteps < (prime_time / sampling_period)
+    if feature_timesteps > (prime_time / sampling_period)
         println("feature_timesteps < (prime_time / sampling_period)")
         println("you should be sure that you intended to do this")
         println("because some features may be invalid in this case")
