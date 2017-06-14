@@ -15,4 +15,7 @@
 | lane_offset_left_is_avail | 1 if lane offset left is not available                            | bool      |
 | length                    | vehicle length                                                    | m         |
 | lidar_1                   | a particular lidar beam distance                                  | m         |
-|                           |                                                                   |           |
+| time_to_collision         |                                                                   |           |
+| rear_l_vel                |                                                                   |           |
+| rangerate_lidar_6         |                                                                   |           |
+| lidar_3                   |                                                                   |           |
