@@ -68,7 +68,17 @@ function render(env::RiskEnv; zoom::Float64 = 7.5)
     return frame
 end
 
-observation_space_spec(env::RiskEnv) = length(env.feature_ext), "Box"
+function observation_space_spec(env::RiskEnv)
+    info = feature_info(env.feature_ext)
+    feature_dim = length(env.feature_ext)
+    high = zeros(feature_dim)
+    low = zeros(feature_dim)
+    for (i, name) in enumerate(feature_names(env.feature_ext))
+        high[i] = info[name]["high"]
+        low[i] = info[name]["low"]
+    end
+    return (feature_dim,), "Box", Dict("high"=>high, "low"=>low)
+end
 action_space_spec(env::RiskEnv) = (0,), "None"
 
 obs_var_names(env::RiskEnv) = feature_names(env.feature_ext)

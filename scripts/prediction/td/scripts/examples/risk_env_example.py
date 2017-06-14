@@ -15,6 +15,7 @@ import envs.julia_env
 from training.configs.risk_env_config import Config
 
 config = Config()
+config.max_timesteps = 10
 register(
     id=config.env_id,
     entry_point='envs.julia_env:JuliaEnv',

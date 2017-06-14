@@ -190,40 +190,26 @@ class AsyncTD(object):
             ## input summaries
             tf.summary.histogram("model/sample_weights", self.w[0])
             tf.summary.scalar("model/sample_weights", self.w[0])
-
-            julia_env = build_envs.get_julia_env(self.env)
-            if self.config.summarize_features and julia_env is not None:
-                for i, feature_name in enumerate(julia_env.obs_var_names()):
+            if self.config.summarize_features:
+                for i, feature_name in enumerate(build_envs.get_obs_var_names(env)):
                     tf.summary.scalar("features/{}_value".format(
                         feature_name.encode('utf-8')), 
                         tf.reduce_mean(pi.x[:,i]))
-
             ## target and loss summaries
             bs = tf.to_float(tf.shape(pi.x)[0])
             tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_vf = tf.reduce_mean(pi.vf, axis=0)
-
-            
             if self.config.loss_type == 'ce':
                 mean_vf = tf.nn.sigmoid(mean_vf)
-            mean_vf = tf.Print(mean_vf, [mean_vf], message='value mean: ', summarize=5)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
-            if julia_env is not None:
-                target_names = julia_env.reward_names()
-            else:
-                target_names = range(self.config.value_dim)
-
-            for i, target_name in enumerate(target_names):
+            for i, target_name in enumerate(
+                    build_envs.get_target_names(env, self.config.value_dim)):
                 tf.summary.scalar("model/value_mean_{}".format(target_name), 
                     mean_vf[i])
                 tf.summary.scalar("model/value_{}".format(target_name), 
                     pi.vf[0,i])
-            
-
-            ## gradient and variable norm
             tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
             tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
-
             # merge the summaries
             self.summary_op = tf.summary.merge_all()
 
@@ -323,6 +309,7 @@ class AsyncTD(object):
         # across the validation dataset
         total_loss = 0
         total_w = 0
+        total_v = 0
         # predict value for each sample in the dataset
         # x.shape = (n_timesteps, input_dim)
         # y.shape = (value_dim,)
@@ -334,16 +321,25 @@ class AsyncTD(object):
                 self.local_network.state_init[1],
                 sequence=True)
 
-            total_loss += np.mean(np.sqrt((v - y) ** 2)) * w
+            total_loss += np.mean(np.sqrt((v - y) ** 2), axis=0) * w
             total_w += w
+            total_v += v * w
         avg_loss = total_loss / total_w
+        avg_value = total_v / total_w
         print('Average Validation Loss: {}'.format(avg_loss))
 
         # write the summary
-        summary = tf.Summary(value=[
-            tf.Summary.Value(tag="val/validation_loss", simple_value=avg_loss), 
-        ])
-        self.summary_writer.add_summary(summary)
+        summaries = []
+        for (i, target_name) in enumerate(
+                build_envs.get_target_names(self.env, self.config.value_dim)):
+            summaries += [tf.Summary.Value(
+                tag="val/{}_validation_loss".format(target_name), 
+                simple_value=avg_loss[i])]
+            summaries += [tf.Summary.Value(
+                tag="val/{}_value".format(target_name), 
+                simple_value=avg_value[i])]
+
+        self.summary_writer.add_summary(summaries)
         self.summary_writer.flush()
         return avg_loss
 
@@ -356,17 +352,11 @@ class AsyncTD(object):
         else:
             loss = tf.reduce_sum(w * tf.reduce_mean(td_error, axis=-1))
 
-        
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_td_errors = tf.reduce_mean(td_error, axis=0)
 
-        julia_env = build_envs.get_julia_env(self.env)
-        if julia_env is not None:
-            target_names = julia_env.reward_names()
-        else:
-            target_names = range(self.config.value_dim)
-
-        for i, target_name in enumerate(target_names):
+        for i, target_name in enumerate(
+                build_envs.get_target_names(self.env, np.shape(targets)[-1])):
             tf.summary.scalar("targets/{}_value".format(target_name), 
                 mean_targets[i])
             tf.summary.scalar("targets/{}_loss".format(target_name), 
@@ -389,12 +379,8 @@ class AsyncTD(object):
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_ce_errors = tf.reduce_mean(loss, axis=0)
         done = False
-        julia_env = build_envs.get_julia_env(self.env)
-        if julia_env is not None:
-            target_names = julia_env.reward_names()
-        else:
-            target_names = range(self.config.value_dim)
-        for i, target_name in enumerate(target_names):
+        for i, target_name in enumerate(
+                build_envs.get_target_names(self.env, np.shape(targets)[-1])):
             tf.summary.scalar("targets/{}_value".format(target_name), 
                 mean_targets[i])
             if target_loss_index is not None:

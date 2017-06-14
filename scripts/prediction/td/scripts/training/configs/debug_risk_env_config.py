@@ -88,5 +88,9 @@ class Config(object):
         self.viz_dir = "videos/"
         self.summarize_features = False
 
+        # validation
+        self.validation_dataset_filepath = ''
+        self.validate_every = 100
+
         # testing
         self.testing = False

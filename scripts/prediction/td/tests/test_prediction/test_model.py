@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(path))
 from prediction import model
 from test_config import TestConfig
 
-class TestAsyncTD(unittest.TestCase):
+class TestLSTMPredictor(unittest.TestCase):
 
     def setUp(self):
         # reset graph before each test case
