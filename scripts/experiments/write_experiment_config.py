@@ -40,7 +40,7 @@ def write_collection(config):
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '20')                             #
+    config.set(s, 'col/num_scenarios', '10')                             #
     config.set(s, 'col/num_monte_carlo_runs', '1')
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -71,10 +71,11 @@ def write_generation(config):
     config.set(s, 'prop/prime_time', '0.')
     config.set(s, 'prop/sampling_time', '5.')
     config.set(s, 'prop/cem_end_prob', '.25')
-    config.set(s, 'prop/max_iters', '1')                                #
-    config.set(s, 'prop/population_size', '20')                         #
+    config.set(s, 'prop/max_iters', '1')                               #
+    config.set(s, 'prop/population_size', '20')                        #
     config.set(s, 'prop/top_k_fraction', '.5')
     config.set(s, 'prop/n_prior_samples', '50000')
+    config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
 
     # generation of validation / training data
     config.set(s, 'gen/output_filepath', '%(expdir)s/data/prediction_data.h5')
@@ -97,7 +98,7 @@ def write_generation(config):
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '1')                               #
+    config.set(s, 'gen/num_scenarios', '2')                               #
     config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')

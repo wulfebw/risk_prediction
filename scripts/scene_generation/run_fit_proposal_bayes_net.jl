@@ -12,6 +12,8 @@ add_entry!(FLAGS, "base_bn_filepath", "../../data/bayesnets/base_test.jld",
     String, "base bayesnet against which to fit")
 add_entry!(FLAGS, "output_filepath", "../../data/bayesnets/prop_test.jld", 
     String, "where to save the prop bayes net")
+add_entry!(FLAGS, "viz_dir", "../../data/bayesnets/viz", 
+    String, "where to save viz files")
 add_entry!(FLAGS, "num_monte_carlo_runs", 1, 
     Int, "num times to run each scene")
 add_entry!(FLAGS, "prime_time", 0., 
@@ -33,6 +35,7 @@ function fit_proposal_bayes_net(
         dataset_filepath::String;
         base_bn_filepath::Union{String,Void} = nothing,
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
+        viz_dir::String = "../../data/bayesnets/viz",
         num_monte_carlo_runs::Int = 1,
         prime_time::Union{Float64,Void} = nothing,
         sampling_time::Union{Float64,Void} = nothing,
@@ -98,7 +101,8 @@ function fit_proposal_bayes_net(
         top_k_fraction = top_k_fraction, 
         target_indices = target_indices,
         n_prior_samples = n_prior_samples,
-        output_filepath = output_filepath
+        output_filepath = output_filepath,
+        viz_dir = viz_dir
     )
     col = cols[1]
     JLD.save(output_filepath, "bn", col.gen.prop_bn, "discs", discs)
@@ -110,6 +114,7 @@ parse_flags!(FLAGS, ARGS)
     FLAGS["dataset_filepath"],
     base_bn_filepath = FLAGS["base_bn_filepath"],
     output_filepath = FLAGS["output_filepath"],
+    viz_dir = FLAGS["viz_dir"],
     num_monte_carlo_runs = FLAGS["num_monte_carlo_runs"],
     prime_time = FLAGS["prime_time"],
     sampling_time = FLAGS["sampling_time"],

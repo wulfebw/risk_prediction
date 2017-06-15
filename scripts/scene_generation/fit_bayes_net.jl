@@ -230,6 +230,25 @@ end
 
 function fit_bn(
         data::DataFrame,
+        discs::Dict{Symbol, LinCatDiscretizer},
+        edges = (
+            :isattentive=>:foredistance, 
+            :aggressiveness=>:foredistance, 
+            # :aggressiveness=>:relvelocity,
+            # :isattentive=>:relvelocity,
+            :foredistance=>:relvelocity,
+            :forevelocity=>:relvelocity,
+            :forevelocity=>:foredistance,
+            :vehlength=>:vehwidth
+        )
+    )
+    disc_data = encode(data, discs)
+    bn = fit(DiscreteBayesNet, disc_data, edges)
+    return bn
+end
+
+function fit_bn(
+        data::DataFrame,
         disc_types::Dict{Symbol,DataType};
         n_bins::Dict{Symbol,Int} = Dict{Symbol,Int}(),
         edges = (
@@ -261,7 +280,7 @@ function fit_bn(
     end
     
     # encode and fit a discrete bayes net
-    disc_data = encode(data, discs)
-    bn = fit(DiscreteBayesNet, disc_data, edges)
+    bn = fit_bn(data, discs, edges)
+
     return bn, discs
 end

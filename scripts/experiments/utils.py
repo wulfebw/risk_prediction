@@ -51,8 +51,9 @@ class Timer(object):
 
 def run_cmd(cmd, logfilepath, cmd_dir='.', dry_run=False):
     print('-' * 50) 
+    print('{}running cmd: {}\n{}'.format(bcolors.BOLD, bcolors.ENDC, cmd))
     cmd_str = '\n'.join(cmd.split('--'))
-    print('{}running cmd: {}\n{}'.format(bcolors.BOLD, bcolors.ENDC, cmd_str))
+    print('{}arguments: {}\n{}'.format(bcolors.BOLD, bcolors.ENDC, cmd_str))
     print('\nlogging output to: {}'.format(logfilepath))
     if not dry_run:
         with ChangeDir(cmd_dir) as cd, Timer() as t:

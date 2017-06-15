@@ -14,6 +14,7 @@ def run_setup(config):
     maybe_mkdir(expdir)
     maybe_mkdir(os.path.join(expdir, 'log'))
     maybe_mkdir(os.path.join(expdir, 'data'))
+    maybe_mkdir(os.path.join(expdir, 'viz'))
 
 # collection
 def run_ngsim_collection(config):
