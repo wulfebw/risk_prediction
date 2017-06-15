@@ -67,6 +67,10 @@ def fit_proposal_bayes_net(config):
 def generate_prediction_data(config):
     s = 'generation'
     cmd = 'julia -p {} run_collect_dataset.jl '.format(config.get(s, 'nprocs'))
+    cmd += '--base_bn_filepath {} '.format(
+        config.get(s, 'base_bn_filepath'))
+    cmd += '--prop_bn_filepath {} '.format(
+        config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='gen/')
     cmd_dir = os.path.join(ROOTDIR, 'collection')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
@@ -75,8 +79,8 @@ def run_generation(config):
     s = 'generation'
     print_intro(s)
 
-    # fit_bayes_net(config)
-    # fit_proposal_bayes_net(config)
+    fit_bayes_net(config)
+    fit_proposal_bayes_net(config)
     generate_prediction_data(config)
 
 # prediction
@@ -98,7 +102,7 @@ def run_prediction(config):
 
 def run_experiment(config):
     run_setup(config)
-    # run_collection(config)
+    run_collection(config)
     run_generation(config)
     run_prediction(config)
 
