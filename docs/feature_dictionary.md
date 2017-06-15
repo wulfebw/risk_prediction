@@ -15,7 +15,7 @@
 | lane_offset_left_is_avail | 1 if lane offset left is not available                            | bool      |
 | length                    | vehicle length                                                    | m         |
 | lidar_1                   | a particular lidar beam distance                                  | m         |
-| time_to_collision         |                                                                   |           |
-| rear_l_vel                |                                                                   |           |
-| rangerate_lidar_6         |                                                                   |           |
-| lidar_3                   |                                                                   |           |
+| time_to_collision         | time until a collision occurs if no acceleration occurs           | s         |
+| rear_l_vel                | velocity of the rear left neighbor in the scene, if one exists    | m/s       |
+| rangerate_lidar_6         | the rate of change of lidar number 6 (specifies which beam)       | m/s       |
+| lidar_3                   | the distance to some object of lidar number 3                     | m         |
