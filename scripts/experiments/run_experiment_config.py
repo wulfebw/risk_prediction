@@ -3,10 +3,12 @@ import configparser
 import os
 import subprocess
 
-from utils import maybe_mkdir, build_cmd, run_cmd, Timer, print_intro
+from utils import maybe_mkdir, build_cmd, run_cmd, print_intro
 
 ROOTDIR = os.path.abspath(os.path.join('../'))
 
+
+# setup
 def run_setup(config):
     expdir = config.defaults().get('expdir')
     maybe_mkdir(expdir)
@@ -20,11 +22,11 @@ def run_ngsim_collection(config):
 def run_heuristic_collection(config):
     s = 'collection'
     cmd = 'julia -p {} '.format(config.get(s, 'nprocs'))
-    cmd += ' {} '.format(os.path.join(
-        ROOTDIR, 'collection/run_collect_dataset.jl'))
+    cmd += 'run_collect_dataset.jl '
     cmd += build_cmd(config.items(s), prefix='col/')
-    with Timer() as t:
-        run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
+    cmd_dir = os.path.join(ROOTDIR, 'collection')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
     
 def run_collection(config):
     s = 'collection'
@@ -39,20 +41,18 @@ def run_collection(config):
 # generation
 def fit_bayes_net(config):
     s = 'generation' 
-    cmd = 'julia {} '.format(os.path.join(
-        ROOTDIR, 'scene_generation/run_fit_bayes_net.jl'))
+    cmd = 'julia run_fit_bayes_net.jl '
     cmd += '--input_filepath {} '.format(
         config.get('collection', 'col/output_filepath'))
     cmd += '--output_filepath {} '.format(
         config.get(s, 'base_bn_filepath'))
-    with Timer() as t:
-        run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
+    cmd_dir = os.path.join(ROOTDIR, 'scene_generation')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+            dry_run=config.dry_run)
 
 def fit_proposal_bayes_net(config):
     s = 'generation'
-    cmd = 'julia -p {} '.format(config.get(s, 'nprocs'))
-    cmd += '{} '.format(os.path.join(
-        ROOTDIR, 'scene_generation/run_fit_proposal_bayes_net.jl'))
+    cmd = 'julia -p {} run_fit_proposal_bayes_net.jl '.format(config.get(s, 'nprocs'))
     cmd += '--dataset_filepath {} '.format(
         config.get('collection', 'col/output_filepath'))
     cmd += '--base_bn_filepath {} '.format(
@@ -60,16 +60,16 @@ def fit_proposal_bayes_net(config):
     cmd += '--output_filepath {} '.format(
         config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='prop/')
-    run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
+    cmd_dir = os.path.join(ROOTDIR, 'scene_generation')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
 
 def generate_prediction_data(config):
     s = 'generation'
-    cmd = 'julia -p {} '.format(config.get(s, 'nprocs'))
-    cmd += '{} '.format(os.path.join(
-        ROOTDIR, 'collection/run_collect_dataset.jl'))
+    cmd = 'julia -p {} run_collect_dataset.jl '.format(config.get(s, 'nprocs'))
     cmd += build_cmd(config.items(s), prefix='gen/')
-    with Timer() as t:
-        run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
+    cmd_dir = os.path.join(ROOTDIR, 'collection')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
 
 def run_generation(config):
     s = 'generation'
@@ -97,11 +97,10 @@ def run_prediction(config):
         run_async_prediction(config)
 
 def run_experiment(config):
-    with Timer() as t:
-        run_setup(config)
-        run_collection(config)
-        run_generation(config)
-        run_prediction(config)
+    run_setup(config)
+    run_collection(config)
+    run_generation(config)
+    run_prediction(config)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='parses the config filepath')
