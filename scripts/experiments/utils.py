@@ -18,14 +18,15 @@ def build_cmd(key_val_iter, prefix=''):
             cmd += ' --{} {}'.format(k.replace(prefix,''), v)
     return cmd
 
-def run_cmd(cmd, logfilepath):
+def run_cmd(cmd, logfilepath, dry_run=False):
     print('-' * 50) 
     cmd_str = '\n'.join(cmd.split('--'))
     print('running cmd:\n{}'.format(cmd_str))
     print('\nlogging output to: {}'.format(logfilepath))
     print('-' * 50) 
-    log = open(logfilepath, 'a')
-    subprocess.call(cmd, shell=True, stdout=log, stderr=log)
+    if not dry_run:
+        log = open(logfilepath, 'a')
+        subprocess.call(cmd, shell=True, stdout=log, stderr=log)
 
 class Timer:    
     def __enter__(self):

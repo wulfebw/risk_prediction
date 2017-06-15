@@ -22,7 +22,7 @@ def write_collection(config):
     config.set(s, 'data_source', 'heuristic')
 
     # common
-    config.set(s, 'output_filepath', '%(expdir)s/data/bn_train_data.h5')
+    config.set(s, 'col/output_filepath', '%(expdir)s/data/bn_train_data.h5')
 
     ## feature extraction
     config.set(s, 'col/feature_timesteps', '1')

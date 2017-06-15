@@ -20,11 +20,11 @@ def run_ngsim_collection(config):
 def run_heuristic_collection(config):
     s = 'collection'
     cmd = 'julia -p {} '.format(config.get(s, 'nprocs'))
-    cmd += ' {}'.format(os.path.join(
+    cmd += ' {} '.format(os.path.join(
         ROOTDIR, 'collection/run_collect_dataset.jl'))
     cmd += build_cmd(config.items(s), prefix='col/')
     with Timer() as t:
-        run_cmd(cmd, config.get(s, 'logfile'))
+        run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
     
 def run_collection(config):
     s = 'collection'
@@ -42,11 +42,11 @@ def fit_bayes_net(config):
     cmd = 'julia {} '.format(os.path.join(
         ROOTDIR, 'scene_generation/run_fit_bayes_net.jl'))
     cmd += '--input_filepath {} '.format(
-        config.get('collection', 'output_filepath'))
+        config.get('collection', 'col/output_filepath'))
     cmd += '--output_filepath {} '.format(
         config.get(s, 'base_bn_filepath'))
     with Timer() as t:
-        run_cmd(cmd, config.get(s, 'logfile'))
+        run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
 
 def fit_proposal_bayes_net(config):
     s = 'generation'
@@ -54,13 +54,13 @@ def fit_proposal_bayes_net(config):
     cmd += '{} '.format(os.path.join(
         ROOTDIR, 'scene_generation/run_fit_proposal_bayes_net.jl'))
     cmd += '--dataset_filepath {} '.format(
-        config.get('collection', 'output_filepath'))
+        config.get('collection', 'col/output_filepath'))
     cmd += '--base_bn_filepath {} '.format(
         config.get(s, 'base_bn_filepath'))
     cmd += '--output_filepath {} '.format(
         config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='prop/')
-    run_cmd(cmd, config.get(s, 'logfile'))
+    run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
 
 def generate_prediction_data(config):
     s = 'generation'
@@ -69,7 +69,7 @@ def generate_prediction_data(config):
         ROOTDIR, 'collection/run_collect_dataset.jl'))
     cmd += build_cmd(config.items(s), prefix='gen/')
     with Timer() as t:
-        run_cmd(cmd, config.get(s, 'logfile'))
+        run_cmd(cmd, config.get(s, 'logfile'), dry_run=config.dry_run)
 
 def run_generation(config):
     s = 'generation'
@@ -105,8 +105,12 @@ def run_experiment(config):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='parses the config filepath')
-    parser.add_argument('-c', '--config_filepath', type=str, help='config filepath.', default='../../data/configs/test.cfg')
+    parser.add_argument('-c', '--config_filepath', type=str, 
+        help='config filepath.', default='../../data/configs/test.cfg')
+    parser.add_argument('-d', '--dry_run', action='store_true', 
+        help='print cmds but not run them', default=False)
     args = parser.parse_args()
     config = configparser.SafeConfigParser()
+    config.dry_run = args.dry_run
     config.read(args.config_filepath)
     run_experiment(config)
