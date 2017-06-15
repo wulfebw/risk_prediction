@@ -75,8 +75,8 @@ def run_generation(config):
     s = 'generation'
     print_intro(s)
 
-    fit_bayes_net(config)
-    fit_proposal_bayes_net(config)
+    # fit_bayes_net(config)
+    # fit_proposal_bayes_net(config)
     generate_prediction_data(config)
 
 # prediction
@@ -98,7 +98,7 @@ def run_prediction(config):
 
 def run_experiment(config):
     run_setup(config)
-    run_collection(config)
+    # run_collection(config)
     run_generation(config)
     run_prediction(config)
 
