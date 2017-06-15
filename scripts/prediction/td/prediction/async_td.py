@@ -53,7 +53,8 @@ class PartialRollout(object):
         self.terminal = terminal
         self.features += [features]
 
-def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, verbose=True):
+def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, 
+        verbose=True, visualize=True, visualize_every=1000):
     """
     The logic of the thread runner.  In brief, it constantly keeps on running
     the policy, and as long as the rollout exceeds a certain length, the thread
@@ -98,6 +99,9 @@ def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, verbos
                 # state = state[-1]
                 # terminal = terminal[-1]
 
+            if visualize and ep_count % visualize_every == 0:
+                env.render()
+
             # collect the experience
             # note that the deepcopies seem to be necessary
             rollout.add(
@@ -110,8 +114,6 @@ def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, verbos
             length += 1
             rewards += reward
             
-            
-
             last_state = state
             last_features = features
 
@@ -121,6 +123,7 @@ def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, verbos
                     summary.value.add(tag=k, simple_value=float(v))
                 summary_writer.add_summary(summary, policy.global_step.eval())
                 summary_writer.flush()
+
 
             timestep_limit = env.spec.tags.get(
                 'wrapper_config.TimeLimit.max_episode_steps')
@@ -133,7 +136,7 @@ def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, verbos
                 
                 total_rewards += rewards
                 total_length += length
-                avg_rewards = total_rewards / total_length
+                avg_rewards = total_rewards / ep_count
                 avg_length = total_length / ep_count
                 if verbose:
                     print("Episode finished\tSum of rewards: {}\tLength: {}\tAverage Rewards: {}\tAverage Length: {:.2f}".format(
@@ -210,8 +213,6 @@ class AsyncTD(object):
                     pi.vf[0,i])
             tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
             tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
-            # merge the summaries
-            self.summary_op = tf.summary.merge_all()
 
             # loss
             grads, _ = tf.clip_by_global_norm(grads, config.grad_clip_norm)
@@ -253,10 +254,15 @@ class AsyncTD(object):
             self.summary_writer = None
             self.local_steps = 0
 
+            # merge the summaries
+            self.summary_op = tf.summary.merge_all()
+
     def start(self, sess, summary_writer):
         self.rollout_provider = env_runner(self.env, self.local_network, 
             self.config.local_steps_per_update, summary_writer, 
-            value_dim=self.config.value_dim)
+            value_dim=self.config.value_dim, 
+            visualize=self.config.visualize and self.task == 0,
+            visualize_every=self.config.visualize_every)
         self.summary_writer = summary_writer
 
     def process(self, sess):
@@ -334,10 +340,10 @@ class AsyncTD(object):
                 build_envs.get_target_names(self.env, self.config.value_dim)):
             summaries += [tf.Summary.Value(
                 tag="val/{}_validation_loss".format(target_name), 
-                simple_value=avg_loss[i])]
+                simple_value=float(avg_loss[i]))]
             summaries += [tf.Summary.Value(
                 tag="val/{}_value".format(target_name), 
-                simple_value=avg_value[i])]
+                simple_value=float(avg_value[i]))]
         summary = tf.Summary(value=summaries)
 
         self.summary_writer.add_summary(summary)
@@ -365,17 +371,27 @@ class AsyncTD(object):
 
         return loss
 
+    def _my_sigmoid_cross_entropy_with_logits(self, logits, labels, e=1e-8):
+        loss = (labels * -tf.log(tf.nn.sigmoid(logits)) 
+            + (1 - labels) * -tf.log(1 - tf.nn.sigmoid(logits)))
+        return loss
+
     def _build_cross_entropy_loss_component(self, scores, targets, w, 
             target_loss_index):
         if target_loss_index is not None:
             loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=scores[:, target_loss_index], 
                 labels=targets[:, target_loss_index])
+            # loss = self._my_sigmoid_cross_entropy_with_logits(
+            #     logits=scores[:, target_loss_index], 
+            #     labels=targets[:, target_loss_index])
         else:
             loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=scores, labels=targets)
+            # loss = self._my_sigmoid_cross_entropy_with_logits(
+            #     logits=scores, labels=targets)
 
-        loss = loss * w
+        loss = loss * tf.reshape(w, [-1,1])
 
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_ce_errors = tf.reduce_mean(loss, axis=0)
@@ -408,7 +424,7 @@ class AsyncTD(object):
                 pi.vf, self.r, self.w, self.config.target_loss_index)
             
         # cross entropy loss
-        if self.config.loss_type == 'ce':
+        elif self.config.loss_type == 'ce':
             loss = self._build_cross_entropy_loss_component(
                 pi.vf, self.r, self.w, self.config.target_loss_index)
 

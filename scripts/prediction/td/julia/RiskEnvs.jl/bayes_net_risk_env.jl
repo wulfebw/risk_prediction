@@ -22,19 +22,10 @@ type BayesNetRiskEnv <: RiskEnv
     params::Dict
 
     function BayesNetRiskEnv(params::Dict)
-
-        # generator
-        beh_gen = build_behavior_generator(params)
-        gen = BayesNetLaneGenerator(
-            params["base_bn_filepath"], 
-            params["prop_bn_filepath"], 
-            params["num_veh_per_lane"], 
-            beh_gen
-        )
-
-        # extraction
-        feature_ext = build_feature_extractor(params)
+        # extractors and generator
+        feature_ext = build_extractor(params)
         target_ext = build_target_extractor(params)
+        gen = build_joint_generator(params)
 
         # rec, scene, roadway, models
         Δt = .1

@@ -93,6 +93,64 @@ class TestAsyncTD(unittest.TestCase):
                 value = trainer.network.value(test_state, c, h)
                 print(value)
             # self.assertTrue(value[3] > .5 and value[3] < .6)
+    
+    def test_validate_const_reward_discounted_env(self):
+        # config
+        config = TestConfig()
+        config.n_global_steps = 50000
+        config.env_id = 'RandObsConstRewardEnv-v0'
+        config.discount = .9
+        config.value_dim = 2
+        config.adam_beta1 = .9
+        config.local_steps_per_update = 1000
+        config.hidden_layer_sizes = [256]
+        config.learning_rate = 1e-3
+        config.learning_rate_end = 1e-5
+        config.loss_type = 'mse'
+        config.target_loss_index = None
+
+        # build env
+        const_reward = .01
+        horizon = 10000000
+        rand_obs = False
+        env = debug_envs.RandObsConstRewardEnv(
+            horizon=horizon, 
+            reward=const_reward, 
+            value_dim=config.value_dim,
+            rand_obs=rand_obs
+        )
+        env.spec = gym.envs.registration.EnvSpec(
+            id='RandObsConstRewardEnv-v0', 
+            tags={'wrapper_config.TimeLimit.max_episode_steps': horizon+1}
+        )
+        
+        n_samples = 2
+        n_timesteps = 10 # predict after seeing this many timesteps
+        n_prediction_timesteps = 10 # determines discount
+        input_dim = 1
+        obs_gen = np.random.randn if rand_obs else np.ones
+        x = obs_gen(np.prod((n_samples, n_timesteps, input_dim))).reshape(
+            (n_samples, n_timesteps, input_dim))
+        y = (const_reward * np.ones((n_samples, config.value_dim)) 
+            * n_prediction_timesteps)
+        w = np.ones((n_samples,1))
+        dataset = validation.Dataset(x, y, w)
+
+        # run it
+        summary_writer = tf.summary.FileWriter('/tmp/test')
+        avg_loss = -1
+        with tf.Session() as sess:
+            trainer = async_td.AsyncTD(env, 0, config)
+            sess.run(tf.global_variables_initializer())
+            sess.run(trainer.sync)
+            trainer.start(sess, summary_writer)
+            global_step = sess.run(trainer.global_step)
+            while global_step < config.n_global_steps:
+                trainer.process(sess)
+                if global_step % 10 == 0:
+                    avg_loss = trainer.validate(sess, dataset)
+                global_step = sess.run(trainer.global_step)
+
 
     def test_validate(self):
         # config
@@ -101,7 +159,7 @@ class TestAsyncTD(unittest.TestCase):
         config.env_id = 'SeqSumDebugEnv-v0'
         config.discount = 1.
         config.value_dim = 1
-        self.adam_beta1 = .99
+        config.adam_beta1 = .99
         config.local_steps_per_update = 100000
         config.hidden_layer_sizes = [128]
         config.learning_rate = 5e-4
@@ -146,7 +204,77 @@ class TestAsyncTD(unittest.TestCase):
                 global_step = sess.run(trainer.global_step)
 
         self.assertTrue(avg_loss < .1)
-                
+
+
+         
+class TestAsyncTDHeuristicDeterministicCase(unittest.TestCase):     
+
+    def test_heuristic_deterministic_case(self):
+
+        config = TestConfig()
+        config.n_global_steps = 50000
+        config.max_timesteps = 50
+        config.env_id = 'HeuristicRiskEnv-v0'
+        config.discount = 1. # 49. / 50
+        config.value_dim = 5
+        config.adam_beta1 = .9
+        config.local_steps_per_update = 100
+        config.hidden_layer_sizes = [128]
+        config.learning_rate = 1e-3
+        config.learning_rate_end = 5e-6
+        config.loss_type = 'ce'
+        config.target_loss_index = 1
+        config.validation_dataset_filepath = '../data/risk.h5'
+        config.max_validation_samples = 1
+        config.validate_every = 1000
+        config.visualize_every = 10000
+        config.summarize_features = True
+
+        validation.transfer_dataset_settings_to_config(
+            config.validation_dataset_filepath, config)
+
+        # config.roadway_radius = 400.
+        # config.roadway_length = 100.
+        # config.lon_accel_std_dev = 0.
+        # config.lat_accel_std_dev = 0.
+        # config.overall_response_time = .2
+        # config.lon_response_time = .0
+        # config.err_p_a_to_i = .15
+        # config.err_p_i_to_a = .3
+        # config.max_num_vehicles = 50
+        # config.min_num_vehicles = 50
+        # config.hard_brake_threshold = -3.
+        # config.hard_brake_n_past_frames = 2
+        # config.min_base_speed = 30.
+        # config.max_base_speed = 30.
+        # config.min_vehicle_length = 5.
+        # config.max_vehicle_length = 5.
+        # config.min_vehicle_width = 2.5
+        # config.max_vehicle_width = 2.5
+        # config.min_init_dist = 10.
+        # config.heuristic_behavior_type = "normal"
+
+        # build env
+        env = build_envs.create_env(config)
+        dataset = validation.build_dataset(config, env)
+        print('mean validation targets: {}'.format(np.mean(dataset.y, axis=0)))
+
+        # run it
+        summary_writer = tf.summary.FileWriter('/tmp/test')
+        avg_loss = -1
+        last_global_step_val = 0
+        with tf.Session() as sess:
+            trainer = async_td.AsyncTD(env, 0, config)
+            sess.run(tf.global_variables_initializer())
+            sess.run(trainer.sync)
+            trainer.start(sess, summary_writer)
+            global_step = sess.run(trainer.global_step)
+            while global_step < config.n_global_steps:
+                trainer.process(sess)
+                if (global_step - last_global_step_val) > config.validate_every:
+                    avg_loss = trainer.validate(sess, dataset)
+                    last_global_step_val = global_step
+                global_step = sess.run(trainer.global_step)
             
 
 if __name__ == '__main__':

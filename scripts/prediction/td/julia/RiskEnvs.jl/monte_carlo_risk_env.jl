@@ -34,8 +34,8 @@ type MonteCarloRiskEnv <: RiskEnv
         )
         roadway_gen = StaticRoadwayGenerator(roadway)
         scene_gen = HeuristicSceneGenerator(
-            params["min_num_veh"], 
-            params["max_num_veh"], 
+            params["min_num_vehicles"], 
+            params["max_num_vehicles"], 
             params["min_base_speed"],
             params["max_base_speed"],
             params["min_vehicle_length"],

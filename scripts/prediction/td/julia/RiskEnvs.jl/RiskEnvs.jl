@@ -5,6 +5,10 @@ using AutoRisk
 using AutoViz
 import AutoViz: render
 
+# external
+include("../../../../collection/collect_dataset.jl")
+
+# module
 include("make.jl")
 include("env.jl")
 include("debug_envs.jl")

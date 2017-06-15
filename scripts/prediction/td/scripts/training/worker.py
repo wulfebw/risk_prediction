@@ -14,6 +14,7 @@ import prediction.async_td
 import prediction.build_envs
 import prediction.validation
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -49,6 +50,10 @@ def run(args, server):
     config = build_config(args)
     env = prediction.build_envs.create_env(config)
     dataset = prediction.validation.build_dataset(config, env)
+    # if validating against a dataset, force the use of it's config
+    if dataset is not None:
+        config = prediction.validation.transfer_dataset_settings_to_config(
+            config.validation_dataset_filepath, config)
     trainer = prediction.async_td.AsyncTD(env, args.task, config)
 
     # Variable names that start with "local" are not saved in checkpoints.
@@ -101,12 +106,15 @@ def run(args, server):
         logger.info("gathering global step")
         global_step = sess.run(trainer.global_step)
         logger.info("Starting training at step=%d", global_step)
+        last_validation_global_step = 0
         while ( not sv.should_stop() 
                 and (not num_global_steps 
                      or global_step < num_global_steps)):
             trainer.process(sess)
-            if global_step % config.validate_every == 0 and dataset is not None:
+            if (global_step - last_validation_global_step > config.validate_every 
+                    and dataset is not None:)
                 trainer.validate(sess, dataset)
+                last_validation_global_step = global_step
             global_step = sess.run(trainer.global_step)
 
     # Ask for all the services to stop.

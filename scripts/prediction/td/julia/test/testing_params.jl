@@ -26,8 +26,8 @@ function build_testing_params()
     ### heuristic
     params["roadway_radius"] = 400.
     params["roadway_length"] = 100.
-    params["min_num_veh"] = 1
-    params["max_num_veh"] = 1
+    params["min_num_vehicles"] = 1
+    params["max_num_vehicles"] = 1
     params["min_base_speed"] = 30.
     params["max_base_speed"] = 30.
     params["min_vehicle_length"] = 5.

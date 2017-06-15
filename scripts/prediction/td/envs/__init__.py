@@ -15,3 +15,14 @@ register(
         'horizon': 4
     },
 )
+
+register(
+    id='RandObsConstRewardEnv-v0',
+    entry_point='debug_envs:RandObsConstRewardEnv',
+    max_episode_steps=10,
+    kwargs = {
+        'horizon': 4,
+        'reward': 0,
+        'value_dim': 2
+    },
+)

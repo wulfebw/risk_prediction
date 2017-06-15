@@ -116,21 +116,6 @@ function get_ego_index(env::RiskEnv)
     return ego_index
 end
 
-function build_feature_extractor(params::Dict)
-    feature_ext = MultiFeatureExtractor(
-        extract_core = params["extract_core"],
-        extract_temporal = params["extract_temporal"],
-        extract_well_behaved = params["extract_well_behaved"],
-        extract_neighbor = params["extract_neighbor"],
-        extract_behavioral = params["extract_behavioral"],
-        extract_neighbor_behavioral = params["extract_neighbor_behavioral"],
-        extract_car_lidar = params["extract_car_lidar"],
-        extract_car_lidar_range_rate = params["extract_car_lidar_range_rate"],
-        extract_road_lidar = params["extract_road_lidar"]
-    )
-    return feature_ext
-end
-
 function build_target_extractor(params::Dict)
     target_ext = TargetExtractor(
         hard_brake_threshold = params["hard_brake_threshold"],
@@ -138,39 +123,6 @@ function build_target_extractor(params::Dict)
         ttc_threshold = params["ttc_threshold"]
     )
     return target_ext
-end
-
-function build_behavior_generator(params::Dict)
-    min_p = get_passive_behavior_params(
-        lon_σ = params["lon_accel_std_dev"], 
-        lat_σ = params["lat_accel_std_dev"], 
-        err_p_a_to_i = params["err_p_a_to_i"],
-        err_p_i_to_a = params["err_p_i_to_a"],
-        overall_response_time = params["overall_response_time"]
-    )
-    normal = get_normal_behavior_params(
-        lon_σ = params["lon_accel_std_dev"], 
-        lat_σ = params["lat_accel_std_dev"], 
-        err_p_a_to_i = params["err_p_a_to_i"],
-        err_p_i_to_a = params["err_p_i_to_a"],
-        overall_response_time = params["overall_response_time"]
-    )
-    max_p = get_aggressive_behavior_params(
-        lon_σ = params["lon_accel_std_dev"], 
-        lat_σ = params["lat_accel_std_dev"], 
-        err_p_a_to_i = params["err_p_a_to_i"],
-        err_p_i_to_a = params["err_p_i_to_a"],
-        overall_response_time = params["overall_response_time"]
-    )
-    if params["heuristic_behavior_type"] == "normal"
-        beh_params = [normal]
-        weights = StatsBase.Weights([1.])
-        beh_gen = PredefinedBehaviorGenerator(beh_params, weights)
-    else
-        beh_gen = CorrelatedBehaviorGenerator(min_p, max_p)
-    end
-    
-    return beh_gen
 end
 
 function build_scene_record(params::Dict, Δt::Float64)

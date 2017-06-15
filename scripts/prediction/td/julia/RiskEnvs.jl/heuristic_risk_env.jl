@@ -22,38 +22,16 @@ type HeuristicRiskEnv <: RiskEnv
     params::Dict
 
     function HeuristicRiskEnv(params::Dict)
-
-        # generator
-        roadway = gen_stadium_roadway(
-            params["num_lanes"], 
-            length = params["roadway_length"], 
-            radius = params["roadway_radius"]
-        )
-        roadway_gen = StaticRoadwayGenerator(roadway)
-        scene_gen = HeuristicSceneGenerator(
-            params["min_num_veh"], 
-            params["max_num_veh"], 
-            params["min_base_speed"],
-            params["max_base_speed"],
-            params["min_vehicle_length"],
-            params["max_vehicle_length"],
-            params["min_vehicle_width"], 
-            params["max_vehicle_width"],
-            params["min_init_dist"]
-        )
-        behavior_gen = build_behavior_generator(params)
-        gen = FactoredGenerator(roadway_gen, scene_gen, behavior_gen)
-
-        # extraction
-        feature_ext = build_feature_extractor(params)
+        # extractors and generator
+        feature_ext = build_extractor(params)
         target_ext = build_target_extractor(params)
+        gen = build_factored_generator(params)
 
         # rec, scene, roadway, models
         Δt = .1
         rec = build_scene_record(params, Δt)
         scene = Scene(params["max_num_vehicles"])
-        # the roadway is long enough s.t. the vehicles will not reach the end
-        roadway = gen_straight_roadway(params["num_lanes"], 100000.)
+        roadway = build_roadway(params)
         models = Dict{Int, DriverModel}()
 
         return new(
