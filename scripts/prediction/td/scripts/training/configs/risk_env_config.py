@@ -84,7 +84,7 @@ class Config(object):
         self.visualize = True
 
         # validation
-        self.validation_dataset_filepath = '/Users/wulfebw/Dropbox/School/Stanford/research/risk/risk_prediction/data/datasets/june/prop_heuristic_5_sec_1_lane.h5'
+        self.validation_dataset_filepath = ''
         self.validate_every = 100000
         self.visualize_every = 1000
         self.max_validation_samples = 100

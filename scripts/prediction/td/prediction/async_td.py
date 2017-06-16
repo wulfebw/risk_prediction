@@ -307,10 +307,12 @@ class AsyncTD(object):
         """
         if data is None:
             return
+        if self.task != 0:
+            return 0
 
         # copy weights from shared to local
         sess.run(self.sync)  
-
+        
         # compute the average rmse between the predicted and true values 
         # across the validation dataset
         total_loss = 0

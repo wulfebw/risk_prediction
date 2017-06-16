@@ -55,7 +55,7 @@ def get_experiment_argparser(caller):
     parser.add_argument('--max_validation_samples', default=500, type=int)
 
     # environment 
-    parser.add_argument('--julia_env_id', type=str, default="HeuristicRiskEnv-v0",
+    parser.add_argument('--julia_env_id', type=str, default="BayesNetRiskEnv-v0",
                         help="Environment id")
     parser.add_argument('--max_timesteps', default=1000, type=int,
                         help="max timesteps in the environment before ending the episode")

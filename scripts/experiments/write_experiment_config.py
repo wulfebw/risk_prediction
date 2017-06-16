@@ -7,7 +7,7 @@ DEFAULTS = {
     'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
-    'err_p_a_to_i': .01,
+    'err_p_a_to_i': .125,
     'err_p_i_to_a': .3,
     'overall_response_time': .2,
     'lon_accel_std_dev': 0.,                                        #
@@ -41,7 +41,7 @@ def write_collection(config):
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '500')                             #
+    config.set(s, 'col/num_scenarios', '3000')                             #
     config.set(s, 'col/num_monte_carlo_runs', '1')
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -50,8 +50,8 @@ def write_collection(config):
     config.set(s, 'col/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     config.set(s, 'col/prime_time', '30.')
     config.set(s, 'col/sampling_time', '.1')
-    config.set(s, 'col/max_num_vehicles', '250')
-    config.set(s, 'col/min_num_vehicles', '250')
+    config.set(s, 'col/max_num_vehicles', '50')
+    config.set(s, 'col/min_num_vehicles', '50')
 
     # ngsim collection
     # TODO
@@ -72,7 +72,7 @@ def write_generation(config):
     config.set(s, 'prop/prime_time', '0.')
     config.set(s, 'prop/sampling_time', '5.')
     config.set(s, 'prop/cem_end_prob', '.3')
-    config.set(s, 'prop/max_iters', '100')                                #
+    config.set(s, 'prop/max_iters', '50')                                #
     config.set(s, 'prop/population_size', '4000')                       #
     config.set(s, 'prop/top_k_fraction', '.5')
     config.set(s, 'prop/n_prior_samples', '60000')
@@ -99,7 +99,7 @@ def write_generation(config):
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '240')                               #
+    config.set(s, 'gen/num_scenarios', '10000')                               #
     config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
@@ -133,7 +133,7 @@ def write_prediction(config):
 
     ## hyperparams
     config.set(s, 'async/hidden_layer_sizes', '128,128')                   #
-    config.set(s, 'async/local_steps_per_update', '50')               #
+    config.set(s, 'async/local_steps_per_update', '100')               #
     config.set(s, 'async/learning_rate', '5e-4')
     config.set(s, 'async/learning_rate_end', '5e-5')
     config.set(s, 'async/dropout_keep_prob', '1.')
