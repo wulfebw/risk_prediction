@@ -128,7 +128,7 @@ function build_factored_generator(flags)
             behavior_gen = CorrelatedBehaviorGenerator(passive, aggressive)
         else
             throw(ArgumentError(
-                "invalid heuristic behavior type $(heursitic_behavior_type)"))
+                "invalid heuristic behavior type $(heuristic_behavior_type)"))
         end
     elseif behavior_type == "learned"
         behavior_gen = LearnedBehaviorGenerator(flags["driver_network_filepath"])

@@ -4,7 +4,7 @@ class Config(object):
     def __init__(self):
 
         # environment options
-        self.env_id = 'HeuristicRiskEnv-v0'
+        self.julia_env_id = 'HeuristicRiskEnv-v0'
 
         ## generation
         self.num_lanes = 1

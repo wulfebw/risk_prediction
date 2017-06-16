@@ -22,6 +22,9 @@ type HeuristicRiskEnv <: RiskEnv
     params::Dict
 
     function HeuristicRiskEnv(params::Dict)
+        # set some values specific to this env
+        params["generator_type"] = "factored"
+
         # extractors and generator
         feature_ext = build_extractor(params)
         target_ext = build_target_extractor(params)
@@ -33,7 +36,6 @@ type HeuristicRiskEnv <: RiskEnv
         scene = Scene(params["max_num_vehicles"])
         roadway = build_roadway(params)
         models = Dict{Int, DriverModel}()
-
         return new(
             gen, 
             feature_ext, 
@@ -42,8 +44,8 @@ type HeuristicRiskEnv <: RiskEnv
             scene, 
             roadway, 
             models,
-            params["sim_timesteps"] * Δt, 
-            params["prime_timesteps"] * Δt, 
+            params["sampling_time"], 
+            params["prime_time"], 
             0, 
             0, 
             0,

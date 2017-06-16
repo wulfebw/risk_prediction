@@ -45,16 +45,41 @@ def build_config(args):
         print('config file must have a class named \'Config\'')
         raise(e)
 
+    # transfer settings from validation dataset if one exists
+    if config.validation_dataset_filepath != '':
+        config = prediction.validation.transfer_dataset_settings_to_config(
+            config.validation_dataset_filepath, config)
+
+    # if a key has been passed in as an arg, then that takes precedence 
+    # over the values in the config; transfer them in here
+    for (k,v) in args.__dict__.items():
+        config.__dict__[k] = v
+
+    # certain values have to be parsed manually
+    # hidden layers sizes passed in as comma separated list
+    if config.hidden_layer_sizes != '':
+        dims = config.hidden_layer_sizes.split(',')
+        dims = [int(dim) for dim in dims if dim != '']
+        config.hidden_layer_sizes = dims
+    # target_loss_index potentially None
+    if config.target_loss_index == 'None':
+        config.target_loss_index = None
+    elif type(config.target_loss_index) == str:
+        config.target_loss_index = int(config.target_loss_index)
+    print(config.target_loss_index)
+    print(type(config.target_loss_index))
+    assert (config.target_loss_index is None or type(config.target_loss_index) == int)
+
     return config
 
 def run(args, server):
     config = build_config(args)
+    for k,v in config.__dict__.items():
+        print(k)
+        print(v)
+
     env = prediction.build_envs.create_env(config)
-    dataset = prediction.validation.build_dataset(config, env)
-    # if validating against a dataset, force the use of it's config
-    if dataset is not None:
-        config = prediction.validation.transfer_dataset_settings_to_config(
-            config.validation_dataset_filepath, config)
+    dataset = prediction.validation.build_dataset(config, env)        
     trainer = prediction.async_td.AsyncTD(env, args.task, config)
 
     # Variable names that start with "local" are not saved in checkpoints.
@@ -148,7 +173,8 @@ def main(_):
     Setting up Tensorflow for data parallel work
     """
     parser = experiment_args.get_experiment_argparser('worker')
-    args = parser.parse_args()
+    args, unknown_args = parser.parse_known_args()
+    print('unknown args: {}'.format(unknown_args))
     spec = cluster_spec(args.num_workers, 1)
     cluster = tf.train.ClusterSpec(spec).as_cluster_def()
 

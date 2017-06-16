@@ -15,6 +15,7 @@ import envs.julia_env
 from . import normalizing_wrapper
 
 def create_env(config):
+
     # register conditional on config, so have to wait until this point
     if config.env_id not in registry.env_specs.keys():
         register(
@@ -22,7 +23,7 @@ def create_env(config):
             entry_point='envs.julia_env:JuliaEnv',
             max_episode_steps=config.max_timesteps,
             kwargs={
-                'env_id': config.env_id.replace('-v0',''),
+                'env_id': config.julia_env_id.replace('-v0',''),
                 'env_params': config.__dict__,
                 'julia_envs_path': '../../julia/RiskEnvs.jl/RiskEnvs.jl'
             }

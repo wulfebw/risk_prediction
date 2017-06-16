@@ -25,7 +25,7 @@ def transfer_dataset_settings_to_config(filepath, config):
         try:
             v = infile['risk'].attrs[k]
         except Exception as e:
-            print('exception occurred during transfer of key: {}'.format(k))
+            print('exception occurred during transfer of key: {}; ignoring'.format(k))
         else:
             if k.startswith('utf8_'):
                 k = k.replace('utf8_', '')

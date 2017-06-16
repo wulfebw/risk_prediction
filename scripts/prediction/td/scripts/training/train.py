@@ -26,6 +26,12 @@ def create_commands(session, num_workers, remotes, env_id, logdir, args,
         '--env-id', env_id,
         '--num-workers', str(num_workers)]
 
+    # add in custom flags
+    for (k,v) in args.__dict__.items():
+        if v != "":
+            base_cmd.append('--{}'.format(k))
+            base_cmd.append(v)
+
     if visualise:
         base_cmd += ['--visualise']
 

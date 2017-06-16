@@ -3,7 +3,7 @@ class Config(object):
     def __init__(self):
 
         # environment options
-        self.env_id = 'BayesNetRiskEnv-v0'
+        self.julia_env_id = 'BayesNetRiskEnv-v0'
 
         ## generation
         self.num_lanes = 1
@@ -39,7 +39,7 @@ class Config(object):
         self.max_vehicle_width = 2.5
         self.min_init_dist = 10.
         self.behavior_type = "heuristic"
-        self.heuristic_behavior_type = "" # correlated behavior
+        self.heuristic_behavior_type = "correlated"
 
         ## feature extraction
         self.extractor_type = 'multi'

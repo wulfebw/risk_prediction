@@ -36,7 +36,7 @@ def get_experiment_argparser(caller):
         parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
         parser.add_argument('--log-dir', default="/tmp/risk", help='Log directory path')
         parser.add_argument('--env-id', default="RiskEnv-v0", help='Environment id')
-        parser.add_argument('-c', '--config', type=str, default='',
+        parser.add_argument('-c', '--config', type=str, default='risk_env_config',
                         help="config filename, without \'.py\' extension. The default behavior is to match the config file to the choosen policy")
         parser.add_argument('-r', '--remotes', default=None,
                             help='References to environments to create (e.g. -r 20), '
@@ -48,16 +48,16 @@ def get_experiment_argparser(caller):
                             help="Visualise the gym environment by running env.render() between each timestep")
 
     # validation 
-    parser.add_argument('--validation_dataset_filepath', default="", type=str,
+    parser.add_argument('--validation_dataset_filepath', default='', type=str,
                         help="filepath to validation dataset. Settings are loaded from this file")
     parser.add_argument('--validate_every', default=1000, type=int,
                         help="updates between validation steps")
     parser.add_argument('--max_validation_samples', default=500, type=int)
 
     # environment 
-    parser.add_argument('--julia-env-id', type=str, default="HeuristicRiskEnv-v0",
+    parser.add_argument('--julia_env_id', type=str, default="HeuristicRiskEnv-v0",
                         help="Environment id")
-    parser.add_argument('--max_timesteps', default=1000000000, type=int,
+    parser.add_argument('--max_timesteps', default=1000, type=int,
                         help="max timesteps in the environment before ending the episode")
     parser.add_argument('--prime_time', default=0., type=float,
                         help="Amount of time to prime the scene in the reset")
@@ -69,6 +69,10 @@ def get_experiment_argparser(caller):
                         help="number of lanes in roadway")
     parser.add_argument('--roadway_type', default="stadium", type=str,
                         help="type of roadway")
+    parser.add_argument('--roadway_length', default=400., type=float,
+                        help="length of roadway")
+    parser.add_argument('--roadway_radius', default=100., type=float,
+                        help="radius of roadway")
 
     # scene
     parser.add_argument('--max_num_vehicles', default=50, type=int,
@@ -117,7 +121,7 @@ def get_experiment_argparser(caller):
     # monitoring
     parser.add_argument('--viz_dir', default="videos/", type=str)
     parser.add_argument('--visualize', default=True, action='store_true')
-    parser.add_argument('--visualize_every', default=100, type=int,
+    parser.add_argument('--visualize_every', default=10000, type=int,
                         help="# episodes between rendering")
     parser.add_argument('--summarize_features', default=True, action='store_true',
                         help="add feature summaries to tensorboard")

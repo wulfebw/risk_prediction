@@ -77,10 +77,10 @@ add_entry!(FLAGS,
     acceleration is sampled.")
 add_entry!(FLAGS, 
     "overall_response_time", .2, Float64, 
-    "Response time for heursitic, delayed driver models.")
+    "Response time for heuristic, delayed driver models.")
 add_entry!(FLAGS, 
     "lon_response_time", .2, Float64, 
-    "Additional response time for longitudinal, heursitic driver models.")
+    "Additional response time for longitudinal, heuristic driver models.")
 add_entry!(FLAGS, 
     "err_p_a_to_i", 0.01, Float64, 
     "Probability of driver becoming inattentive.")

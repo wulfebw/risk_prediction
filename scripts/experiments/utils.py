@@ -56,8 +56,8 @@ def run_cmd(cmd, logfilepath, cmd_dir='.', dry_run=False):
     print('{}arguments: {}\n{}'.format(bcolors.BOLD, bcolors.ENDC, cmd_str))
     print('\nlogging output to: {}'.format(logfilepath))
     if not dry_run:
+        log = open(logfilepath, 'a')
         with ChangeDir(cmd_dir) as cd, Timer() as t:
-            log = open(logfilepath, 'a')
             subprocess.call(cmd, shell=True, stdout=log, stderr=log)
     print('-' * 50) 
 
