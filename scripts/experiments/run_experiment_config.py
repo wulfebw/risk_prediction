@@ -94,7 +94,8 @@ def run_async_prediction(config):
     cmd += build_cmd(config.items(s), prefix='async/')
     cmd_dir = os.path.join(ROOTDIR, 'prediction/td/scripts/training')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
-    print("Async prediction running in the background...")
+    print('Async prediction running in the background...')
+    print("Enter 'tmux attach -t a3c' to attach")
 
 def run_prediction(config):
     s = 'prediction'
