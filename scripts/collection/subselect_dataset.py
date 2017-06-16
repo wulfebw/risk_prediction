@@ -5,6 +5,7 @@ weight that is not 1. This task is performed after dataset collection for now.
 import argparse
 import h5py
 import numpy as np
+import os
 
 def select_nonconstant_features(input_filepath, output_filepath, 
         batch_size=1000, check_size=10000, eps=1e-8):
@@ -105,6 +106,17 @@ if __name__ == '__main__':
                             default='', type=str,
                             help="filepath to output proposal subselected data")
     args = parser.parse_args()
+
+    path, filename = os.path.split(args.dataset_filepath)
+    if args.subselect_filepath == '':
+        args.subselect_filepath = os.path.join(
+            path, 'subselect_' + filename)
+    if args.subselect_feature_filepath == '':
+        args.subselect_feature_filepath = os.path.join(
+            path, 'subselect_feature_' + filename)
+    if args.subselect_proposal_filepath == '':
+        args.subselect_proposal_filepath = os.path.join(
+            path, 'subselect_proposal_' + filename)
 
     # output three datasets
     # one in which all the samples are included, but only nonconstant features 
