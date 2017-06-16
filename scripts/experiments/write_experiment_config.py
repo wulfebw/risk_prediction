@@ -4,7 +4,7 @@ import os
 # constant accross all
 EXPERIMENT_NAME = 'heuristic_determinstic_1_lane_5_sec'                #
 DEFAULTS = {
-    'nprocs': 24,                                                       #
+    'nprocs': 2,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
     'err_p_a_to_i': .125,
@@ -130,6 +130,15 @@ def write_prediction(config):
         'generation', 'gen/output_filepath'))
     config.set(s, 'async/validation_dataset_filepath', abs_val_dataset_filepath)
     config.set(s, 'async/config', 'risk_env_config')
+    abs_base_bn_filepath = os.path.abspath(config.get(
+        'generation', 'base_bn_filepath'))
+    config.set(s, 'async/base_bn_filepath', abs_base_bn_filepath)
+    abs_prop_bn_filepath = os.path.abspath(config.get(
+        'generation', 'prop_bn_filepath'))
+    config.set(s, 'async/prop_bn_filepath', abs_prop_bn_filepath)
+    abs_viz_dir = os.path.abspath(config.get(
+        'generation', 'prop/viz_dir'))
+    config.set(s, 'async/viz_dir', abs_viz_dir)
 
     ## hyperparams
     config.set(s, 'async/hidden_layer_sizes', '128,128')                   #
@@ -144,6 +153,7 @@ def write_prediction(config):
     config.set(s, 'async/discount', str(discount))
     config.set(s, 'async/n_global_steps', '10000000')                   #
     config.set(s, 'async/max_timesteps', '1000')                         #
+    config.set(s, 'async/prime_time', '0.')
 
 def write_config(filepath):
     config = configparser.SafeConfigParser(defaults=DEFAULTS)
