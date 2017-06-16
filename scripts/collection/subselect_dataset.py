@@ -7,7 +7,7 @@ import h5py
 import numpy as np
 
 def select_nonconstant_features(input_filepath, output_filepath, 
-        batch_size=10000, check_size=10000, eps=1e-8):
+        batch_size=1000, check_size=10000, eps=1e-8):
     infile = h5py.File(input_filepath, 'r')
     outfile = h5py.File(output_filepath, 'w')
 
@@ -56,7 +56,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
     infile.close()
     outfile.close()
 
-def select_proposal_samples(input_filepath, output_filepath, batch_size=10000):
+def select_proposal_samples(input_filepath, output_filepath, batch_size=1000):
     infile = h5py.File(input_filepath, 'r')
     outfile = h5py.File(output_filepath, 'w')
 
