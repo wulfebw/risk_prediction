@@ -94,6 +94,7 @@ def run_async_prediction(config):
     cmd += build_cmd(config.items(s), prefix='async/')
     cmd_dir = os.path.join(ROOTDIR, 'prediction/td/scripts/training')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+    print("Async prediction running in the background...")
 
 def run_prediction(config):
     s = 'prediction'
@@ -106,9 +107,9 @@ def run_prediction(config):
         run_async_prediction(config)
 
 def run_experiment(config):
-    # run_setup(config)
-    # run_collection(config)
-    # run_generation(config)
+    run_setup(config)
+    run_collection(config)
+    run_generation(config)
     run_prediction(config)
 
 if __name__ == '__main__':

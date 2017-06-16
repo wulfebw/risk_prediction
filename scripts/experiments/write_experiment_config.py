@@ -131,18 +131,18 @@ def write_prediction(config):
     config.set(s, 'async/config', 'risk_env_config')
 
     ## hyperparams
-    config.set(s, 'async/hidden_layer_sizes', '64,')                   #
-    config.set(s, 'async/local_steps_per_update', '100')               #
+    config.set(s, 'async/hidden_layer_sizes', '64,32')                   #
+    config.set(s, 'async/local_steps_per_update', '5')               #
     config.set(s, 'async/learning_rate', '5e-4')
     config.set(s, 'async/learning_rate_end', '5e-5')
     config.set(s, 'async/dropout_keep_prob', '1.')
     config.set(s, 'async/l2_reg', '0.')
-    config.set(s, 'async/target_loss_index', '3')                       #
+    config.set(s, 'async/target_loss_index', 'None')                       #
     horizon = float(config.get('generation', 'gen/sampling_time')) / .1
     discount = (horizon - 1) / horizon
     config.set(s, 'async/discount', str(discount))
-    config.set(s, 'async/n_global_steps', '10000000')                   #
-    config.set(s, 'async/max_timesteps', '100')                         #
+    config.set(s, 'async/n_global_steps', '1000')                   #
+    config.set(s, 'async/max_timesteps', '10')                         #
 
 def write_config(filepath):
     config = configparser.SafeConfigParser(defaults=DEFAULTS)
