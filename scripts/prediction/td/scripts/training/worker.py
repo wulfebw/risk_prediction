@@ -10,6 +10,7 @@ import tensorflow as tf
 
 sys.path.append('../../')
 
+import experiment_args
 import prediction.async_td
 import prediction.build_envs
 import prediction.validation
@@ -112,7 +113,7 @@ def run(args, server):
                      or global_step < num_global_steps)):
             trainer.process(sess)
             if (global_step - last_validation_global_step > config.validate_every 
-                    and dataset is not None:)
+                    and dataset is not None):
                 trainer.validate(sess, dataset)
                 last_validation_global_step = global_step
             global_step = sess.run(trainer.global_step)
@@ -144,27 +145,9 @@ More tensorflow setup for data parallelism
 
 def main(_):
     """
-Setting up Tensorflow for data parallel work
-"""
-
-    parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help='Set verbosity.')
-    parser.add_argument('--task', default=0, type=int, help='Task index')
-    parser.add_argument('--job-name', default="worker", help='worker or ps')
-    parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
-    parser.add_argument('--log-dir', default="/tmp/risk", help='Log directory path')
-    parser.add_argument('--env-id', default="RiskEnv-v0", help='Environment id')
-    parser.add_argument('-c', '--config', type=str, default='',
-                    help="config filename, without \'.py\' extension. The default behavior is to match the config file to the choosen policy")
-    parser.add_argument('-r', '--remotes', default=None,
-                        help='References to environments to create (e.g. -r 20), '
-                             'or the address of pre-existing VNC servers and '
-                             'rewarders to use (e.g. -r vnc://localhost:5900+15900,vnc://localhost:5901+15901)')
-
-    # Add visualisation argument
-    parser.add_argument('--visualise', action='store_true',
-                        help="Visualise the gym environment by running env.render() between each timestep")
-
+    Setting up Tensorflow for data parallel work
+    """
+    parser = experiment_args.get_experiment_argparser('worker')
     args = parser.parse_args()
     spec = cluster_spec(args.num_workers, 1)
     cluster = tf.train.ClusterSpec(spec).as_cluster_def()

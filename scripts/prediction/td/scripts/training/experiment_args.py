@@ -1,14 +1,51 @@
+import argparse
+
 # args to use by default
 # validation_dataset_filepath specifies a dataset, if that is provided then 
 # the settings from it take precedence
 # if not validation dataset is provided, then a config is loaded from config
 # config filepath specifies defaults that 
-def get_experiment_argparser():
+def get_experiment_argparser(caller):
     parser = argparse.ArgumentParser(description=None)
 
-    # config 
-    parser.add_argument('-c', '--config', type=str, default='',
-                    help="config filename, without \'.py\' extension. The default behavior is to match the config file to the choosen policy")
+    if caller == 'train':
+        parser.add_argument('-w', '--num-workers', default=1, type=int,
+                            help="Number of workers")
+        parser.add_argument('-r', '--remotes', default=None,
+                            help='The address of pre-existing VNC servers and '
+                                 'rewarders to use (e.g. -r vnc://localhost:5900+15900,vnc://localhost:5901+15901).')
+        parser.add_argument('-e', '--env-id', type=str, default="RiskEnv-v0",
+                            help="Environment id")
+        parser.add_argument('-l', '--log-dir', type=str, default="/tmp/risk",
+                            help="Log directory path")
+        parser.add_argument('-n', '--dry-run', action='store_true',
+                            help="Print out commands rather than executing them")
+        parser.add_argument('-m', '--mode', type=str, default='tmux',
+                            help="tmux: run workers in a tmux session. nohup: run workers with nohup. child: run workers as child processes")
+        parser.add_argument('-c', '--config', type=str, default='risk_env_config',
+                            help="config filename, without \'.py\' extension.")
+
+        # Add visualise tag
+        parser.add_argument('--visualise', action='store_true',
+                            help="Visualise the gym environment by running env.render() between each timestep")
+    elif caller == 'worker':
+        parser = argparse.ArgumentParser(description=None)
+        parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help='Set verbosity.')
+        parser.add_argument('--task', default=0, type=int, help='Task index')
+        parser.add_argument('--job-name', default="worker", help='worker or ps')
+        parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
+        parser.add_argument('--log-dir', default="/tmp/risk", help='Log directory path')
+        parser.add_argument('--env-id', default="RiskEnv-v0", help='Environment id')
+        parser.add_argument('-c', '--config', type=str, default='',
+                        help="config filename, without \'.py\' extension. The default behavior is to match the config file to the choosen policy")
+        parser.add_argument('-r', '--remotes', default=None,
+                            help='References to environments to create (e.g. -r 20), '
+                                 'or the address of pre-existing VNC servers and '
+                                 'rewarders to use (e.g. -r vnc://localhost:5900+15900,vnc://localhost:5901+15901)')
+
+        # Add visualisation argument
+        parser.add_argument('--visualise', action='store_true',
+                            help="Visualise the gym environment by running env.render() between each timestep")
 
     # validation 
     parser.add_argument('--validation_dataset_filepath', default="", type=str,
@@ -18,7 +55,7 @@ def get_experiment_argparser():
     parser.add_argument('--max_validation_samples', default=500, type=int)
 
     # environment 
-    parser.add_argument('--julia_env-id', type=str, default="HeuristicRiskEnv-v0",
+    parser.add_argument('--julia-env-id', type=str, default="HeuristicRiskEnv-v0",
                         help="Environment id")
     parser.add_argument('--max_timesteps', default=1000000000, type=int,
                         help="max timesteps in the environment before ending the episode")
