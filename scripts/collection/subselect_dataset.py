@@ -2,10 +2,12 @@
 This scripts selects same from a dataset that are associated with a likelihood
 weight that is not 1. This task is performed after dataset collection for now.
 """
+import argparse
 import h5py
 import numpy as np
 
-def select_nonzero_features(input_filepath, output_filepath):
+def select_nonconstant_features(input_filepath, output_filepath, 
+        batch_size=10000, check_size=10000, eps=1e-8):
     infile = h5py.File(input_filepath, 'r')
     outfile = h5py.File(output_filepath, 'w')
 
@@ -14,8 +16,6 @@ def select_nonzero_features(input_filepath, output_filepath):
     nsamples, timesteps, feature_dim = infile['risk/features'].shape
     _, target_dim = infile['risk/targets'].shape
     feature_names = infile['risk'].attrs['feature_names']
-    check_size = 10000
-    eps = 1e-8
     nonzero_fidxs = []
     zero_fidxs = []
     for fidx in range(feature_dim):
@@ -36,7 +36,6 @@ def select_nonzero_features(input_filepath, output_filepath):
     outfile.create_dataset("risk/features", (nsamples, timesteps, nonzero_feature_dim))
     outfile.create_dataset("risk/targets", (nsamples, target_dim))
 
-    batch_size = 100000
     nbatches = int(nsamples / float(batch_size))
     if nsamples % batch_size != 0:
         nbatches += 1
@@ -57,7 +56,7 @@ def select_nonzero_features(input_filepath, output_filepath):
     infile.close()
     outfile.close()
 
-def select_proposal_samples(input_filepath, output_filepath):
+def select_proposal_samples(input_filepath, output_filepath, batch_size=10000):
     infile = h5py.File(input_filepath, 'r')
     outfile = h5py.File(output_filepath, 'w')
 
@@ -71,7 +70,6 @@ def select_proposal_samples(input_filepath, output_filepath):
     outfile.create_dataset("risk/features", (nsamples, timesteps, feature_dim))
     outfile.create_dataset("risk/targets", (nsamples, target_dim))
 
-    batch_size = 10000
     nbatches = int(nsamples / float(batch_size))
     if nsamples % batch_size != 0:
         nbatches += 1
@@ -94,9 +92,24 @@ def select_proposal_samples(input_filepath, output_filepath):
     outfile.close()
 
 if __name__ == '__main__':
-    input_filepath = '../../data/datasets/june/prop_bn_30_second_5_lane_heuristic.h5'
-    output_filepath = '../../data/datasets/june/subselect_prop_bn_30_second_1_lane_heuristic.h5'
-    # select_nonzero_features(input_filepath, output_filepath)
-    input_filepath = output_filepath
-    output_filepath = '../../data/datasets/june/subselect_bn_30_second_1_lane_heuristic.h5'
-    select_proposal_samples(input_filepath, output_filepath)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_filepath', default='', type=str,
+                            help="filepath to original dataset")
+    parser.add_argument('--subselect_dataset_filepath', default='', type=str,
+                            help="filepath to output subselected data")
+    parser.add_argument('--select_proposal_samples', default=True, action='store_true',
+                            help="only choose proposal vehicle samples")
+    parser.add_argument('--select_nonconstant_features', default=True, action='store_true',
+                            help="only store features that take more than 1 value")
+    args = parser.parse_args()
+
+    if args.select_nonconstant_features and not args.select_proposal_samples:
+        output_filepath = args.subselect_dataset_filepath
+    else:
+        output_filepath = input_filepath = '/tmp/risk_data.h5'
+
+    if args.select_nonconstant_features:
+        select_nonconstant_features(args.dataset_filepath, output_filepath)
+    
+    if args.select_proposal_samples:
+        select_proposal_samples(input_filepath, args.subselect_dataset_filepath)

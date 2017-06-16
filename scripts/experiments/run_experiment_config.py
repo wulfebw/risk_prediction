@@ -76,6 +76,15 @@ def generate_prediction_data(config):
     cmd_dir = os.path.join(ROOTDIR, 'collection')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
 
+def subselect_prediction_data(config):
+    s = 'generation'
+    cmd = 'python subselect_dataset.py '
+    cmd += '--dataset_filepath {} '.format(config.get(s, 'gen/output_filepath'))
+    cmd += '--subselect_dataset_filepath {} '.format(
+        config.get(s, 'subselect/output_filepath'))
+    cmd_dir = os.path.join(ROOTDIR, 'collection')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+
 def run_generation(config):
     s = 'generation'
     print_intro(s)
@@ -83,6 +92,7 @@ def run_generation(config):
     fit_bayes_net(config)
     fit_proposal_bayes_net(config)
     generate_prediction_data(config)
+    subselect_prediction_data(config)
 
 # prediction
 def run_batch_prediction(config):
@@ -96,6 +106,7 @@ def run_async_prediction(config):
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
     print('Async prediction running in the background...')
     print("Enter 'tmux attach -t a3c' to attach")
+    print("Enter 'tmux kill-session -t a3c' to end training manually")
 
 def run_prediction(config):
     s = 'prediction'

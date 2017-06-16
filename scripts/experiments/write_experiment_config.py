@@ -4,7 +4,7 @@ import os
 # constant accross all
 EXPERIMENT_NAME = 'heuristic_determinstic_1_lane_5_sec'                #
 DEFAULTS = {
-    'nprocs': 2,                                                       #
+    'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
     'err_p_a_to_i': .125,
@@ -72,8 +72,8 @@ def write_generation(config):
     config.set(s, 'prop/prime_time', '0.')
     config.set(s, 'prop/sampling_time', '5.')
     config.set(s, 'prop/cem_end_prob', '.3')
-    config.set(s, 'prop/max_iters', '50')                                #
-    config.set(s, 'prop/population_size', '4000')                       #
+    config.set(s, 'prop/max_iters', '100')                                #
+    config.set(s, 'prop/population_size', '5000')                       #
     config.set(s, 'prop/top_k_fraction', '.5')
     config.set(s, 'prop/n_prior_samples', '60000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
@@ -113,6 +113,10 @@ def write_generation(config):
     config.set(s, 'gen/max_num_vehicles', '50')
     config.set(s, 'gen/min_num_vehicles', '50')
 
+    # subselect dataset filepath
+    config.set(s, 'subselect/output_filepath', 
+        '%(expdir)s/data/subselect_prediction_data.h5')
+
 def write_prediction(config):
     s = 'prediction'
     config.add_section(s)
@@ -127,7 +131,7 @@ def write_prediction(config):
     config.set(s, 'async/log-dir', '{}/data/'.format(abs_expdir))
     config.set(s, 'async/num-workers', '%(nprocs)s')
     abs_val_dataset_filepath = os.path.abspath(config.get(
-        'generation', 'gen/output_filepath'))
+        'generation', 'subselect/output_filepath'))
     config.set(s, 'async/validation_dataset_filepath', abs_val_dataset_filepath)
     config.set(s, 'async/config', 'risk_env_config')
     abs_base_bn_filepath = os.path.abspath(config.get(
