@@ -176,9 +176,11 @@ function build_joint_generator(flags)
     # assume the target vehicle is 2nd to last in its row
     # then we need (prime_time + sampling_time + timestep) / sampling period
     # vehicles in front of the target vehicle and one behind it 
-    num_veh_per_lane = Int(ceil((prime_time + sampling_time) / sampling_period))
-    num_veh_per_lane += 2 # proposal vehicle + following vehicle
-    num_veh_per_lane = min(num_veh_per_lane, flags["max_num_vehicles"])
+    # num_veh_per_lane = Int(ceil((prime_time + sampling_time) / sampling_period))
+    # num_veh_per_lane += 2 # proposal vehicle + following vehicle
+    # num_veh_per_lane = min(num_veh_per_lane, flags["max_num_vehicles"])
+    num_veh_per_lane = Int(ceil(flags["max_num_vehicles"] / flags["num_lanes"]))
+
     flags["max_num_vehicles"] = min(
         num_veh_per_lane * flags["num_lanes"], flags["max_num_vehicles"])
     min_p = get_passive_behavior_params(

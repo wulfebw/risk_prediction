@@ -43,7 +43,7 @@ function Base.step(env::RiskEnv)
     )
 end
 
-function render(env::RiskEnv; zoom::Float64 = 7.5)
+function render(env::RiskEnv; zoom::Float64 = 4.)
     veh_id = env.ego_index
     carcolors = Dict{Int,Colorant}()
     for veh in env.scene
