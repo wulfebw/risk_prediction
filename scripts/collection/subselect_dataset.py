@@ -95,21 +95,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_filepath', default='', type=str,
                             help="filepath to original dataset")
-    parser.add_argument('--subselect_dataset_filepath', default='', type=str,
-                            help="filepath to output subselected data")
-    parser.add_argument('--select_proposal_samples', default=True, action='store_true',
-                            help="only choose proposal vehicle samples")
-    parser.add_argument('--select_nonconstant_features', default=True, action='store_true',
-                            help="only store features that take more than 1 value")
+    parser.add_argument('--subselect_filepath', 
+                            default='', type=str,
+                            help="filepath to output feature and proposal subselected data")
+    parser.add_argument('--subselect_feature_filepath', 
+                            default='', type=str,
+                            help="filepath to output feature subselected data")
+    parser.add_argument('--subselect_proposal_filepath', 
+                            default='', type=str,
+                            help="filepath to output proposal subselected data")
     args = parser.parse_args()
 
-    if args.select_nonconstant_features and not args.select_proposal_samples:
-        output_filepath = args.subselect_dataset_filepath
-    else:
-        output_filepath = input_filepath = '/tmp/risk_data.h5'
+    # output three datasets
+    # one in which all the samples are included, but only nonconstant features 
+    # are captured, a second where all features are included, but only proposal
+    # samples are kept, and a third with both these conditions
+    select_proposal_samples(args.dataset_filepath, 
+        args.subselect_proposal_filepath)
+    select_nonconstant_features(args.dataset_filepath, 
+        args.subselect_feature_filepath)
+    select_nonconstant_features(args.subselect_proposal_filepath, 
+        args.subselect_filepath)
 
-    if args.select_nonconstant_features:
-        select_nonconstant_features(args.dataset_filepath, output_filepath)
-    
-    if args.select_proposal_samples:
-        select_proposal_samples(input_filepath, args.subselect_dataset_filepath)

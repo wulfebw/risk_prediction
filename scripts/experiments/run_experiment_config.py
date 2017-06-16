@@ -80,8 +80,12 @@ def subselect_prediction_data(config):
     s = 'generation'
     cmd = 'python subselect_dataset.py '
     cmd += '--dataset_filepath {} '.format(config.get(s, 'gen/output_filepath'))
-    cmd += '--subselect_dataset_filepath {} '.format(
-        config.get(s, 'subselect/output_filepath'))
+    cmd += '--subselect_filepath {} '.format(
+        config.get(s, 'subselect_dataset'))
+    cmd += '--subselect_feature_filepath {} '.format(
+        config.get(s, 'subselect_feature_dataset'))
+    cmd += '--subselect_proposal_filepath {} '.format(
+        config.get(s, 'subselect_proposal_dataset'))
     cmd_dir = os.path.join(ROOTDIR, 'collection')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
 

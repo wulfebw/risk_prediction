@@ -4,7 +4,7 @@ import os
 # constant accross all
 EXPERIMENT_NAME = 'heuristic_determinstic_1_lane_5_sec'                #
 DEFAULTS = {
-    'nprocs': 24,                                                       #
+    'nprocs': 1,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
     'err_p_a_to_i': .125,
@@ -114,8 +114,12 @@ def write_generation(config):
     config.set(s, 'gen/min_num_vehicles', '50')
 
     # subselect dataset filepath
-    config.set(s, 'subselect/output_filepath', 
+    config.set(s, 'subselect_dataset', 
         '%(expdir)s/data/subselect_prediction_data.h5')
+    config.set(s, 'subselect_feature_dataset', 
+        '%(expdir)s/data/subselect_feature_prediction_data.h5')
+    config.set(s, 'subselect_proposal_dataset', 
+        '%(expdir)s/data/subselect_proposal_prediction_data.h5')
 
 def write_prediction(config):
     s = 'prediction'
@@ -130,10 +134,14 @@ def write_prediction(config):
     abs_expdir = os.path.abspath(config.get('DEFAULT', 'expdir'))
     config.set(s, 'async/log-dir', '{}/data/'.format(abs_expdir))
     config.set(s, 'async/num-workers', '%(nprocs)s')
-    abs_val_dataset_filepath = os.path.abspath(config.get(
-        'generation', 'subselect/output_filepath'))
-    config.set(s, 'async/validation_dataset_filepath', abs_val_dataset_filepath)
     config.set(s, 'async/config', 'risk_env_config')
+
+    ### validation dataset
+    abs_val_dataset_filepath = os.path.abspath(config.get(
+        'generation', 'subselect_proposal_dataset'))
+    config.set(s, 'async/validation_dataset_filepath', abs_val_dataset_filepath)
+
+    ### bayes net filepaths
     abs_base_bn_filepath = os.path.abspath(config.get(
         'generation', 'base_bn_filepath'))
     config.set(s, 'async/base_bn_filepath', abs_base_bn_filepath)
