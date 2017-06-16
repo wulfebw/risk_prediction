@@ -19,3 +19,7 @@
 | rear_l_vel                | velocity of the rear left neighbor in the scene, if one exists    | m/s       |
 | rangerate_lidar_6         | the rate of change of lidar number 6 (specifies which beam)       | m/s       |
 | lidar_3                   | the distance to some object of lidar number 3                     | m         |
+| timegap                   |                                                                   |           |
+| time_to_collision_is_avail|                                                                   |           |
+| relvelocity               |                                                                   |           |
+| utilities                 |                                                                   |           |
