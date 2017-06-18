@@ -165,7 +165,7 @@ function run_cem(
             weights[scene_idx] = col.gen.weights[proposal_vehicle_index]
 
             data[:, scene_idx] = extract_bn_features(
-                col.eval.features[:,end,:], 
+                col.eval.features[:,1,:], 
                 ext_feature_names, 
                 proposal_vehicle_index)
         end

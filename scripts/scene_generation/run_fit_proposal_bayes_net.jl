@@ -48,9 +48,9 @@ function fit_proposal_bayes_net(
         target_indices::Vector{Int} = [4],
         n_prior_samples::Int = 5000
     )
-    # only collect a single timestep
-    flags["feature_timesteps"] = 1
-    flags["feature_step_size"] = 1
+    # # only collect a single timestep
+    # flags["feature_timesteps"] = 1
+    # flags["feature_step_size"] = 1
     # ensure joint generator
     flags["generator_type"] = "joint"
     # changing prime time may be reasonable because want to generate scenes 

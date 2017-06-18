@@ -41,7 +41,7 @@ def write_collection(config):
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '3000')                             #
+    config.set(s, 'col/num_scenarios', '5000')                             #
     config.set(s, 'col/num_monte_carlo_runs', '1')
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -71,8 +71,9 @@ def write_generation(config):
     # defined below
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
     config.set(s, 'prop/num_monte_carlo_runs', '2')                     #
-    config.set(s, 'prop/prime_time', '0.')
-    config.set(s, 'prop/sampling_time', '5.')
+    # want to use prime and sampling time from generation
+    # config.set(s, 'prop/prime_time', '0.')
+    # config.set(s, 'prop/sampling_time', '5.')
     config.set(s, 'prop/cem_end_prob', '.5')
     config.set(s, 'prop/max_iters', '100')                                #
     config.set(s, 'prop/population_size', '5000')                       #
