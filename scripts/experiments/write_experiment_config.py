@@ -187,10 +187,12 @@ def write_prediction(config):
     config.set(s, 'batch/decay_lr_ratio', '1.')
     config.set(s, 'batch/loss_type', 'ce')                              #
     config.set(s, 'batch/task_type', 'regression')                      #
-    config.set(s, 'batch/num_target_bins', '2')                           #
-    config.set(s, 'batch/dropout_keep_prob', '1.')
+    num_target_bins = None
+    if num_target_bins is not None:
+        config.set(s, 'batch/num_target_bins', num_target_bins)              #
+    config.set(s, 'batch/dropout_keep_prob', '.5')
     config.set(s, 'batch/use_batch_norm', 'True')
-    config.set(s, 'batch/l2_reg', '0.')
+    config.set(s, 'batch/l2_reg', '1e-5')
     config.set(s, 'batch/timesteps', config.get(
         'generation', 'gen/feature_timesteps'))
     config.set(s, 'batch/use_likelihood_weights', 'True')

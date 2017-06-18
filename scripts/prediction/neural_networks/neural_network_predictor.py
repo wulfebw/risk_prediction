@@ -255,17 +255,17 @@ class NeuralNetworkPredictor(object):
         dropout_ph = tf.placeholder(tf.float32,
                 shape=(),
                 name="dropout_ph")
-        learning_rate_ph = tf.placeholder(tf.float32, 
+        lr_ph = tf.placeholder(tf.float32, 
                 shape=(),
                 name="lr_ph")
 
         # summaries
         tf.summary.scalar('dropout_keep_prob',dropout_ph)
-        tf.summary.scalar('learning_rate',learning_rate_ph)
+        tf.summary.scalar('learning_rate',lr_ph)
         if self.flags.use_likelihood_weights:
             tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
 
-        return (input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph)
+        return (input_ph, target_ph, weights_ph, dropout_ph, lr_ph)
 
     def _build_network(self, input_ph, dropout_ph):
         """
@@ -372,14 +372,9 @@ class NeuralNetworkPredictor(object):
         train_op = opt.apply_gradients(
             clipped_grads_params, global_step=global_step)  
 
-        # summaries
-        # for (g, p) in clipped_grads_params:
-        #     tf.histogram_summary('grads for {}'.format(p.name), g)
-
         return train_op
-    
 
-class ClassificationFeedForwardNeuralNetwork(NeuralNetworkPredictor):
+class NeuralNetworkClassifier(NeuralNetworkPredictor):
     def __init__(self, session, flags):
         """
         Description:
@@ -390,8 +385,7 @@ class ClassificationFeedForwardNeuralNetwork(NeuralNetworkPredictor):
             - session: the session with which to execute model operations
             - flags: tensorflow flags object containing network options
         """
-        super(ClassificationFeedForwardNeuralNetwork, self).__init__(
-            session, flags)
+        super(NeuralNetworkClassifier, self).__init__(session, flags)
 
     def predict(self, inputs, predict_labels=True):
         """
@@ -434,28 +428,15 @@ class ClassificationFeedForwardNeuralNetwork(NeuralNetworkPredictor):
             - dropout_ph: placeholder for fraction of activations 
                 to drop
         """
-        input_ph = tf.placeholder(tf.float32,
-                shape=(None, self.flags.input_dim),
-                name="input_ph")
+        # note that summaries performed in super
+        input_ph, _, weights_ph, dropout_ph, lr_ph = super(
+            NeuralNetworkClassifier, self)._build_placeholders()
+
         target_ph = tf.placeholder(tf.int32,
                 shape=(None, self.flags.output_dim),
                 name="target_ph")
-        weights_ph = tf.placeholder(tf.float32,
-                shape=(None, 1),
-                name="weights_ph")
-        dropout_ph = tf.placeholder(tf.float32,
-                shape=(),
-                name="dropout_ph")
-        learning_rate_ph = tf.placeholder(tf.float32, 
-                shape=(),
-                name="lr_ph")
 
-        # summaries
-        tf.summary.scalar('dropout keep prob', dropout_ph)
-        tf.summary.scalar('learning_rate', learning_rate_ph)
-        tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
-
-        return input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph
+        return input_ph, target_ph, weights_ph, dropout_ph, lr_ph
 
     def _build_loss(self, scores, targets, weights):
         """
