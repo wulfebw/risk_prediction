@@ -214,7 +214,7 @@ class TestAsyncTDHeuristicDeterministicCase(unittest.TestCase):
         config = TestConfig()
         config.n_global_steps = 50000
         config.max_timesteps = 50
-        config.env_id = 'HeuristicRiskEnv-v0'
+        config.env_id = 'BayesNetRiskEnv-v0'
         config.discount = 1. # 49. / 50
         config.value_dim = 5
         config.adam_beta1 = .9
@@ -222,9 +222,9 @@ class TestAsyncTDHeuristicDeterministicCase(unittest.TestCase):
         config.hidden_layer_sizes = [128]
         config.learning_rate = 1e-3
         config.learning_rate_end = 5e-6
-        config.loss_type = 'ce'
+        config.loss_type = 'mse'
         config.target_loss_index = 1
-        config.validation_dataset_filepath = '../data/risk.h5'
+        config.validation_dataset_filepath = '/Users/wulfebw/Dropbox/School/Stanford/research/risk/risk_prediction/data/experiments/heuristic_determinstic_1_lane_5_sec/data/subselect_proposal_prediction_data.h5'
         config.max_validation_samples = 1
         config.validate_every = 1000
         config.visualize_every = 10000
@@ -232,6 +232,10 @@ class TestAsyncTDHeuristicDeterministicCase(unittest.TestCase):
 
         validation.transfer_dataset_settings_to_config(
             config.validation_dataset_filepath, config)
+
+        config.base_bn_filepath = '/Users/wulfebw/Dropbox/School/Stanford/research/risk/risk_prediction/data/experiments/heuristic_determinstic_1_lane_5_sec/data/base_bn_filepath.h5'
+        config.base_prop_filepath = '/Users/wulfebw/Dropbox/School/Stanford/research/risk/risk_prediction/data/experiments/heuristic_determinstic_1_lane_5_sec/data/prop_bn_filepath.h5'
+        config.max_validation_samples = 1000
 
         # config.roadway_radius = 400.
         # config.roadway_length = 100.

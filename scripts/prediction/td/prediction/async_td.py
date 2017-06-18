@@ -198,19 +198,17 @@ class AsyncTD(object):
                     tf.summary.scalar("features/{}_value".format(
                         feature_name.encode('utf-8')), 
                         tf.reduce_mean(pi.x[:,i]))
+
             ## target and loss summaries
             bs = tf.to_float(tf.shape(pi.x)[0])
-            tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_vf = tf.reduce_mean(pi.vf, axis=0)
             if self.config.loss_type == 'ce':
                 mean_vf = tf.nn.sigmoid(mean_vf)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
             for i, target_name in enumerate(
                     build_envs.get_target_names(env, self.config.value_dim)):
-                tf.summary.scalar("model/value_mean_{}".format(target_name), 
+                tf.summary.scalar("model/vf_mean_{}".format(target_name), 
                     mean_vf[i])
-                tf.summary.scalar("model/value_{}".format(target_name), 
-                    pi.vf[0,i])
             tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
             tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
 
@@ -366,16 +364,11 @@ class AsyncTD(object):
 
         for i, target_name in enumerate(
                 build_envs.get_target_names(self.env, np.shape(targets)[-1])):
-            tf.summary.scalar("targets/{}_value".format(target_name), 
+            tf.summary.scalar("targets/{}".format(target_name), 
                 mean_targets[i])
             tf.summary.scalar("targets/{}_loss".format(target_name), 
                 mean_target_td_errors[i])
 
-        return loss
-
-    def _my_sigmoid_cross_entropy_with_logits(self, logits, labels, e=1e-8):
-        loss = (labels * -tf.log(tf.nn.sigmoid(logits)) 
-            + (1 - labels) * -tf.log(1 - tf.nn.sigmoid(logits)))
         return loss
 
     def _build_cross_entropy_loss_component(self, scores, targets, w, 
@@ -384,14 +377,9 @@ class AsyncTD(object):
             loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=scores[:, target_loss_index], 
                 labels=targets[:, target_loss_index])
-            # loss = self._my_sigmoid_cross_entropy_with_logits(
-            #     logits=scores[:, target_loss_index], 
-            #     labels=targets[:, target_loss_index])
         else:
             loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=scores, labels=targets)
-            # loss = self._my_sigmoid_cross_entropy_with_logits(
-            #     logits=scores, labels=targets)
 
         loss = loss * tf.reshape(w, [-1,1])
 
@@ -400,7 +388,7 @@ class AsyncTD(object):
         done = False
         for i, target_name in enumerate(
                 build_envs.get_target_names(self.env, np.shape(targets)[-1])):
-            tf.summary.scalar("targets/{}_value".format(target_name), 
+            tf.summary.scalar("targets/{}".format(target_name), 
                 mean_targets[i])
             if target_loss_index is not None:
                 if not done:
