@@ -25,7 +25,7 @@ def build_cmd(key_val_iter, prefix=''):
     cmd = ''
     for (k, v) in key_val_iter:
         if k.startswith(prefix):
-            cmd += ' --{} {}'.format(k.replace(prefix,''), v)
+            cmd += ' --{} {} '.format(k.replace(prefix,''), v)
     return cmd
 
 class ChangeDir(object):

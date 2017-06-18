@@ -2,12 +2,13 @@ using CommandLineFlags
 using JLD
 
 include("../collection/collect_dataset.jl")
+# including the config uses the same flags as are used in collection
+# below only defining the additional flags used for CEM 
+# when passing arguments, the ones that are passed later in the command 
+# are used
 include("../collection/dataset_config.jl")
 @everywhere include("fit_proposal_bayes_net.jl")
 
-FLAGS = Flags()
-add_entry!(FLAGS, "dataset_filepath", "../../data/datasets/risk.h5", 
-    String, "training data filepath")
 add_entry!(FLAGS, "base_bn_filepath", "../../data/bayesnets/base_test.jld", 
     String, "base bayesnet against which to fit")
 add_entry!(FLAGS, "output_filepath", "../../data/bayesnets/prop_test.jld", 
@@ -32,8 +33,8 @@ add_entry!(FLAGS, "n_prior_samples", 50000,
     Int, "number of samples from the base bn to start with")
 
 function fit_proposal_bayes_net(
-        dataset_filepath::String;
-        base_bn_filepath::Union{String,Void} = nothing,
+        base_bn_filepath::Union{String},
+        flags::Flags;
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
         viz_dir::String = "../../data/bayesnets/viz",
         num_monte_carlo_runs::Int = 1,
@@ -47,11 +48,6 @@ function fit_proposal_bayes_net(
         target_indices::Vector{Int} = [4],
         n_prior_samples::Int = 5000
     )
-    # load flags from an existing dataset
-    # these flags should be the ones ultimately used in evaluation
-    # and that were used to generate the dataset of the base bn
-    flags = h5readattr(dataset_filepath, "risk")
-    fixup_types!(flags)
     # only collect a single timestep
     flags["feature_timesteps"] = 1
     flags["feature_step_size"] = 1
@@ -110,9 +106,8 @@ end
 
 parse_flags!(FLAGS, ARGS)
 
-@time fit_proposal_bayes_net(
-    FLAGS["dataset_filepath"],
-    base_bn_filepath = FLAGS["base_bn_filepath"],
+@time fit_proposal_bayes_net(FLAGS["base_bn_filepath"],
+    FLAGS,
     output_filepath = FLAGS["output_filepath"],
     viz_dir = FLAGS["viz_dir"],
     num_monte_carlo_runs = FLAGS["num_monte_carlo_runs"],

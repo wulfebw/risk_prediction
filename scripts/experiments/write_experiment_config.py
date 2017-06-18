@@ -2,9 +2,9 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'heuristic_determinstic_1_lane_5_sec'                #
+EXPERIMENT_NAME = 'heuristic_deterministic_1_lane_5_sec'                #
 DEFAULTS = {
-    'nprocs': 1,                                                       #
+    'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
     'err_p_a_to_i': .125,
@@ -67,11 +67,13 @@ def write_generation(config):
     config.set(s, 'base_bn_filepath', '%(expdir)s/data/base_bn.jld')
 
     # proposal bayes net training
+    # note that this should use the dataset generation parameters
+    # defined below
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
     config.set(s, 'prop/num_monte_carlo_runs', '2')                     #
     config.set(s, 'prop/prime_time', '0.')
     config.set(s, 'prop/sampling_time', '5.')
-    config.set(s, 'prop/cem_end_prob', '.3')
+    config.set(s, 'prop/cem_end_prob', '.5')
     config.set(s, 'prop/max_iters', '100')                                #
     config.set(s, 'prop/population_size', '5000')                       #
     config.set(s, 'prop/top_k_fraction', '.5')
@@ -82,7 +84,7 @@ def write_generation(config):
     config.set(s, 'gen/output_filepath', '%(expdir)s/data/prediction_data.h5')
 
     ## feature extraction
-    feature_timesteps = 10
+    feature_timesteps = 20
     config.set(s, 'gen/feature_timesteps', '{}'.format(feature_timesteps))
     feature_step_size = 1
     config.set(s, 'gen/feature_step_size', '{}'.format(feature_step_size))
@@ -99,7 +101,7 @@ def write_generation(config):
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '10000')                               #
+    config.set(s, 'gen/num_scenarios', '100000')                          #
     config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
@@ -176,7 +178,7 @@ def write_prediction(config):
 
     ## hyperparams
     config.set(s, 'batch/batch_size', '1000')                              #
-    config.set(s, 'batch/num_epochs', '100')
+    config.set(s, 'batch/num_epochs', '200')
     config.set(s, 'batch/save_every', '10')
     config.set(s, 'batch/debug_size', '10000')                            #
     config.set(s, 'batch/target_index', '3')                              #
@@ -184,7 +186,7 @@ def write_prediction(config):
     config.set(s, 'batch/learning_rate', '1e-3')
     config.set(s, 'batch/min_lr', '1e-5')
     config.set(s, 'batch/decrease_lr_threshold', '.0')
-    config.set(s, 'batch/decay_lr_ratio', '1.')
+    config.set(s, 'batch/decay_lr_ratio', '.999')
     config.set(s, 'batch/loss_type', 'ce')                              #
     config.set(s, 'batch/task_type', 'regression')                      #
     num_target_bins = None

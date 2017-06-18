@@ -56,6 +56,12 @@ def fit_bayes_net(config):
 def fit_proposal_bayes_net(config):
     s = 'generation'
     cmd = 'julia -p {} run_fit_proposal_bayes_net.jl '.format(config.get(s, 'nprocs'))
+    # want to use the same configuration for fitting the proposal 
+    # BN as will be used for data generation, so add the data gen flags
+    # first, and then add the explictly proposal-BN training flags second
+    # this lets the explict ones override, but uses the data gen flags 
+    # as defaults
+    cmd += build_cmd(config.items(s), prefix='gen/')
     cmd += '--dataset_filepath {} '.format(
         config.get('collection', 'col/output_filepath'))
     cmd += '--base_bn_filepath {} '.format(
