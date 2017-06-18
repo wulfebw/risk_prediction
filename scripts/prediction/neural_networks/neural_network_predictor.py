@@ -9,7 +9,7 @@ import time
 
 from . import models
 
-class NeuralNetwork(object):
+class NeuralNetworkPredictor(object):
 
     def __init__(self, session, flags):
         """
@@ -227,6 +227,46 @@ class NeuralNetwork(object):
         # intialize the model
         self.session.run(tf.global_variables_initializer())
 
+    def _build_placeholders(self):
+        """
+        Description:
+            - build placeholders for inputs to the tf graph.
+
+        Returns:
+            - input_ph: placeholder for a input batch
+            - target_ph: placeholder for a target batch
+            - dropout_ph: placeholder for fraction of activations 
+                to drop
+        """
+        if self.flags.timesteps > 1:
+            input_ph = tf.placeholder(tf.float32,
+                shape=(None, self.flags.timesteps, self.flags.input_dim),
+                name="input_ph")
+        else:
+            input_ph = tf.placeholder(tf.float32,
+                    shape=(None, self.flags.input_dim),
+                    name="input_ph")
+        target_ph = tf.placeholder(tf.float32,
+                shape=(None, self.flags.output_dim),
+                name="target_ph")
+        weights_ph = tf.placeholder(tf.float32,
+                shape=(None, 1),
+                name="weights_ph")
+        dropout_ph = tf.placeholder(tf.float32,
+                shape=(),
+                name="dropout_ph")
+        learning_rate_ph = tf.placeholder(tf.float32, 
+                shape=(),
+                name="lr_ph")
+
+        # summaries
+        tf.summary.scalar('dropout_keep_prob',dropout_ph)
+        tf.summary.scalar('learning_rate',learning_rate_ph)
+        if self.flags.use_likelihood_weights:
+            tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
+
+        return (input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph)
+
     def _build_network(self, input_ph, dropout_ph):
         """
         Description:
@@ -240,7 +280,12 @@ class NeuralNetwork(object):
         Returns:
             - scores: the scores for the target values
         """
-        return models.build_feed_forward_network(input_ph, dropout_ph, self.flags)
+        if self.flags.timesteps > 1:
+            return models.build_recurrent_network(
+                input_ph, dropout_ph, self.flags)
+        else:
+            return models.build_feed_forward_network(
+                input_ph, dropout_ph, self.flags)
 
     def _build_loss(self, scores, targets, weights):
         """
@@ -332,56 +377,9 @@ class NeuralNetwork(object):
         #     tf.histogram_summary('grads for {}'.format(p.name), g)
 
         return train_op
+    
 
-class FeedForwardNeuralNetwork(NeuralNetwork):
-    def __init__(self, session, flags):
-        """
-        Description:
-            - Initializes this network by storing the tf flags and 
-                building the model.
-
-        Args:
-            - session: the session with which to execute model operations
-            - flags: tensorflow flags object containing network options
-        """
-        super(FeedForwardNeuralNetwork, self).__init__(session, flags)
-
-    def _build_placeholders(self):
-        """
-        Description:
-            - build placeholders for inputs to the tf graph.
-
-        Returns:
-            - input_ph: placeholder for a input batch
-            - target_ph: placeholder for a target batch
-            - dropout_ph: placeholder for fraction of activations 
-                to drop
-        """
-        input_ph = tf.placeholder(tf.float32,
-                shape=(None, self.flags.input_dim),
-                name="input_ph")
-        target_ph = tf.placeholder(tf.float32,
-                shape=(None, self.flags.output_dim),
-                name="target_ph")
-        weights_ph = tf.placeholder(tf.float32,
-                shape=(None, 1),
-                name="weights_ph")
-        dropout_ph = tf.placeholder(tf.float32,
-                shape=(),
-                name="dropout_ph")
-        learning_rate_ph = tf.placeholder(tf.float32, 
-                shape=(),
-                name="lr_ph")
-
-        # summaries
-        tf.summary.scalar('dropout_keep_prob',dropout_ph)
-        tf.summary.scalar('learning_rate',learning_rate_ph)
-        if self.flags.use_likelihood_weights:
-            tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
-
-        return (input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph)
-
-class ClassificationFeedForwardNeuralNetwork(FeedForwardNeuralNetwork):
+class ClassificationFeedForwardNeuralNetwork(NeuralNetworkPredictor):
     def __init__(self, session, flags):
         """
         Description:

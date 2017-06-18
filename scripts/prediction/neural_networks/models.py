@@ -57,22 +57,7 @@ def get_bias_initializer(activation):
         raise ValueError('invalid activation: {}'.format(activation))
     return initializer
 
-
-def build_feed_forward_network(input_ph, dropout_ph, flags):
-    """
-    Description:
-        - Builds a feed forward network with relu units.
-
-    Args:
-        - input_ph: placeholder for the inputs
-            shape = (batch_size, input_dim)
-        - dropout_ph: placeholder for dropout value
-        - flags: config values
-
-    Returns:
-        - scores: the scores for the target values
-    """
-
+def _build_perception_module(input_ph, dropout_ph, flags):
     # build initializers specific to relu
     weights_initializer = get_weight_initializer('relu')
     bias_initializer = get_bias_initializer('relu')
@@ -100,6 +85,12 @@ def build_feed_forward_network(input_ph, dropout_ph, flags):
             hidden = tf.contrib.layers.batch_norm(hidden)
         hidden = tf.nn.dropout(hidden, dropout_ph)
 
+    return hidden
+
+def _build_score_module(hidden, dropout_ph, flags):
+    # build regularizers
+    weights_regularizer = tf.contrib.layers.l2_regularizer(flags.l2_reg)
+
     # build output layer
     output_dim = flags.output_dim
     if flags.task_type == 'classification':
@@ -108,5 +99,52 @@ def build_feed_forward_network(input_ph, dropout_ph, flags):
             output_dim, 
             activation_fn=None,
             weights_regularizer=weights_regularizer)
-
     return scores
+
+def build_feed_forward_network(input_ph, dropout_ph, flags):
+    """
+    Description:
+        - Builds a feed forward network with relu units.
+
+    Args:
+        - input_ph: placeholder for the inputs
+            shape = (batch_size, input_dim)
+        - dropout_ph: placeholder for dropout value
+        - flags: config values
+
+    Returns:
+        - scores: the scores for the target values
+    """
+    hidden = _build_perception_module(input_ph, dropout_ph, flags)
+    scores = _build_score_module(hidden, dropout_ph, flags)
+    return scores
+
+def build_recurrent_network(input_ph, dropout_ph, flags):
+        """
+        Description:
+            - Builds a recurrent neural network where the features are first
+                mapped from the input dim to the hidden dim of the RNN by a 
+                feed forward network.
+
+        Args:
+            - input_ph: placeholder for the inputs
+                shape = (batch_size, input_dim)
+            - dropout_ph: placeholder for dropout value
+            - flags: options for the network
+
+        Returns:
+            - scores: the scores for the target values
+        """
+
+        hidden = _build_perception_module(input_ph, dropout_ph, flags)
+
+        # build recurrent network 
+        cell = tf.contrib.rnn.GRUCell(num_units=flags.hidden_layer_dims[-1])
+        outputs, states = tf.nn.dynamic_rnn(
+            cell=cell,
+            dtype=tf.float32,
+            inputs=hidden)
+
+        scores = _build_score_module(outputs[:,-1], dropout_ph, flags)
+
+        return scores
