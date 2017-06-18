@@ -42,9 +42,10 @@ class TestFeedForwardNeuralNetworkMNIST(unittest.TestCase):
         flags.dropout_keep_prob = .75
         flags.verbose = False
         flags.save_weights_every = 100000
+        flags.use_likelihood_weights = False
 
         # load data
-        data = testing_utils.load_mnist(debug_size=1000)
+        data = testing_utils.load_mnist(debug_size=2000)
         d = dataset.Dataset(data, flags)
 
         # build network
@@ -58,6 +59,7 @@ class TestFeedForwardNeuralNetworkMNIST(unittest.TestCase):
             acc = len(np.where(y_pred == y)[0]) / float(len(y_pred))
 
             # check that validation accuracy is above 90%
+            print(acc)
             self.assertTrue(acc > .9)
 
             # if run solo, then display some images and predictions

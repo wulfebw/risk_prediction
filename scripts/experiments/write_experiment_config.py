@@ -126,46 +126,74 @@ def write_prediction(config):
     config.add_section(s)
 
     # logistics
-    config.set(s, 'prediction_type', 'async')
+    config.set(s, 'prediction_type', 'batch')
     config.set(s, 'logfile', '%(expdir)s/log/prediction.log')
 
-    # async
+    # td prediction
     ## logistics
-    abs_expdir = os.path.abspath(config.get('DEFAULT', 'expdir'))
-    config.set(s, 'async/log-dir', '{}/data/'.format(abs_expdir))
-    config.set(s, 'async/num-workers', '%(nprocs)s')
-    config.set(s, 'async/config', 'risk_env_config')
+    relpath = '../../../'
+    config.set(s, 'td/log-dir', '{}/data/'.format(os.path.join(
+        relpath, config.get('DEFAULT', 'expdir'))))
+    config.set(s, 'td/num-workers', '%(nprocs)s')
+    config.set(s, 'td/config', 'risk_env_config')
 
     ### validation dataset
-    abs_val_dataset_filepath = os.path.abspath(config.get(
-        'generation', 'subselect_proposal_dataset'))
-    config.set(s, 'async/validation_dataset_filepath', abs_val_dataset_filepath)
+    config.set(s, 'td/validation_dataset_filepath', os.path.join(
+        relpath, config.get('generation', 'subselect_proposal_dataset')))
 
     ### bayes net filepaths
-    abs_base_bn_filepath = os.path.abspath(config.get(
-        'generation', 'base_bn_filepath'))
-    config.set(s, 'async/base_bn_filepath', abs_base_bn_filepath)
-    abs_prop_bn_filepath = os.path.abspath(config.get(
-        'generation', 'prop_bn_filepath'))
-    config.set(s, 'async/prop_bn_filepath', abs_prop_bn_filepath)
-    abs_viz_dir = os.path.abspath(config.get(
-        'generation', 'prop/viz_dir'))
-    config.set(s, 'async/viz_dir', abs_viz_dir)
+    config.set(s, 'td/base_bn_filepath', os.path.join(
+        relpath, config.get('generation', 'base_bn_filepath')))
+    config.set(s, 'td/prop_bn_filepath', os.path.join(
+        relpath, config.get('generation', 'prop_bn_filepath')))
+
+    ## viz
+    config.set(s, 'td/viz_dir', os.path.join(
+        relpath, config.get('generation', 'prop/viz_dir')))
 
     ## hyperparams
-    config.set(s, 'async/hidden_layer_sizes', '128,128')                   #
-    config.set(s, 'async/local_steps_per_update', '100')               #
-    config.set(s, 'async/learning_rate', '5e-4')
-    config.set(s, 'async/learning_rate_end', '5e-5')
-    config.set(s, 'async/dropout_keep_prob', '1.')
-    config.set(s, 'async/l2_reg', '0.')
-    config.set(s, 'async/target_loss_index', '3')                       #
+    config.set(s, 'td/hidden_layer_sizes', '128,128')                   #
+    config.set(s, 'td/local_steps_per_update', '100')               #
+    config.set(s, 'td/learning_rate', '5e-4')
+    config.set(s, 'td/learning_rate_end', '5e-5')
+    config.set(s, 'td/dropout_keep_prob', '1.')
+    config.set(s, 'td/l2_reg', '0.')
+    config.set(s, 'td/target_loss_index', '3')                       #
     horizon = float(config.get('generation', 'gen/sampling_time')) / .1
     discount = (horizon - 1) / horizon
-    config.set(s, 'async/discount', str(discount))
-    config.set(s, 'async/n_global_steps', '10000000')                   #
-    config.set(s, 'async/max_timesteps', '1000')                         #
-    config.set(s, 'async/prime_time', '0.')
+    config.set(s, 'td/discount', str(discount))
+    config.set(s, 'td/n_global_steps', '10000000')                   #
+    config.set(s, 'td/max_timesteps', '1000')                         #
+    config.set(s, 'td/prime_time', '0.')
+
+    # batch prediction
+    ## dataset / logistics
+    config.set(s, 'batch/dataset_filepath', os.path.join('../', config.get(
+        'generation', 'subselect_dataset')))
+    config.set(s, 'batch/snapshot_dir', '../%(expdir)s/data/snapshots')
+    config.set(s, 'batch/viz_dir', '../%(expdir)s/data/viz')
+    config.set(s, 'batch/summary_dir', '../%(expdir)s/data/summaries')
+
+    ## hyperparams
+    config.set(s, 'batch/batch_size', '1000')                              #
+    config.set(s, 'batch/num_epochs', '100')
+    config.set(s, 'batch/save_every', '10')
+    config.set(s, 'batch/debug_size', '10000')                            #
+    config.set(s, 'batch/target_index', '3')                              #
+    config.set(s, 'batch/hidden_layer_dims', '128 128')
+    config.set(s, 'batch/learning_rate', '1e-3')
+    config.set(s, 'batch/min_lr', '1e-5')
+    config.set(s, 'batch/decrease_lr_threshold', '.0')
+    config.set(s, 'batch/decay_lr_ratio', '1.')
+    config.set(s, 'batch/loss_type', 'ce')                              #
+    config.set(s, 'batch/task_type', 'regression')                      #
+    config.set(s, 'batch/num_target_bins', '2')                           #
+    config.set(s, 'batch/dropout_keep_prob', '1.')
+    config.set(s, 'batch/use_batch_norm', 'True')
+    config.set(s, 'batch/l2_reg', '0.')
+    config.set(s, 'batch/timesteps', config.get(
+        'generation', 'gen/feature_timesteps'))
+    config.set(s, 'batch/use_likelihood_weights', 'True')
 
 def write_config(filepath):
     config = configparser.SafeConfigParser(defaults=DEFAULTS)

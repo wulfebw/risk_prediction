@@ -42,6 +42,7 @@ class TestRecurrentNeuralNetwork(unittest.TestCase):
         flags.dropout_keep_prob = 1.
         flags.verbose = False
         flags.save_weights_every = 100000
+        flags.use_likelihood_weights = False
         flags.snapshot_dir = os.path.abspath(os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir, 'data','snapshots','test'))
 

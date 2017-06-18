@@ -84,6 +84,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.num_epochs = 200
         flags.learning_rate = .05
         flags.save_weights_every = 100000
+        flags.use_likelihood_weights = False
         with tf.Session() as session:
             network = ffnn.FeedForwardNeuralNetwork(session, flags)
             # data set maps 1->0 and 0->1
@@ -99,6 +100,48 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
                 loss, probs, scores, _ = session.run([network._loss, network._probs, network._scores, network._train_op],
                     feed_dict={network._input_ph: x, network._target_ph: y,
                     network._dropout_ph: network.flags.dropout_keep_prob, network._lr_ph: flags.learning_rate})
+
+            probs = session.run(network._probs,
+                    feed_dict={network._input_ph: x, network._target_ph: y,
+                    network._dropout_ph: 1., network._lr_ph: flags.learning_rate})
+
+            self.assertAlmostEqual(loss, 0, 4)
+            np.testing.assert_array_almost_equal(probs, y, 4)
+
+    def test_ability_to_overfit_debug_dataset_with_weights(self):
+        """
+        Description:
+            - Test network's ability to overfit a small dataset independent
+                of whether 'fit' is correctly implemented.
+        """
+        tf.set_random_seed(1)
+        np.random.seed(1)
+        flags = testing_flags.FLAGS
+        flags.input_dim = 3
+        flags.hidden_dim = 16
+        flags.num_hidden_layers = 2
+        flags.output_dim = 2
+        flags.batch_size = 12
+        flags.num_epochs = 200
+        flags.use_likelihood_weights = True
+        flags.learning_rate = .05
+        flags.save_weights_every = 100000
+        with tf.Session() as session:
+            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            # data set maps 1->0 and 0->1
+            x = np.vstack(
+                (np.ones((flags.batch_size // 2, flags.input_dim)), 
+                  np.zeros((flags.batch_size // 2, flags.input_dim))))
+            y = np.vstack(
+                (np.zeros((flags.batch_size // 2, flags.output_dim)), 
+                    np.ones((flags.batch_size // 2, flags.output_dim))))
+            w = np.ones((flags.batch_size, 1))
+
+            # training epochs
+            for epoch in range(flags.num_epochs):
+                loss, probs, scores, _ = session.run([network._loss, network._probs, network._scores, network._train_op],
+                    feed_dict={network._input_ph: x, network._target_ph: y,
+                    network._dropout_ph: network.flags.dropout_keep_prob, network._lr_ph: flags.learning_rate, network._weights_ph: w})
 
             probs = session.run(network._probs,
                     feed_dict={network._input_ph: x, network._target_ph: y,
@@ -145,6 +188,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.learning_rate = .05
         flags.l2_reg = 0.0
         flags.save_weights_every = 100000
+        flags.use_likelihood_weights = False
         flags.snapshot_dir = os.path.abspath(os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir, 'data','snapshots','test'))
 
@@ -179,6 +223,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.l2_reg = 0.0
         flags.verbose = False
         flags.save_weights_every = 100000
+        flags.use_likelihood_weights = False
         flags.snapshot_dir = os.path.abspath(os.path.join(
             os.path.dirname(__file__), os.pardir, os.pardir, 'data','snapshots','test'))
 

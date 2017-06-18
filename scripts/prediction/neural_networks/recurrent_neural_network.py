@@ -40,6 +40,9 @@ class RecurrentNeuralNetwork(NeuralNetwork):
         target_ph = tf.placeholder(tf.float32,
                 shape=(None, self.flags.output_dim),
                 name="target_ph")
+        weights_ph = tf.placeholder(tf.float32,
+                shape=(None, 1),
+                name="weights_ph")
         dropout_ph = tf.placeholder(tf.float32,
                 shape=(),
                 name="dropout_ph")
@@ -50,8 +53,10 @@ class RecurrentNeuralNetwork(NeuralNetwork):
         # summaries
         tf.summary.scalar('dropout keep prob', dropout_ph)
         tf.summary.scalar('learning_rate', learning_rate_ph)
+        if self.flags.use_likelihood_weights:
+            tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
 
-        return input_ph, target_ph, dropout_ph, learning_rate_ph
+        return input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph
 
     def _build_network(self, input_ph, dropout_ph):
         """
@@ -181,14 +186,14 @@ class ClassificationRecurrentNeuralNetwork(RecurrentNeuralNetwork):
                 to drop
             - learning_rate_ph: placeholder for learning rate
         """
-        input_ph, _, dropout_ph, learning_rate_ph = super(
+        input_ph, _, weights_ph, dropout_ph, learning_rate_ph = super(
             ClassificationRecurrentNeuralNetwork, self)._build_placeholders()
         target_ph = tf.placeholder(tf.int32,
                 shape=(None, self.flags.output_dim),
                 name="target_ph")
-        return input_ph, target_ph, dropout_ph, learning_rate_ph
+        return sinput_ph, starget_ph, sweights_ph, sdropout_ph, learning_rate_ph
 
-    def _build_loss(self, scores, targets):
+    def _build_loss(self, scores, targets, weights):
         """
         Description:
             - Build a loss function to optimize using the 
@@ -215,8 +220,14 @@ class ClassificationRecurrentNeuralNetwork(RecurrentNeuralNetwork):
         # probs are the per-target softmax probabilities
         probs = tf.nn.softmax(scores, dim=-1)
 
-        # overall loss is sum of individual target losses
-        loss = tf.reduce_sum(losses)
+        # reduce over target
+        loss = tf.reduce_sum(losses, axis=-1)
+
+        if self.flags.use_likelihood_weights:
+            loss = loss * weights
+
+        # reduce over batch 
+        loss = tf.reduce_sum(loss, axis=0)
 
         # collect regularization losses
         reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))

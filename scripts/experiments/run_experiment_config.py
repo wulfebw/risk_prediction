@@ -14,6 +14,8 @@ def run_setup(config):
     maybe_mkdir(expdir)
     maybe_mkdir(os.path.join(expdir, 'log'))
     maybe_mkdir(os.path.join(expdir, 'data'))
+    maybe_mkdir(os.path.join(expdir, 'data', 'snapshots'))
+    maybe_mkdir(os.path.join(expdir, 'data', 'summaries'))
     maybe_mkdir(os.path.join(expdir, 'viz'))
 
 # collection
@@ -100,12 +102,16 @@ def run_generation(config):
 
 # prediction
 def run_batch_prediction(config):
-    pass
+    s = 'prediction'
+    cmd = 'python fit_predictor.py '
+    cmd += build_cmd(config.items(s), prefix='batch/')
+    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
 
-def run_async_prediction(config):
+def run_td_prediction(config):
     s = 'prediction'
     cmd = 'python train.py '
-    cmd += build_cmd(config.items(s), prefix='async/')
+    cmd += build_cmd(config.items(s), prefix='td/')
     cmd_dir = os.path.join(ROOTDIR, 'prediction/td/scripts/training')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
     print('Async prediction running in the background...')
@@ -119,8 +125,8 @@ def run_prediction(config):
     prediction_type = config.get(s, 'prediction_type')
     if prediction_type == 'batch':
         run_batch_prediction(config)
-    elif prediction_type == 'async':
-        run_async_prediction(config)
+    elif prediction_type == 'td':
+        run_td_prediction(config)
 
 def run_experiment(config):
     run_setup(config)
