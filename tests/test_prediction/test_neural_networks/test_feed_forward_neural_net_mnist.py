@@ -16,7 +16,7 @@ path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 sys.path.append(os.path.abspath(path))
 
 from prediction.batch import dataset
-from prediction.neural_networks import feed_forward_neural_network as ffnn
+from prediction.neural_networks import neural_network_predictor as ffnn
 import testing_flags
 import testing_utils
 
@@ -59,7 +59,6 @@ class TestFeedForwardNeuralNetworkMNIST(unittest.TestCase):
             acc = len(np.where(y_pred == y)[0]) / float(len(y_pred))
 
             # check that validation accuracy is above 90%
-            print(acc)
             self.assertTrue(acc > .9)
 
             # if run solo, then display some images and predictions

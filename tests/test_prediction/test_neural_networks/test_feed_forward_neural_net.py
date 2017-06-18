@@ -13,7 +13,7 @@ path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
 sys.path.append(os.path.abspath(path))
 
 from prediction.batch import dataset
-from prediction.neural_networks import feed_forward_neural_network as ffnn
+from prediction.neural_networks import neural_network_predictor as nn
 import testing_flags
 import testing_utils
 
@@ -26,7 +26,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
     def test_init(self):
         flags = testing_flags.FLAGS
         with tf.Session() as session:
-            ffnn.FeedForwardNeuralNetwork(session, flags)
+            nn.FeedForwardNeuralNetwork(session, flags)
 
     def test_build_network(self):
         flags = testing_flags.FLAGS
@@ -37,7 +37,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.batch_size = 6
         flags.save_weights_every = 100000
         with tf.Session() as session:
-            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            network = nn.FeedForwardNeuralNetwork(session, flags)
 
             # check scores for zero weights
             testing_utils.assign_trainable_variables_to_constant(constant=0)
@@ -86,7 +86,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.save_weights_every = 100000
         flags.use_likelihood_weights = False
         with tf.Session() as session:
-            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            network = nn.FeedForwardNeuralNetwork(session, flags)
             # data set maps 1->0 and 0->1
             x = np.vstack(
                 (np.ones((flags.batch_size // 2, flags.input_dim)), 
@@ -127,7 +127,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
         flags.learning_rate = .05
         flags.save_weights_every = 100000
         with tf.Session() as session:
-            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            network = nn.FeedForwardNeuralNetwork(session, flags)
             # data set maps 1->0 and 0->1
             x = np.vstack(
                 (np.ones((flags.batch_size // 2, flags.input_dim)), 
@@ -163,7 +163,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
             (np.zeros((flags.batch_size // 2, flags.input_dim)), 
                 -1 * np.ones((flags.batch_size // 2, flags.input_dim))))
         with tf.Session() as session:
-            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            network = nn.FeedForwardNeuralNetwork(session, flags)
             testing_utils.assign_trainable_variables_to_constant(constant=1)
             actual = network.predict(x)
             expected = np.ones((flags.batch_size, flags.output_dim))
@@ -204,7 +204,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
             'y_val': y}
         d = dataset.Dataset(data, flags)
         with tf.Session() as session:
-            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            network = nn.FeedForwardNeuralNetwork(session, flags)
             network.fit(d)
             actual = network.predict(x)
             np.testing.assert_array_almost_equal(y, actual, 8)
@@ -236,7 +236,7 @@ class TestFeedForwardNeuralNetwork(unittest.TestCase):
             'y_val': y}
         d = dataset.Dataset(data, flags)
         with tf.Session() as session:
-            network = ffnn.FeedForwardNeuralNetwork(session, flags)
+            network = nn.FeedForwardNeuralNetwork(session, flags)
             network.fit(d)
             actual = network.predict(x)
             actual[actual < .5] = 0

@@ -7,7 +7,7 @@ import os
 import tensorflow as tf
 import time
 
-from . import initializers
+from . import models
 
 class NeuralNetwork(object):
 
@@ -227,6 +227,21 @@ class NeuralNetwork(object):
         # intialize the model
         self.session.run(tf.global_variables_initializer())
 
+    def _build_network(self, input_ph, dropout_ph):
+        """
+        Description:
+            - Builds a feed forward network with relu units.
+
+        Args:
+            - input_ph: placeholder for the inputs
+                shape = (batch_size, input_dim)
+            - dropout_ph: placeholder for dropout value
+
+        Returns:
+            - scores: the scores for the target values
+        """
+        return models.build_feed_forward_network(input_ph, dropout_ph, self.flags)
+
     def _build_loss(self, scores, targets, weights):
         """
         Description:
@@ -364,63 +379,7 @@ class FeedForwardNeuralNetwork(NeuralNetwork):
         if self.flags.use_likelihood_weights:
             tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
 
-
         return (input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph)
-
-    def _build_network(self, input_ph, dropout_ph):
-        """
-        Description:
-            - Builds a feed forward network with relu units.
-
-        Args:
-            - input_ph: placeholder for the inputs
-                shape = (batch_size, input_dim)
-            - dropout_ph: placeholder for dropout value
-
-        Returns:
-            - scores: the scores for the target values
-        """
-
-        # build initializers specific to relu
-        weights_initializer = initializers.get_weight_initializer(
-            'relu')
-        bias_initializer = initializers.get_bias_initializer(
-            'relu')
-
-        # build regularizers
-        weights_regularizer = tf.contrib.layers.l2_regularizer(
-            self.flags.l2_reg)
-
-        # build hidden layers
-        # if layer dims not set individually, then assume all the same dim
-        hidden_layer_dims = self.flags.hidden_layer_dims
-        if len(hidden_layer_dims) == 0:
-            hidden_layer_dims = [self.flags.hidden_dim 
-                for _ in range(self.flags.num_hidden_layers)]
-
-        hidden = input_ph
-        for (lidx, hidden_dim) in enumerate(hidden_layer_dims):
-            hidden = tf.contrib.layers.fully_connected(hidden, 
-                hidden_dim, 
-                activation_fn=tf.nn.relu,
-                weights_initializer=weights_initializer,
-                weights_regularizer=weights_regularizer,
-                biases_initializer=bias_initializer)
-            # tf.histogram_summary("layer_{}_activation".format(lidx), hidden)
-            if self.flags.use_batch_norm:
-                hidden = tf.contrib.layers.batch_norm(hidden)
-            hidden = tf.nn.dropout(hidden, dropout_ph)
-
-        # build output layer
-        scores = tf.contrib.layers.fully_connected(hidden, 
-                self.flags.output_dim, 
-                activation_fn=None,
-                weights_regularizer=weights_regularizer)
-
-        # summaries
-        # tf.histogram_summary('scores', scores)
-
-        return scores
 
 class ClassificationFeedForwardNeuralNetwork(FeedForwardNeuralNetwork):
     def __init__(self, session, flags):
@@ -499,62 +458,6 @@ class ClassificationFeedForwardNeuralNetwork(FeedForwardNeuralNetwork):
         tf.summary.scalar('weights', tf.reduce_mean(weights_ph))
 
         return input_ph, target_ph, weights_ph, dropout_ph, learning_rate_ph
-
-    def _build_network(self, input_ph, dropout_ph):
-        """
-        Description:
-            - Builds a feed forward network with relu units.
-
-        Args:
-            - input_ph: placeholder for the inputs
-                shape = (batch_size, input_dim)
-            - dropout_ph: placeholder for dropout value
-
-        Returns:
-            - scores: the scores for the target values
-        """
-
-        # build initializers specific to relu
-        weights_initializer = initializers.get_weight_initializer(
-            'relu')
-        bias_initializer = initializers.get_bias_initializer(
-            'relu')
-
-        # build regularizers
-        weights_regularizer = tf.contrib.layers.l2_regularizer(
-            self.flags.l2_reg)
-
-        # build hidden layers
-        # if layer dims not set individually, then assume all the same dim
-        hidden_layer_dims = self.flags.hidden_layer_dims
-        if len(hidden_layer_dims) == 0:
-            hidden_layer_dims = [self.flags.hidden_dim 
-                for _ in range(self.flags.num_hidden_layers)]
-
-        hidden = input_ph
-        for (lidx, hidden_dim) in enumerate(hidden_layer_dims):
-            hidden = tf.contrib.layers.fully_connected(hidden, 
-                hidden_dim, 
-                activation_fn=tf.nn.relu,
-                weights_initializer=weights_initializer,
-                weights_regularizer=weights_regularizer,
-                biases_initializer=bias_initializer)
-            # tf.histogram_summary("layer_{}_activation".format(lidx), hidden)
-
-            if self.flags.use_batch_norm:
-                hidden = tf.contrib.layers.batch_norm(hidden)
-            hidden = tf.nn.dropout(hidden, dropout_ph)
-
-        # build output layer
-        scores = tf.contrib.layers.fully_connected(hidden, 
-                self.flags.output_dim * self.flags.num_target_bins, 
-                activation_fn=None,
-                weights_regularizer=weights_regularizer)
-
-        # summaries
-        # tf.histogram_summary('scores', scores)
-
-        return scores
 
     def _build_loss(self, scores, targets, weights):
         """

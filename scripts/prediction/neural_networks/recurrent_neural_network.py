@@ -7,8 +7,8 @@ import os
 import tensorflow as tf
 import time
 
-from . import initializers
-from .feed_forward_neural_network import NeuralNetwork
+from . import models as initializers
+from .neural_network_predictor import NeuralNetwork
 
 class RecurrentNeuralNetwork(NeuralNetwork):
     def __init__(self, session, flags):

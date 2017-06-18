@@ -13,7 +13,7 @@ import prediction_metrics
 import prediction_flags
 import dataset
 import dataset_loaders
-import neural_networks.feed_forward_neural_network as ffnn
+import neural_networks.neural_network_predictor as nnp
 import neural_networks.recurrent_neural_network as rnn
 import neural_networks.utils
 
@@ -66,11 +66,11 @@ def main(argv=None):
         else:
             if FLAGS.task_type == 'classification':
                 if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:
-                    network = ffnn.WeightedClassificationFeedForwardNeuralNetwork(session, FLAGS)
+                    network = nnp.WeightedClassificationFeedForwardNeuralNetwork(session, FLAGS)
                 else:
-                    network = ffnn.ClassificationFeedForwardNeuralNetwork(session, FLAGS)
+                    network = nnp.ClassificationFeedForwardNeuralNetwork(session, FLAGS)
             else:
-                network = ffnn.FeedForwardNeuralNetwork(session, FLAGS)
+                network = nnp.FeedForwardNeuralNetwork(session, FLAGS)
         network.fit(d)
 
         # save weights to a julia-compatible weight file
