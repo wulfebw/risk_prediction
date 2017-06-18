@@ -7,6 +7,10 @@ import h5py
 import numpy as np
 import os
 
+def copy_attrs(src, dest):
+    for (k,v) in src.items():
+        dest[k] = v
+
 def select_nonconstant_features(input_filepath, output_filepath, 
         batch_size=1000, check_size=10000, eps=1e-8):
     infile = h5py.File(input_filepath, 'r')
@@ -27,6 +31,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
             nonzero_fidxs.append(fidx)
         else:
             zero_fidxs.append(fidx)
+
     print('nonzero indices: {}'.format(nonzero_fidxs))
     print('zero indices: {}'.format(zero_fidxs))
     print('length nonzero: {}'.format(len(nonzero_fidxs)))
@@ -52,6 +57,8 @@ def select_nonconstant_features(input_filepath, output_filepath,
     outfile['risk/weights'] = infile['risk/weights'].value
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = infile['risk/batch_idxs'].value
+
+    copy_attrs(outfile['risk'].attrs, infile['risk'].attrs)
     outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names'][nonzero_fidxs]
 
     infile.close()
@@ -87,6 +94,7 @@ def select_proposal_samples(input_filepath, output_filepath, batch_size=1000):
     # metadata
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = np.arange(len(prop_idxs)).reshape(-1, 1)
+    copy_attrs(outfile['risk'].attrs, infile['risk'].attrs)
     outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names']
 
     infile.close()

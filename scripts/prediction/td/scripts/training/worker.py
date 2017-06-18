@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import cv2
-import go_vncdriver
 import argparse
 import logging
 import sys, signal
