@@ -29,7 +29,7 @@ add_entry!(FLAGS, "population_size", 200,
     Int, "pop size of cem")
 add_entry!(FLAGS, "top_k_fraction", .5,
     Float64, "fraction of pop to keep (.2 means keep top 20%)")
-add_entry!(FLAGS, "n_prior_samples", 50000,
+add_entry!(FLAGS, "n_prior_samples", 80000,
     Int, "number of samples from the base bn to start with")
 
 function fit_proposal_bayes_net(

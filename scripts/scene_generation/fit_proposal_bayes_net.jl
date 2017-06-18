@@ -208,7 +208,8 @@ function run_cem(
         println("\niter: $(iter) / $(max_iters) \tweighted utilities: $(weighted_utils)")
 
         # check if the target probability has been sufficiently optimized
-        if mean(weighted_utils) > y
+        # do this in an unweighted fashion
+        if mean(utilities) > y
             break
         end
     end
