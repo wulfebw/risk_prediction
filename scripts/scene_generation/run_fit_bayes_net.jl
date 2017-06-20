@@ -1,7 +1,16 @@
 
+using CommandLineFlags
 using JLD
 
 include("fit_bayes_net.jl")
+
+FLAGS = Flags()
+add_entry!(FLAGS, "input_filepath", "../../data/datasets/risk.h5", 
+    String, "training data filepath")
+add_entry!(FLAGS, "output_filepath", "../../data/bayesnets/base_test.jld", 
+    String, "where to save the bayesnet")
+add_entry!(FLAGS, "viz_filepath", "../../data/bayesnets/feature_histograms.pdf", 
+    String, "where to save visualizations")
 
 function fit_bn(
         input_filepath::String, 
@@ -11,9 +20,9 @@ function fit_bn(
         n_bins::Dict{Symbol,Int} = Dict(
             :relvelocity=>8,
             :forevelocity=>10,
-            :foredistance=>15,
-            :vehlength=>8,
-            :vehwidth=>8,
+            :foredistance=>14,
+            :vehlength=>6,
+            :vehwidth=>6,
             :aggressiveness=>5,
             :isattentive=>2
         ),
@@ -68,8 +77,10 @@ function fit_bn(
     JLD.save(output_filepath, "bn", bn, "discs", discs)
 end
 
+parse_flags!(FLAGS, ARGS)
+
 @time fit_bn(
-    "../../data/datasets/june/ngsim_1_sec_1_feature_timesteps.h5", 
-    "../../data/bayesnets/base_test.jld",
-    "../../data/bayesnets/feature_histograms.pdf"
+    FLAGS["input_filepath"], 
+    FLAGS["output_filepath"],
+    FLAGS["viz_filepath"]
 )

@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import cv2
-import go_vncdriver
 import argparse
 import logging
 import sys, signal
@@ -10,8 +8,11 @@ import tensorflow as tf
 
 sys.path.append('../../')
 
+import experiment_args
 import prediction.async_td
 import prediction.build_envs
+import prediction.validation
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -24,7 +25,6 @@ class FastSaver(tf.train.Saver):
                                     meta_graph_suffix, False)
 
 def build_config(args):
-
     try:
         config_path = 'configs.{}'.format(args.config)
         config_module = __import__(config_path, fromlist=["configs"])
@@ -43,11 +43,41 @@ def build_config(args):
         print('config file must have a class named \'Config\'')
         raise(e)
 
+    # transfer settings from validation dataset if one exists
+    if config.validation_dataset_filepath != '':
+        config = prediction.validation.transfer_dataset_settings_to_config(
+            config.validation_dataset_filepath, config)
+
+    # if a key has been passed in as an arg, then that takes precedence 
+    # over the values in the config; transfer them in here
+    for (k,v) in args.__dict__.items():
+        config.__dict__[k] = v
+
+    # certain values have to be parsed manually
+    # hidden layers sizes passed in as comma separated list
+    if config.hidden_layer_sizes != '':
+        dims = config.hidden_layer_sizes.split(',')
+        dims = [int(dim) for dim in dims if dim != '']
+        config.hidden_layer_sizes = dims
+    # target_loss_index potentially None
+    if config.target_loss_index == 'None':
+        config.target_loss_index = None
+    elif type(config.target_loss_index) == str:
+        config.target_loss_index = int(config.target_loss_index)
+    print(config.target_loss_index)
+    print(type(config.target_loss_index))
+    assert (config.target_loss_index is None or type(config.target_loss_index) == int)
+
     return config
 
 def run(args, server):
     config = build_config(args)
+    for k,v in config.__dict__.items():
+        print(k)
+        print(v)
+
     env = prediction.build_envs.create_env(config)
+    dataset = prediction.validation.build_dataset(config, env)        
     trainer = prediction.async_td.AsyncTD(env, args.task, config)
 
     # Variable names that start with "local" are not saved in checkpoints.
@@ -100,8 +130,15 @@ def run(args, server):
         logger.info("gathering global step")
         global_step = sess.run(trainer.global_step)
         logger.info("Starting training at step=%d", global_step)
-        while not sv.should_stop() and (not num_global_steps or global_step < num_global_steps):
+        last_validation_global_step = 0
+        while ( not sv.should_stop() 
+                and (not num_global_steps 
+                     or global_step < num_global_steps)):
             trainer.process(sess)
+            if (global_step - last_validation_global_step > config.validate_every 
+                    and dataset is not None):
+                trainer.validate(sess, dataset)
+                last_validation_global_step = global_step
             global_step = sess.run(trainer.global_step)
 
     # Ask for all the services to stop.
@@ -131,28 +168,11 @@ More tensorflow setup for data parallelism
 
 def main(_):
     """
-Setting up Tensorflow for data parallel work
-"""
-
-    parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('-v', '--verbose', action='count', dest='verbosity', default=0, help='Set verbosity.')
-    parser.add_argument('--task', default=0, type=int, help='Task index')
-    parser.add_argument('--job-name', default="worker", help='worker or ps')
-    parser.add_argument('--num-workers', default=1, type=int, help='Number of workers')
-    parser.add_argument('--log-dir', default="/tmp/risk", help='Log directory path')
-    parser.add_argument('--env-id', default="RiskEnv-v0", help='Environment id')
-    parser.add_argument('-c', '--config', type=str, default='',
-                    help="config filename, without \'.py\' extension. The default behavior is to match the config file to the choosen policy")
-    parser.add_argument('-r', '--remotes', default=None,
-                        help='References to environments to create (e.g. -r 20), '
-                             'or the address of pre-existing VNC servers and '
-                             'rewarders to use (e.g. -r vnc://localhost:5900+15900,vnc://localhost:5901+15901)')
-
-    # Add visualisation argument
-    parser.add_argument('--visualise', action='store_true',
-                        help="Visualise the gym environment by running env.render() between each timestep")
-
-    args = parser.parse_args()
+    Setting up Tensorflow for data parallel work
+    """
+    parser = experiment_args.get_experiment_argparser('worker')
+    args, unknown_args = parser.parse_known_args()
+    print('unknown args: {}'.format(unknown_args))
     spec = cluster_spec(args.num_workers, 1)
     cluster = tf.train.ClusterSpec(spec).as_cluster_def()
 

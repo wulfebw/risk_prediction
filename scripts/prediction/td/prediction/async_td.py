@@ -25,7 +25,6 @@ def process_rollout(rollout, gamma):
     batch_si = np.asarray(rollout.states)
     rewards = np.asarray(rollout.rewards)
     batch_w = np.asarray(rollout.weights)
-
     rewards_plus_v = np.asarray(rollout.rewards + [rollout.r])
     batch_r = discount(rewards_plus_v, gamma)[:-1]
 
@@ -54,7 +53,8 @@ class PartialRollout(object):
         self.terminal = terminal
         self.features += [features]
 
-def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
+def env_runner(env, policy, num_local_steps, summary_writer, value_dim=5, 
+        verbose=True, visualize=True, visualize_every=1000):
     """
     The logic of the thread runner.  In brief, it constantly keeps on running
     the policy, and as long as the rollout exceeds a certain length, the thread
@@ -63,14 +63,14 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
     last_state = env.reset()
     last_features = policy.get_initial_features()
     length = 0
-    total_rewards = np.zeros(5)
+    total_rewards = np.zeros(value_dim)
     total_length = 0
     ep_count = 0
-    rewards = np.zeros(5)
+    rewards = np.zeros(value_dim)
     
     while True:
         terminal_end = False
-        rollout = PartialRollout()
+        rollout = PartialRollout(value_dim=value_dim)
 
         for local_step in range(num_local_steps):
             features = policy.features(last_state, *last_features)
@@ -99,6 +99,9 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
                 # state = state[-1]
                 # terminal = terminal[-1]
 
+            if visualize and ep_count % visualize_every == 0:
+                env.render()
+
             # collect the experience
             # note that the deepcopies seem to be necessary
             rollout.add(
@@ -110,7 +113,7 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
             
             length += 1
             rewards += reward
-
+            
             last_state = state
             last_features = features
 
@@ -120,6 +123,7 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
                     summary.value.add(tag=k, simple_value=float(v))
                 summary_writer.add_summary(summary, policy.global_step.eval())
                 summary_writer.flush()
+
 
             timestep_limit = env.spec.tags.get(
                 'wrapper_config.TimeLimit.max_episode_steps')
@@ -132,14 +136,14 @@ def env_runner(env, policy, num_local_steps, summary_writer, verbose=True):
                 
                 total_rewards += rewards
                 total_length += length
-                avg_rewards = total_rewards / total_length
+                avg_rewards = total_rewards / ep_count
                 avg_length = total_length / ep_count
                 if verbose:
                     print("Episode finished\tSum of rewards: {}\tLength: {}\tAverage Rewards: {}\tAverage Length: {:.2f}".format(
                         rewards, length, avg_rewards, avg_length))
 
                 length = 0
-                rewards = 0
+                rewards = np.zeros(value_dim)
                 break
 
         if not terminal_end:
@@ -153,7 +157,6 @@ class AsyncTD(object):
         self.env = env
         self.task = task
         self.config = config
-
 
         # when testing only on localhost, use simple worker device
         if config.testing:
@@ -190,37 +193,24 @@ class AsyncTD(object):
             ## input summaries
             tf.summary.histogram("model/sample_weights", self.w[0])
             tf.summary.scalar("model/sample_weights", self.w[0])
-
-            julia_env = build_envs.get_julia_env(self.env)
             if self.config.summarize_features:
-                for i, feature_name in enumerate(julia_env.obs_var_names()):
+                for i, feature_name in enumerate(build_envs.get_obs_var_names(env)):
                     tf.summary.scalar("features/{}_value".format(
                         feature_name.encode('utf-8')), 
                         tf.reduce_mean(pi.x[:,i]))
 
             ## target and loss summaries
             bs = tf.to_float(tf.shape(pi.x)[0])
-            tf.summary.scalar("model/value_loss", self.loss / bs)
             mean_vf = tf.reduce_mean(pi.vf, axis=0)
-
-            
             if self.config.loss_type == 'ce':
                 mean_vf = tf.nn.sigmoid(mean_vf)
-            mean_vf = tf.Print(mean_vf, [mean_vf], message='value mean: ', summarize=5)
             tf.summary.scalar("model/value_mean", tf.reduce_mean(pi.vf))
-            for i, target_name in enumerate(julia_env.reward_names()):
-                tf.summary.scalar("model/value_mean_{}".format(target_name), 
+            for i, target_name in enumerate(
+                    build_envs.get_target_names(env, self.config.value_dim)):
+                tf.summary.scalar("model/vf_mean_{}".format(target_name), 
                     mean_vf[i])
-                tf.summary.scalar("model/value_{}".format(target_name), 
-                    pi.vf[0,i])
-            
-
-            ## gradient and variable norm
             tf.summary.scalar("model/grad_global_norm", tf.global_norm(grads))
             tf.summary.scalar("model/var_global_norm", tf.global_norm(pi.var_list))
-
-            # merge the summaries
-            self.summary_op = tf.summary.merge_all()
 
             # loss
             grads, _ = tf.clip_by_global_norm(grads, config.grad_clip_norm)
@@ -232,16 +222,26 @@ class AsyncTD(object):
             grads_and_vars = list(zip(grads, self.network.var_list))
             inc_step = self.global_step.assign_add(tf.shape(pi.x)[0])
 
+            # learning rate decay
+            learning_rate = tf.train.polynomial_decay(
+                self.config.learning_rate, 
+                self.global_step,
+                end_learning_rate=config.learning_rate_end,
+                decay_steps=self.config.n_global_steps,
+                power=2
+            )
+            tf.summary.scalar("model/learning_rate", learning_rate)
+
             # each worker has a different set of adam optimizer parameters
             optimizers = {
                 'adam': tf.train.AdamOptimizer(
-                    config.learning_rate, 
+                    learning_rate, 
                     beta1=config.adam_beta1,
                     beta2=config.adam_beta2,
                     epsilon=config.adam_epsilon
                 ),
                 'rmsprop': tf.train.RMSPropOptimizer(
-                    config.learning_rate,
+                    learning_rate,
                     decay=config.rmsprop_decay,
                     momentum=config.rmsprop_momentum
                 ),
@@ -252,9 +252,15 @@ class AsyncTD(object):
             self.summary_writer = None
             self.local_steps = 0
 
+            # merge the summaries
+            self.summary_op = tf.summary.merge_all()
+
     def start(self, sess, summary_writer):
         self.rollout_provider = env_runner(self.env, self.local_network, 
-            self.config.local_steps_per_update, summary_writer)
+            self.config.local_steps_per_update, summary_writer, 
+            value_dim=self.config.value_dim, 
+            visualize=self.config.visualize and self.task == 0,
+            visualize_every=self.config.visualize_every)
         self.summary_writer = summary_writer
 
     def process(self, sess):
@@ -293,6 +299,57 @@ class AsyncTD(object):
             self.summary_writer.flush()
         self.local_steps += 1
 
+    def validate(self, sess, data):
+        """
+        Validates the model against a given dataset.
+        """
+        if data is None:
+            return
+        if self.task != 0:
+            return 0
+
+        # copy weights from shared to local
+        sess.run(self.sync)  
+        
+        # compute the average rmse between the predicted and true values 
+        # across the validation dataset
+        total_loss = 0
+        total_w = 0
+        total_v = 0
+        # predict value for each sample in the dataset
+        # x.shape = (n_timesteps, input_dim)
+        # y.shape = (value_dim,)
+        # w is a scalar giving the weight of this sample
+        for (x, y, w) in data.next_batch():
+            # compute the value
+            v = self.local_network.value(x, 
+                self.local_network.state_init[0],
+                self.local_network.state_init[1],
+                sequence=True)
+
+            total_loss += np.sqrt((v - y) ** 2) * w
+            total_w += w
+            total_v += v * w
+        avg_loss = total_loss / total_w
+        avg_value = total_v / total_w
+        print('Average Validation Loss: {}'.format(avg_loss))
+
+        # write the summary
+        summaries = []
+        for (i, target_name) in enumerate(
+                build_envs.get_target_names(self.env, self.config.value_dim)):
+            summaries += [tf.Summary.Value(
+                tag="val/{}_validation_loss".format(target_name), 
+                simple_value=float(avg_loss[i]))]
+            summaries += [tf.Summary.Value(
+                tag="val/{}_value".format(target_name), 
+                simple_value=float(avg_value[i]))]
+        summary = tf.Summary(value=summaries)
+
+        self.summary_writer.add_summary(summary)
+        self.summary_writer.flush()
+        return avg_loss
+
     def _build_squared_error_loss_component(self, scores, targets, w, 
             target_loss_index):
         td_error = tf.square(scores - targets)
@@ -302,11 +359,12 @@ class AsyncTD(object):
         else:
             loss = tf.reduce_sum(w * tf.reduce_mean(td_error, axis=-1))
 
-        julia_env = build_envs.get_julia_env(self.env)
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_td_errors = tf.reduce_mean(td_error, axis=0)
-        for i, target_name in enumerate(julia_env.reward_names()):
-            tf.summary.scalar("targets/{}_value".format(target_name), 
+
+        for i, target_name in enumerate(
+                build_envs.get_target_names(self.env, np.shape(targets)[-1])):
+            tf.summary.scalar("targets/{}".format(target_name), 
                 mean_targets[i])
             tf.summary.scalar("targets/{}_loss".format(target_name), 
                 mean_target_td_errors[i])
@@ -323,15 +381,14 @@ class AsyncTD(object):
             loss = tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=scores, labels=targets)
 
-        loss = loss * w
+        loss = loss * tf.reshape(w, [-1,1])
 
-        julia_env = build_envs.get_julia_env(self.env)
         mean_targets = tf.reduce_mean(self.r, axis=0)
         mean_target_ce_errors = tf.reduce_mean(loss, axis=0)
         done = False
-        target_names = julia_env.reward_names()
-        for i, target_name in enumerate(target_names):
-            tf.summary.scalar("targets/{}_value".format(target_name), 
+        for i, target_name in enumerate(
+                build_envs.get_target_names(self.env, np.shape(targets)[-1])):
+            tf.summary.scalar("targets/{}".format(target_name), 
                 mean_targets[i])
             if target_loss_index is not None:
                 if not done:
@@ -357,7 +414,7 @@ class AsyncTD(object):
                 pi.vf, self.r, self.w, self.config.target_loss_index)
             
         # cross entropy loss
-        if self.config.loss_type == 'ce':
+        elif self.config.loss_type == 'ce':
             loss = self._build_cross_entropy_loss_component(
                 pi.vf, self.r, self.w, self.config.target_loss_index)
 

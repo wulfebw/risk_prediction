@@ -164,4 +164,4 @@ def custom_parse_flags(flags):
 
     # task
     if flags.num_target_bins is not None:
-        flags.task_type = 'classification'
+        assert flags.task_type == 'classification'

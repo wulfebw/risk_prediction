@@ -44,14 +44,21 @@ function preprocess_features(
         targets::Array{Float64}, 
         feature_names::Array{String};
         max_collision_prob::Float64 = 1.,
-        min_vel::Float64 = 0.,
+        min_vel::Float64 = 3.,
         max_vel::Float64 = 40.,
-        max_Δvel::Float64 = 5.,
-        min_dist::Float64 = 7.5,
+        max_Δvel::Float64 = 6.,
+        min_dist::Float64 = 4.,
         max_dist::Float64 = 40.,
         min_len::Float64 = 2.5,
         max_len::Float64 = 6.
     )
+    # first check that the necessary features are in the dataset
+    msg = "Dataset missing required feature"
+    @assert in("velocity", feature_names) msg
+    @assert in("fore_m_vel", feature_names) msg
+    @assert in("fore_m_dist", feature_names) msg
+    @assert in("length", feature_names) msg
+
     # threshold based on collision probability if applicable
     valid_target_inds = find(sum(targets[1:3,:], 1) / 3. .<= max_collision_prob)
 
@@ -175,13 +182,19 @@ end
 function get_discretizers(
         data::DataFrame,
         disc_types::Dict{Symbol,DataType};
-        discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks()
+        discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks(),
+        max_data_size::Int = 10000
     )
     discs = Dict{Symbol, LinCatDiscretizer}()
 
     for var in names(data)
         if disc_types[var] == LinearDiscretizer{Float64,Int}
-            discs[var] = LinearDiscretizer(binedges(discalg, data[var]))
+            # compute bins using only a subset of the data because it the 
+            # bayesian blocks algorithm doesn't seem to scale that well
+            data_size = length(data[var])
+            data_size = min(data_size, max_data_size)
+            discs[var] = LinearDiscretizer(
+                binedges(discalg, data[var][1:data_size]))
         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             # assumes integer valued
             discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
@@ -217,6 +230,25 @@ end
 
 function fit_bn(
         data::DataFrame,
+        discs::Dict{Symbol, LinCatDiscretizer},
+        edges = (
+            :isattentive=>:foredistance, 
+            :aggressiveness=>:foredistance, 
+            # :aggressiveness=>:relvelocity,
+            # :isattentive=>:relvelocity,
+            :foredistance=>:relvelocity,
+            :forevelocity=>:relvelocity,
+            :forevelocity=>:foredistance,
+            :vehlength=>:vehwidth
+        )
+    )
+    disc_data = encode(data, discs)
+    bn = fit(DiscreteBayesNet, disc_data, edges)
+    return bn
+end
+
+function fit_bn(
+        data::DataFrame,
         disc_types::Dict{Symbol,DataType};
         n_bins::Dict{Symbol,Int} = Dict{Symbol,Int}(),
         edges = (
@@ -248,7 +280,7 @@ function fit_bn(
     end
     
     # encode and fit a discrete bayes net
-    disc_data = encode(data, discs)
-    bn = fit(DiscreteBayesNet, disc_data, edges)
+    bn = fit_bn(data, discs, edges)
+
     return bn, discs
 end

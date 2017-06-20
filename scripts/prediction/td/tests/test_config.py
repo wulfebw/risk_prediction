@@ -10,3 +10,4 @@ class TestConfig(Config):
     def __init__(self):
         super(TestConfig, self).__init__()
         self.testing = True
+        self.visualize = False

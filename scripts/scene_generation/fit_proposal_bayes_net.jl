@@ -17,7 +17,8 @@ const FEATURE_NAMES = [
 
 function visualize_stats(
         stats::DefaultDict{String, Vector{Float64}}, 
-        iter::Int
+        iter::Int,
+        viz_dir::String
     )
     g = GroupPlot(
             3, 3, groupStyle = "horizontal sep = 1.75cm, vertical sep = 1.5cm")
@@ -39,7 +40,7 @@ function visualize_stats(
             title="weights")
     push!(g, a)
 
-    output_filepath = "../../data/visualizations/bayesnets/iter_$(iter).pdf"
+    output_filepath = joinpath(viz_dir, "iter_$(iter).pdf")
     PGFPlots.save(output_filepath, g)
 end
 
@@ -111,7 +112,10 @@ function run_cem(
         top_k_fraction::Float64 = .5, 
         target_indices::Vector{Int} = [1,2,3,4,5],
         n_prior_samples::Int = 10000,
-        weight_threshold::Float64 = 10.
+        weight_threshold::Float64 = 1.,
+        output_filepath::String = "../../data/bayesnets/prop_test.jld",
+        viz_dir::String = "../../data/bayesnets/viz",
+        permit_diff_disc::Bool = false
     )
     # initialize
     col = cols[1]
@@ -127,14 +131,13 @@ function run_cem(
     prior = decode(prior, discs)
     disc_types = get_disc_types(col.gen.base_assignment_sampler)
     
-    # allocate containers
+    # allocate containers / single compute values
     stats = DefaultDict{String, Vector{Float64}}(Vector{Float64})
     utilities = SharedArray(Float64, N)
     weights = SharedArray(Float64, N)
     data = SharedArray(Float64, n_vars, N)
-    for iter in 1:max_iters
-        println("\niter: $(iter) / $(max_iters) \ty_hat: $(mean(utilities))")
-        
+    ext_feature_names = feature_names(col.eval.ext)
+    for iter in 1:max_iters       
         # reset
         fill!(utilities, 0.)
         fill!(weights, 0.)
@@ -162,19 +165,19 @@ function run_cem(
             weights[scene_idx] = col.gen.weights[proposal_vehicle_index]
 
             data[:, scene_idx] = extract_bn_features(
-                col.eval.features[:,end,:], 
-                feature_names(col.eval.ext), 
+                col.eval.features[:,1,:], 
+                ext_feature_names, 
                 proposal_vehicle_index)
         end
 
         # select samples with weight > weight_threshold
-        valid_indices = find(weights .< weight_threshold)
+        valid_indices = find(weights .<= weight_threshold)
         invalid_indices = find(weights .> weight_threshold)
 
         # update and visualize stats
         update_stats(stats, data[:, valid_indices], 
             utilities[valid_indices], weights[valid_indices])
-        @spawnat 1 visualize_stats(stats, iter)
+        @spawnat 1 visualize_stats(stats, iter, viz_dir)
                 
         # select top fraction of population
         weights[invalid_indices] = 0.
@@ -186,13 +189,26 @@ function run_cem(
         prior = vcat(prior, df_data)[(top_k + 1):end, :]
 
         # refit bayesnet and reset in the collectors
-        prop_bn, discs = fit_bn(prior, disc_types)
+        if permit_diff_disc
+            prop_bn, discs = fit_bn(prior, disc_types)
+        else
+            prop_bn = fit_bn(prior, discs)
+        end
+
         for col in cols
             col.gen.prop_bn = prop_bn
             col.gen.prop_assignment_sampler = AssignmentSampler(discs)
         end
 
+        # save checkpoint
+        JLD.save(output_filepath, "bn", prop_bn, "discs", discs)
+
+        # report progress
+        weighted_utils = mean(utilities .* weights)
+        println("\niter: $(iter) / $(max_iters) \tweighted utilities: $(weighted_utils)")
+
         # check if the target probability has been sufficiently optimized
+        # do this in an unweighted fashion
         if mean(utilities) > y
             break
         end

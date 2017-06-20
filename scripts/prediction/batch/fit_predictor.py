@@ -9,12 +9,12 @@ import tensorflow as tf
 path = os.path.join(os.path.dirname(__file__), os.pardir)
 sys.path.append(os.path.abspath(path))
 
+import prediction_utils
 import prediction_metrics
 import prediction_flags
 import dataset
 import dataset_loaders
-import neural_networks.feed_forward_neural_network as ffnn
-import neural_networks.recurrent_neural_network as rnn
+import neural_networks.neural_network_predictor as nnp
 import neural_networks.utils
 
 FLAGS = prediction_flags.FLAGS
@@ -30,20 +30,25 @@ def main(argv=None):
     # load dataset
     input_filepath = FLAGS.dataset_filepath
     data = dataset_loaders.risk_dataset_loader(
-        input_filepath, shuffle=FLAGS.shuffle_data, train_split=.8, 
-        debug_size=FLAGS.debug_size, timesteps=FLAGS.timesteps,
+        input_filepath, 
+        shuffle=FLAGS.shuffle_data, 
+        train_split=.8, 
+        debug_size=FLAGS.debug_size, 
+        timesteps=FLAGS.timesteps,
         num_target_bins=FLAGS.num_target_bins, 
         balanced_class_loss=FLAGS.balanced_class_loss, 
         target_index=FLAGS.target_index,
-        load_likelihood_weights=FLAGS.use_likelihood_weights)
+        load_likelihood_weights=FLAGS.use_likelihood_weights
+    )
 
-    if FLAGS.use_priority:
-        d = priority_dataset.PrioritizedDataset(data, FLAGS)
+    # infer what the input dimension should be from the data
+    FLAGS.input_dim = prediction_utils.infer_input_dim(data)
+    FLAGS.output_dim = prediction_utils.infer_output_dim(data)
+
+    if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:
+        d = dataset.WeightedDataset(data, FLAGS)
     else:
-        if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:
-            d = dataset.WeightedDataset(data, FLAGS)
-        else:
-            d = dataset.Dataset(data, FLAGS)
+        d = dataset.Dataset(data, FLAGS)
 
     print('training set size: {}'.format(len(data['x_train'])))
     print('means:\n{}\n{}'.format(
@@ -57,20 +62,12 @@ def main(argv=None):
 
     # fit the model
     with tf.Session(config=tf.ConfigProto(log_device_placement=False)) as session:
-        # if the timestep dimension is > 1, use recurrent network
-        if FLAGS.timesteps > 1:
-            if FLAGS.task_type == 'classification':
-                network = rnn.ClassificationRecurrentNeuralNetwork(session, FLAGS)
-            else:
-                network = rnn.RecurrentNeuralNetwork(session, FLAGS)
+        # split based on the task being performed
+        if FLAGS.task_type == 'classification':
+            network = nnp.NeuralNetworkClassifier(session, FLAGS)
         else:
-            if FLAGS.task_type == 'classification':
-                if FLAGS.balanced_class_loss or FLAGS.use_likelihood_weights:
-                    network = ffnn.WeightedClassificationFeedForwardNeuralNetwork(session, FLAGS)
-                else:
-                    network = ffnn.ClassificationFeedForwardNeuralNetwork(session, FLAGS)
-            else:
-                network = ffnn.FeedForwardNeuralNetwork(session, FLAGS)
+            network = nnp.NeuralNetworkPredictor(session, FLAGS)
+
         network.fit(d)
 
         # save weights to a julia-compatible weight file

@@ -3,27 +3,7 @@ import os
 import sys
 from six.moves import shlex_quote
 
-parser = argparse.ArgumentParser(description="Run commands")
-parser.add_argument('-w', '--num-workers', default=1, type=int,
-                    help="Number of workers")
-parser.add_argument('-r', '--remotes', default=None,
-                    help='The address of pre-existing VNC servers and '
-                         'rewarders to use (e.g. -r vnc://localhost:5900+15900,vnc://localhost:5901+15901).')
-parser.add_argument('-e', '--env-id', type=str, default="RiskEnv-v0",
-                    help="Environment id")
-parser.add_argument('-l', '--log-dir', type=str, default="/tmp/risk",
-                    help="Log directory path")
-parser.add_argument('-n', '--dry-run', action='store_true',
-                    help="Print out commands rather than executing them")
-parser.add_argument('-m', '--mode', type=str, default='tmux',
-                    help="tmux: run workers in a tmux session. nohup: run workers with nohup. child: run workers as child processes")
-parser.add_argument('-c', '--config', type=str, default='risk_env_config',
-                    help="config filename, without \'.py\' extension.")
-
-# Add visualise tag
-parser.add_argument('--visualise', action='store_true',
-                    help="Visualise the gym environment by running env.render() between each timestep")
-
+import experiment_args
 
 def new_cmd(session, name, cmd, mode, logdir, shell):
     if isinstance(cmd, (list, tuple)):
@@ -36,7 +16,8 @@ def new_cmd(session, name, cmd, mode, logdir, shell):
         return name, "nohup {} -c {} >{}/{}.{}.out 2>&1 & echo kill $! >>{}/kill.sh".format(shell, shlex_quote(cmd), logdir, session, name, logdir)
 
 
-def create_commands(session, num_workers, remotes, env_id, logdir, shell='bash', mode='tmux', config='', visualise=False):
+def create_commands(session, num_workers, remotes, env_id, logdir, args, 
+        shell='bash', mode='tmux', config='', visualise=False):
     # for launching the TF workers and for launching tensorboard
     base_cmd = [
         'CUDA_VISIBLE_DEVICES=',
@@ -44,6 +25,12 @@ def create_commands(session, num_workers, remotes, env_id, logdir, shell='bash',
         '--log-dir', logdir,
         '--env-id', env_id,
         '--num-workers', str(num_workers)]
+
+    # add in custom flags
+    for (k,v) in args.__dict__.items():
+        if v != "":
+            base_cmd.append('--{}'.format(k))
+            base_cmd.append(v)
 
     if visualise:
         base_cmd += ['--visualise']
@@ -103,10 +90,10 @@ def create_commands(session, num_workers, remotes, env_id, logdir, shell='bash',
 
     return cmds, notes
 
-
 def run():
+    parser = experiment_args.get_experiment_argparser('train')
     args = parser.parse_args()
-    cmds, notes = create_commands("a3c", args.num_workers, args.remotes, args.env_id, args.log_dir, mode=args.mode, config=args.config, visualise=args.visualise)
+    cmds, notes = create_commands("a3c", args.num_workers, args.remotes, args.env_id, args.log_dir, args, mode=args.mode, config=args.config, visualise=args.visualise)
     if args.dry_run:
         print("Dry-run mode due to -n flag, otherwise the following commands would be executed:")
     else:

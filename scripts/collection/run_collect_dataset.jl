@@ -15,10 +15,12 @@ function analyze_risk_dataset(output_filepath)
     if exists(dataset, "risk/weights")
         weights = read(dataset["risk/weights"])
         inds = find(weights .!= 1.)
-        avg_prop_weight = mean(weights[1, inds])
-        println("avg proposal weight: $(avg_prop_weight)")
-        med_prop_weight = median(weights[1, inds])
-        println("median proposal weight: $(med_prop_weight)")
+	if length(inds) > 0
+            avg_prop_weight = mean(weights[1, inds])
+            println("avg proposal weight: $(avg_prop_weight)")
+            med_prop_weight = median(weights[1, inds])
+            println("median proposal weight: $(med_prop_weight)")
+	end
     end
 end
 

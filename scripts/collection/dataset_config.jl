@@ -77,10 +77,10 @@ add_entry!(FLAGS,
     acceleration is sampled.")
 add_entry!(FLAGS, 
     "overall_response_time", .2, Float64, 
-    "Response time for heursitic, delayed driver models.")
+    "Response time for heuristic, delayed driver models.")
 add_entry!(FLAGS, 
     "lon_response_time", .2, Float64, 
-    "Additional response time for longitudinal, heursitic driver models.")
+    "Additional response time for longitudinal, heuristic driver models.")
 add_entry!(FLAGS, 
     "err_p_a_to_i", 0.01, Float64, 
     "Probability of driver becoming inattentive.")
@@ -147,6 +147,9 @@ add_entry!(FLAGS,
 add_entry!(FLAGS, 
     "feature_timesteps", 1, Int64, 
     "Number of timesteps over which to collect features.")
+add_entry!(FLAGS, 
+    "feature_step_size", 1, Int64, 
+    "Number of timesteps between consecutive collected features.")
 add_entry!(FLAGS, 
     "bootstrap_discount", 1., Float64, 
     "Discount applied to predicted values (note that this is not the ideal way for this to work).")
