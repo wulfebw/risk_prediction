@@ -2,7 +2,7 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'various_prop_prime_times'                #
+EXPERIMENT_NAME = 'prop_exp_timesteps_50'                #
 DEFAULTS = {
     'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
@@ -10,8 +10,8 @@ DEFAULTS = {
     'err_p_a_to_i': .1,
     'err_p_i_to_a': .3,
     'overall_response_time': .2,
-    'lon_accel_std_dev': 0.,                                        #
-    'lat_accel_std_dev': 0.,                                        #
+    'lon_accel_std_dev': 1.,                                        #
+    'lat_accel_std_dev': .2,                                        #
 }
 
 def write_collection(config):
@@ -64,7 +64,7 @@ def write_generation(config):
     config.set(s, 'logfile', '%(expdir)s/log/generation.log')
 
     # common 
-    feature_timesteps = 1
+    feature_timesteps = 50
     feature_step_size = 1
 
     # base bayes net training
@@ -75,12 +75,12 @@ def write_generation(config):
     # e.g., the sampling time from generation
     # and do this by passing them in explictly in the run call
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
-    config.set(s, 'prop/num_monte_carlo_runs', '1')                     #
-    config.set(s, 'prop/cem_end_prob', '.5')
+    config.set(s, 'prop/num_monte_carlo_runs', '3')                     #
+    config.set(s, 'prop/cem_end_prob', '.25')
     config.set(s, 'prop/max_iters', '100')                                #
     config.set(s, 'prop/population_size', '2000')                       #
     config.set(s, 'prop/top_k_fraction', '.25')
-    config.set(s, 'prop/n_prior_samples', '50000')
+    config.set(s, 'prop/n_prior_samples', '20000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
     # prime time for proposal should be exactly the number of feature timesteps
 
@@ -104,7 +104,7 @@ def write_generation(config):
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
     config.set(s, 'gen/num_scenarios', '100')                          #
-    config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
+    config.set(s, 'gen/num_monte_carlo_runs', '20')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'gen/err_p_i_to_a', '%(err_p_i_to_a)s')

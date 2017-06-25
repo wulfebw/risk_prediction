@@ -113,7 +113,7 @@ function run_cem(
         top_k_fraction::Float64 = .5, 
         target_indices::Vector{Int} = [1,2,3,4,5],
         n_prior_samples::Int = 10000,
-        weight_threshold::Float64 = 1.,
+        weight_threshold::Float64 = 10.,
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
         viz_dir::String = "../../data/bayesnets/viz",
         permit_diff_disc::Bool = false
