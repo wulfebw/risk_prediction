@@ -2,12 +2,12 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'prop_exp_timesteps_50'                #
+EXPERIMENT_NAME = 'prop_exp_timesteps_30'                #
 DEFAULTS = {
     'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
-    'err_p_a_to_i': .1,
+    'err_p_a_to_i': .05,
     'err_p_i_to_a': .3,
     'overall_response_time': .2,
     'lon_accel_std_dev': 1.,                                        #
@@ -50,8 +50,9 @@ def write_collection(config):
     config.set(s, 'col/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     config.set(s, 'col/prime_time', '30.')
     config.set(s, 'col/sampling_time', '.1')
-    config.set(s, 'col/max_num_vehicles', '100')
-    config.set(s, 'col/min_num_vehicles', '100')
+    # don't change these numbers of vehicles
+    config.set(s, 'col/max_num_vehicles', '50') 
+    config.set(s, 'col/min_num_vehicles', '50')
 
     # ngsim collection
     # TODO
@@ -64,7 +65,7 @@ def write_generation(config):
     config.set(s, 'logfile', '%(expdir)s/log/generation.log')
 
     # common 
-    feature_timesteps = 50
+    feature_timesteps = 30
     feature_step_size = 1
 
     # base bayes net training
@@ -75,12 +76,12 @@ def write_generation(config):
     # e.g., the sampling time from generation
     # and do this by passing them in explictly in the run call
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
-    config.set(s, 'prop/num_monte_carlo_runs', '3')                     #
-    config.set(s, 'prop/cem_end_prob', '.25')
-    config.set(s, 'prop/max_iters', '100')                                #
-    config.set(s, 'prop/population_size', '2000')                       #
-    config.set(s, 'prop/top_k_fraction', '.25')
-    config.set(s, 'prop/n_prior_samples', '20000')
+    config.set(s, 'prop/num_monte_carlo_runs', '2')                     #
+    config.set(s, 'prop/cem_end_prob', '1.')
+    config.set(s, 'prop/max_iters', '400')                                #
+    config.set(s, 'prop/population_size', '200')                       #
+    config.set(s, 'prop/top_k_fraction', '.5')
+    config.set(s, 'prop/n_prior_samples', '10000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
     # prime time for proposal should be exactly the number of feature timesteps
 
