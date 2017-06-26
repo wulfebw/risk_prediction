@@ -89,8 +89,21 @@ function fit_proposal_bayes_net(
     end
 
     n_cols = max(1, nprocs() - 1)
+
+    # build feature extractors manually
+    exts = AbstractFeatureExtractor[]
+    for i in 1:n_cols
+        push!(exts, build_extractor(flags))
+    end
+
+    # build collectors
+    # since we manually extract features, set feature_timesteps to 0, which 
+    # results in no feature extraction
+    flags["feature_timesteps"] = 0  
     cols = [build_dataset_collector("", flags) for _ in 1:n_cols]
+
     prop_bn, discs = run_cem(cols, 
+        exts,
         y, 
         max_iters = max_iters, 
         N = N, 

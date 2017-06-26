@@ -73,11 +73,11 @@ function extract_bn_features(
         index::Int
     )
     bn_features = zeros(7)
-    bn_features[1:5] = Array(extract_base_features(features, feature_names)[index,:])
+    bn_features[1:5] = Array(extract_base_features(features, feature_names))
     bn_features[6] = extract_aggressiveness(features, feature_names, 
-        rand_aggressiveness_if_unavailable = false)[index]
+        rand_aggressiveness_if_unavailable = false)[1]
     bn_features[7] = extract_is_attentive(features, feature_names, 
-        rand_attentiveness_if_unavailable = false)[index] 
+        rand_attentiveness_if_unavailable = false)[1]
     return bn_features
 end
 
@@ -106,13 +106,14 @@ Retruns:
 """
 function run_cem(
         cols::Vector{DatasetCollector}, 
+        exts::Vector{AbstractFeatureExtractor},
         y::Float64;
         max_iters::Int = 10,
         N::Int = 1000, 
         top_k_fraction::Float64 = .5, 
         target_indices::Vector{Int} = [1,2,3,4,5],
         n_prior_samples::Int = 10000,
-        weight_threshold::Float64 = 1.,
+        weight_threshold::Float64 = 10.,
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
         viz_dir::String = "../../data/bayesnets/viz",
         permit_diff_disc::Bool = false
@@ -136,7 +137,7 @@ function run_cem(
     utilities = SharedArray(Float64, N)
     weights = SharedArray(Float64, N)
     data = SharedArray(Float64, n_vars, N)
-    ext_feature_names = feature_names(col.eval.ext)
+    ext_feature_names = feature_names(exts[1])
     for iter in 1:max_iters       
         # reset
         fill!(utilities, 0.)
@@ -147,16 +148,23 @@ function run_cem(
         @parallel (+) for scene_idx in 1:N
 
             # select the corresponding collector
-            col_id = (scene_idx % length(cols)) + 1
-            col = cols[col_id]
+            index = (scene_idx % length(cols)) + 1
+            col = cols[index]
+            ext = exts[index]
             
             # compute seed
             seed = (iter - 1) * N + scene_idx
             
             # sample a scene + models
             rand!(col, seed)
+
+            # extract features
+            update!(col.eval.rec, col.scene)
+            pull_features!(ext, col.eval.rec, col.roadway, 
+                proposal_vehicle_index, col.models)
+            empty!(col.eval.rec)
             
-            # evaluate this scene
+            # evaluate this scene (i.e., extract targets)
             evaluate!(col.eval, col.scene, col.models, col.roadway, seed)
             
             # extract utilities and weights
@@ -165,7 +173,7 @@ function run_cem(
             weights[scene_idx] = col.gen.weights[proposal_vehicle_index]
 
             data[:, scene_idx] = extract_bn_features(
-                col.eval.features[:,1,:], 
+                ext.features[:], 
                 ext_feature_names, 
                 proposal_vehicle_index)
         end

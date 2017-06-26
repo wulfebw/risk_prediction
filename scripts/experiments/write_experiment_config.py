@@ -2,16 +2,16 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'heuristic_deterministic_1_lane_5_sec'                #
+EXPERIMENT_NAME = 'prop_exp_timesteps_50'                #
 DEFAULTS = {
     'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
-    'err_p_a_to_i': .125,
+    'err_p_a_to_i': .1,
     'err_p_i_to_a': .3,
     'overall_response_time': .2,
-    'lon_accel_std_dev': 0.,                                        #
-    'lat_accel_std_dev': 0.,                                        #
+    'lon_accel_std_dev': 1.,                                        #
+    'lat_accel_std_dev': .2,                                        #
 }
 
 def write_collection(config):
@@ -41,7 +41,7 @@ def write_collection(config):
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '5000')                             #
+    config.set(s, 'col/num_scenarios', '2000')                             #
     config.set(s, 'col/num_monte_carlo_runs', '1')
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -50,8 +50,8 @@ def write_collection(config):
     config.set(s, 'col/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     config.set(s, 'col/prime_time', '30.')
     config.set(s, 'col/sampling_time', '.1')
-    config.set(s, 'col/max_num_vehicles', '50')
-    config.set(s, 'col/min_num_vehicles', '50')
+    config.set(s, 'col/max_num_vehicles', '100')
+    config.set(s, 'col/min_num_vehicles', '100')
 
     # ngsim collection
     # TODO
@@ -63,31 +63,32 @@ def write_generation(config):
     # logistics
     config.set(s, 'logfile', '%(expdir)s/log/generation.log')
 
+    # common 
+    feature_timesteps = 50
+    feature_step_size = 1
+
     # base bayes net training
     config.set(s, 'base_bn_filepath', '%(expdir)s/data/base_bn.jld')
 
     # proposal bayes net training
-    # note that this should use the dataset generation parameters
-    # defined below
+    # note: use the dataset generation parameters defined below
+    # e.g., the sampling time from generation
+    # and do this by passing them in explictly in the run call
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
-    config.set(s, 'prop/num_monte_carlo_runs', '2')                     #
-    # want to use prime and sampling time from generation
-    # config.set(s, 'prop/prime_time', '0.')
-    # config.set(s, 'prop/sampling_time', '5.')
-    config.set(s, 'prop/cem_end_prob', '.5')
+    config.set(s, 'prop/num_monte_carlo_runs', '3')                     #
+    config.set(s, 'prop/cem_end_prob', '.25')
     config.set(s, 'prop/max_iters', '100')                                #
-    config.set(s, 'prop/population_size', '5000')                       #
-    config.set(s, 'prop/top_k_fraction', '.5')
-    config.set(s, 'prop/n_prior_samples', '60000')
+    config.set(s, 'prop/population_size', '2000')                       #
+    config.set(s, 'prop/top_k_fraction', '.25')
+    config.set(s, 'prop/n_prior_samples', '20000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
+    # prime time for proposal should be exactly the number of feature timesteps
 
     # generation of validation / training data
     config.set(s, 'gen/output_filepath', '%(expdir)s/data/prediction_data.h5')
 
     ## feature extraction
-    feature_timesteps = 20
     config.set(s, 'gen/feature_timesteps', '{}'.format(feature_timesteps))
-    feature_step_size = 1
     config.set(s, 'gen/feature_step_size', '{}'.format(feature_step_size))
     config.set(s, 'gen/extractor_type', 'multi')
     config.set(s, 'gen/extract_core', 'true')
@@ -102,8 +103,8 @@ def write_generation(config):
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '100000')                          #
-    config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
+    config.set(s, 'gen/num_scenarios', '100')                          #
+    config.set(s, 'gen/num_monte_carlo_runs', '20')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'gen/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -113,8 +114,8 @@ def write_generation(config):
     prime_time = (feature_timesteps * feature_step_size) * .1 + .2
     config.set(s, 'gen/prime_time', '{}'.format(prime_time))
     config.set(s, 'gen/sampling_time', '5.')                               #
-    config.set(s, 'gen/max_num_vehicles', '50')
-    config.set(s, 'gen/min_num_vehicles', '50')
+    config.set(s, 'gen/max_num_vehicles', '100')
+    config.set(s, 'gen/min_num_vehicles', '100')
 
     # subselect dataset filepath
     config.set(s, 'subselect_dataset', 
