@@ -3,10 +3,12 @@
 | Feature Name              | Description                                                       | Units     | 
 |---------------------------|------------------------                                           |-------    |
 | angular_rate_frenet       | Angular rate relative to curvature of the road                    | rad / s   |
+| angular_rate_global       | turn rate from global perspective                                 | rad / s   |
+| turn_rate_frenet          |                                                                   |           |
+| turn_rate_global          |                                                                   |           |
 | relative_offset           | lane offset, positive is to left                                  | m         |
 | fore_fore_m_dist          | distance to vehicle in front of vehicle in front                  | m         |
 | fore_m_is_avail           | 1 if no vehicle in front                                          | bool      |
-| angular_rate_global       | turn rate from global perspective                                 | rad / s   |
 | fore_r_vel                | velocity of vehicle in front and in lane to the right             | m / s     |
 | is_colliding              | 1 if ego is currently colliding with another vehicle              | bool      |      
 | jerk                      | Derivative of acceleration                                        | m / s^4   |
