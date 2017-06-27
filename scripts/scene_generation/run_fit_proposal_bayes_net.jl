@@ -46,7 +46,8 @@ function fit_proposal_bayes_net(
         N::Int = 1000,
         top_k_fraction::Float64 = .5,
         target_indices::Vector{Int} = [4],
-        n_prior_samples::Int = 5000
+        n_prior_samples::Int = 60000,
+        n_static_prior_samples::Int = 10000
     )
     # # only collect a single timestep
     # flags["feature_timesteps"] = 1
