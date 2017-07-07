@@ -58,8 +58,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = infile['risk/batch_idxs'].value
 
-    copy_attrs(outfile['risk'].attrs, infile['risk'].attrs)
-    outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names'][nonzero_fidxs]
+    copy_attrs(infile['risk'].attrs, outfile['risk'].attrs)
 
     infile.close()
     outfile.close()
@@ -94,8 +93,7 @@ def select_proposal_samples(input_filepath, output_filepath, batch_size=1000):
     # metadata
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = np.arange(len(prop_idxs)).reshape(-1, 1)
-    copy_attrs(outfile['risk'].attrs, infile['risk'].attrs)
-    outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names']
+    copy_attrs(infile['risk'].attrs, outfile['risk'].attrs)
 
     infile.close()
     outfile.close()
