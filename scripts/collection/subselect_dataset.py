@@ -76,6 +76,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
     outfile['risk/batch_idxs'] = infile['risk/batch_idxs'].value
 
     copy_attrs(infile['risk'].attrs, outfile['risk'].attrs)
+    outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names'][nonzero_fidxs]
 
     infile.close()
     outfile.close()

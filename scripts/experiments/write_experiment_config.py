@@ -41,7 +41,7 @@ def write_collection(config):
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '2000')                             #
+    config.set(s, 'col/num_scenarios', '3000')                             #
     config.set(s, 'col/num_monte_carlo_runs', '1')
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -83,8 +83,8 @@ def write_generation(config):
     config.set(s, 'prop/max_iters', '1000')                             #
     config.set(s, 'prop/population_size', '4000')                       #
     config.set(s, 'prop/top_k_fraction', '.25')
-    config.set(s, 'prop/n_prior_samples', '50000')
-    config.set(s, 'prop/n_static_prior_samples', '1000')
+    config.set(s, 'prop/n_prior_samples', '100000')
+    config.set(s, 'prop/n_static_prior_samples', '10000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
     # prime time for proposal should be exactly the number of feature timesteps
 
@@ -98,7 +98,7 @@ def write_generation(config):
     config.set(s, 'gen/extract_core', 'true')
     config.set(s, 'gen/extract_temporal', 'true')
     config.set(s, 'gen/extract_well_behaved', 'true')
-    config.set(s, 'gen/extract_neighbor', 'false')
+    config.set(s, 'gen/extract_neighbor', 'true')
     config.set(s, 'gen/extract_behavioral', 'false')
     config.set(s, 'gen/extract_neighbor_behavioral', 'false')
     config.set(s, 'gen/extract_car_lidar', 'true')
@@ -107,7 +107,7 @@ def write_generation(config):
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '100000')                          #
+    config.set(s, 'gen/num_scenarios', '2000000')                          #
     config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
@@ -161,7 +161,7 @@ def write_prediction(config):
         relpath, config.get('generation', 'prop/viz_dir')))
 
     ## hyperparams
-    config.set(s, 'td/hidden_layer_sizes', '128,128')                   #
+    config.set(s, 'td/hidden_layer_sizes', "'128,128,128'")                   #
     config.set(s, 'td/local_steps_per_update', '100')               #
     config.set(s, 'td/learning_rate', '5e-4')
     config.set(s, 'td/learning_rate_end', '5e-5')
@@ -184,16 +184,16 @@ def write_prediction(config):
     config.set(s, 'batch/summary_dir', '../%(expdir)s/data/summaries')
 
     ## hyperparams
-    config.set(s, 'batch/batch_size', '1000')                              #
+    config.set(s, 'batch/batch_size', '2000')                              #
     config.set(s, 'batch/num_epochs', '200')
-    config.set(s, 'batch/save_every', '10')
-    config.set(s, 'batch/debug_size', '10000')                            #
+    config.set(s, 'batch/save_every', '2')
+    config.set(s, 'batch/debug_size', '3000000')                            #
     config.set(s, 'batch/target_index', '4')                              #
-    config.set(s, 'batch/hidden_layer_dims', '128 128')
-    config.set(s, 'batch/learning_rate', '1e-3')
+    config.set(s, 'batch/hidden_layer_dims', "'128 128 128'")
+    config.set(s, 'batch/learning_rate', '5e-4')
     config.set(s, 'batch/min_lr', '1e-5')
     config.set(s, 'batch/decrease_lr_threshold', '.0')
-    config.set(s, 'batch/decay_lr_ratio', '.999')
+    config.set(s, 'batch/decay_lr_ratio', '.95')
     config.set(s, 'batch/loss_type', 'ce')                              #
     config.set(s, 'batch/task_type', 'regression')                      #
     num_target_bins = None

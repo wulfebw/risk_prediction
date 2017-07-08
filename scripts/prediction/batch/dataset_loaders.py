@@ -110,7 +110,8 @@ def get_balanced_class_weights(targets):
 def risk_dataset_loader(input_filepath, normalize=True, 
         debug_size=None, train_split=.8, shuffle=False, timesteps=None,
         num_target_bins=None, balanced_class_loss=False, 
-        target_index=None, load_likelihood_weights=False,
+        target_index=None, load_likelihood_weights=False, 
+        likelihood_weight_threshold=2.,
         ignore_behavioral_features=True):
     """
     Description:
@@ -186,9 +187,22 @@ def risk_dataset_loader(input_filepath, normalize=True,
         else:
             lw = infile['risk/weights']
         if shuffle:
-            lw = lw.value[shuffle_idxs]
+            if type(lw) == np.ndarray:
+                lw = lw[shuffle_idxs]
+            else:
+                lw = lw.value[shuffle_idxs]
         data['lw_train'] = lw[:num_train]
         data['lw_val'] = lw[num_train:]
+
+        # apply threshold
+        valid_train = np.where(data['lw_train'] < likelihood_weight_threshold)[0]
+        data['lw_train'] = data['lw_train'][valid_train]
+        data['x_train'] = data['x_train'][valid_train]
+        data['y_train'] = data['y_train'][valid_train]
+        valid_val = np.where(data['lw_val'] < likelihood_weight_threshold)[0]
+        data['lw_val'] = data['lw_val'][valid_val]
+        data['x_val'] = data['x_val'][valid_val]
+        data['y_val'] = data['y_val'][valid_val]
 
     if ignore_behavioral_features:
         feature_names = infile['risk'].attrs['feature_names']
