@@ -8,10 +8,10 @@ import numpy as np
 import os
 
 def copy_attrs(src, dest):
-    for k in src['risk'].attrs.keys():
+    for k in src.keys():
         
         try:
-            v = infile['risk'].attrs[k]
+            v = src[k]
         except Exception as e:
             print('exception occurred during transfer of key: {}; ignoring'.format(k))
         else:
@@ -25,7 +25,7 @@ def copy_attrs(src, dest):
             elif isinstance(v, np.generic):
                 v = np.asscalar(v)
             dest[k] = v
-            
+
     return dest
 
 def select_nonconstant_features(input_filepath, output_filepath, 
