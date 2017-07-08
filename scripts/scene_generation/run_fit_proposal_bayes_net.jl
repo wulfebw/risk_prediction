@@ -31,6 +31,8 @@ add_entry!(FLAGS, "top_k_fraction", .5,
     Float64, "fraction of pop to keep (.2 means keep top 20%)")
 add_entry!(FLAGS, "n_prior_samples", 80000,
     Int, "number of samples from the base bn to start with")
+add_entry!(FLAGS, "n_static_prior_samples", 10000,
+    Int, "constant number of prior samples added to dataset")
 
 function fit_proposal_bayes_net(
         base_bn_filepath::Union{String},
@@ -45,8 +47,9 @@ function fit_proposal_bayes_net(
         max_iters::Int = 500,
         N::Int = 1000,
         top_k_fraction::Float64 = .5,
-        target_indices::Vector{Int} = [4],
-        n_prior_samples::Int = 5000
+        target_indices::Vector{Int} = [5],
+        n_prior_samples::Int = 60000,
+        n_static_prior_samples::Int = 10000
     )
     # # only collect a single timestep
     # flags["feature_timesteps"] = 1
@@ -110,6 +113,7 @@ function fit_proposal_bayes_net(
         top_k_fraction = top_k_fraction, 
         target_indices = target_indices,
         n_prior_samples = n_prior_samples,
+        n_static_prior_samples = n_static_prior_samples,
         output_filepath = output_filepath,
         viz_dir = viz_dir
     )
@@ -130,5 +134,6 @@ parse_flags!(FLAGS, ARGS)
     N = FLAGS["population_size"],
     max_iters = FLAGS["max_iters"],
     top_k_fraction = FLAGS["top_k_fraction"],
-    n_prior_samples = FLAGS["n_prior_samples"]
+    n_prior_samples = FLAGS["n_prior_samples"],
+    n_static_prior_samples = FLAGS["n_static_prior_samples"]
 )

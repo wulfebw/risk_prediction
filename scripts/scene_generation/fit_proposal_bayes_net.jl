@@ -99,6 +99,8 @@ Args:
     - target_indices: which of the target variables should be considered
         1 = lane change collision, 2 = rear end, etc
     - n_prior_samples: number of samples from the base BN to start out with
+    - n_static_prior_samples: number of samples from the base BN to keep
+        throughout training
     - weight_threshold: we throw out samples where the weight is above this threshold
 
 Retruns:
@@ -112,7 +114,8 @@ function run_cem(
         N::Int = 1000, 
         top_k_fraction::Float64 = .5, 
         target_indices::Vector{Int} = [1,2,3,4,5],
-        n_prior_samples::Int = 10000,
+        n_prior_samples::Int = 60000,
+        n_static_prior_samples::Int = 10000,
         weight_threshold::Float64 = 10.,
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
         viz_dir::String = "../../data/bayesnets/viz",
@@ -131,6 +134,8 @@ function run_cem(
     prior = rand(col.gen.base_bn, n_prior_samples)
     prior = decode(prior, discs)
     disc_types = get_disc_types(col.gen.base_assignment_sampler)
+    static_prior = rand(col.gen.base_bn, n_static_prior_samples)
+    static_prior = decode(static_prior, discs)
     
     # allocate containers / single compute values
     stats = DefaultDict{String, Vector{Float64}}(Vector{Float64})
@@ -195,12 +200,13 @@ function run_cem(
         # add that set to the prior, and remove older samples
         df_data = DataFrame(data[:, indices], FEATURE_NAMES)
         prior = vcat(prior, df_data)[(top_k + 1):end, :]
+        training_data = vcat(prior, static_prior)
 
         # refit bayesnet and reset in the collectors
         if permit_diff_disc
-            prop_bn, discs = fit_bn(prior, disc_types)
+            prop_bn, discs = fit_bn(training_data, disc_types)
         else
-            prop_bn = fit_bn(prior, discs)
+            prop_bn = fit_bn(training_data, discs)
         end
 
         for col in cols

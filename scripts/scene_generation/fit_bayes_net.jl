@@ -214,10 +214,21 @@ function get_discretizers(
     discs = Dict{Symbol, LinCatDiscretizer}()
     for var in names(data)
         if disc_types[var] == LinearDiscretizer{Float64,Int}
+
             # maps continuous to discrete bins
             low = minimum(data[var])
             high = maximum(data[var])
-            discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
+
+            # handle the low = high case by creating a single bin containing
+            # low to high + epsilon
+            # not a great solution, though this should not come up in practice
+            if low == high
+                discs[var] = LinearDiscretizer(linspace(low, high + 1e-8, 2))
+                println("Warning: single bin in fitting bayes net")
+            else
+                discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
+            end
+            
         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
             # identity mapping between bins
             discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))

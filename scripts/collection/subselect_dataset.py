@@ -8,8 +8,25 @@ import numpy as np
 import os
 
 def copy_attrs(src, dest):
-    for (k,v) in src.items():
-        dest[k] = v
+    for k in src.keys():
+        
+        try:
+            v = src[k]
+        except Exception as e:
+            print('exception occurred during transfer of key: {}; ignoring'.format(k))
+        else:
+            if k.startswith('utf8_'):
+                k = k.replace('utf8_', '')
+                v = ''.join(chr(i) for i in v)
+                if v.lower() == 'true':
+                    v = True
+                elif v.lower() == 'false':
+                    v = False
+            elif isinstance(v, np.generic):
+                v = np.asscalar(v)
+            dest[k] = v
+
+    return dest
 
 def select_nonconstant_features(input_filepath, output_filepath, 
         batch_size=1000, check_size=10000, eps=1e-8):
@@ -58,8 +75,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = infile['risk/batch_idxs'].value
 
-    copy_attrs(outfile['risk'].attrs, infile['risk'].attrs)
-    outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names'][nonzero_fidxs]
+    copy_attrs(infile['risk'].attrs, outfile['risk'].attrs)
 
     infile.close()
     outfile.close()
@@ -94,8 +110,7 @@ def select_proposal_samples(input_filepath, output_filepath, batch_size=1000):
     # metadata
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = np.arange(len(prop_idxs)).reshape(-1, 1)
-    copy_attrs(outfile['risk'].attrs, infile['risk'].attrs)
-    outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names']
+    copy_attrs(infile['risk'].attrs, outfile['risk'].attrs)
 
     infile.close()
     outfile.close()

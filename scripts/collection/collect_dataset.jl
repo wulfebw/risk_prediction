@@ -165,7 +165,6 @@ function build_joint_generator(flags)
     prop_bn = d["bn"]
     prop_sampler = AssignmentSampler(d["discs"])
     
-
     # we want the simulation to be valid for prime_time + sampling_time 
     # the first vehicle in the scene is invalid after the first timestep 
     # this is because it acts with no vehicles in front
@@ -197,7 +196,13 @@ function build_joint_generator(flags)
         err_p_i_to_a = err_p_i_to_a,
         overall_response_time = overall_response_time
     )
-    behgen = CorrelatedBehaviorGenerator(min_p, max_p)
+
+    # for debugging purposes allow for constant behavior
+    if flags["heuristic_behavior_type"] == "passive"
+        behgen = CorrelatedBehaviorGenerator(min_p, min_p)
+    else
+        behgen = CorrelatedBehaviorGenerator(min_p, max_p)
+    end
     gen = BayesNetLaneGenerator(base_bn, base_sampler, prop_bn, prop_sampler,
         num_veh_per_lane, behgen)
     return gen
