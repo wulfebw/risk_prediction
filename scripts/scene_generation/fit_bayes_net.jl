@@ -179,65 +179,121 @@ function Discretizers.decode(
     return dec_df
 end
 
-function get_discretizers(
-        data::DataFrame,
-        disc_types::Dict{Symbol,DataType};
+function get_discretizer(
+        data::AbstractArray,
+        disc_type::DataType,
+        nbin::Union{Void,Int};
         discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks(),
         max_data_size::Int = 10000
     )
-    discs = Dict{Symbol, LinCatDiscretizer}()
+    
+    if disc_type == LinearDiscretizer{Float64,Int}
+        # if nbin not provided then infer from data
+        if nbin == nothing
 
-    for var in names(data)
-        if disc_types[var] == LinearDiscretizer{Float64,Int}
             # compute bins using only a subset of the data because it the 
             # bayesian blocks algorithm doesn't seem to scale that well
-            data_size = length(data[var])
+            data_size = length(data)
             data_size = min(data_size, max_data_size)
-            discs[var] = LinearDiscretizer(
-                binedges(discalg, data[var][1:data_size]))
-        elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
-            # assumes integer valued
-            discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
+            disc = LinearDiscretizer(binedges(discalg, data[1:data_size]))
         else
-            throw(ArgumentError("$(disc_types[var]) not implemented"))
-        end
-    end
-    return discs
-end
-
-function get_discretizers(
-        data::DataFrame, 
-        disc_types::Dict{Symbol,DataType},
-        n_bins::Dict{Symbol,Int}
-    )
-
-    discs = Dict{Symbol, LinCatDiscretizer}()
-    for var in names(data)
-        if disc_types[var] == LinearDiscretizer{Float64,Int}
-
             # maps continuous to discrete bins
-            low = minimum(data[var])
-            high = maximum(data[var])
+            low = minimum(data)
+            high = maximum(data)
 
             # handle the low = high case by creating a single bin containing
             # low to high + epsilon
             # not a great solution, though this should not come up in practice
+            # because it means that the variable only takes on a single value 
+            # and therefore should likely not be part of the BN
             if low == high
-                discs[var] = LinearDiscretizer(linspace(low, high + 1e-8, 2))
+                disc = LinearDiscretizer(linspace(low, high + 1e-8, 2))
                 println("Warning: single bin in fitting bayes net")
             else
-                discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
+                disc = LinearDiscretizer(linspace(low, high, nbin + 1))
             end
-            
-        elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
-            # identity mapping between bins
-            discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
-        else
-            throw(ArgumentError("$(disc_types[var]) not implemented"))
         end
+    elseif disc_type == CategoricalDiscretizer{Int,Int}
+        # assumes integer valued
+        disc = CategoricalDiscretizer(convert(Array{Int}, data))
+    else
+        throw(ArgumentError("$(disc_type) not implemented"))
+    end    
+    return disc
+end
+
+function get_discretizers(
+        data::DataFrame,
+        disc_types::Dict{Symbol,DataType},
+        nbins::Dict{Symbol,Int} = Dict{Symbol,Int}()
+    )
+    discs = Dict{Symbol, LinCatDiscretizer}()
+    for var in names(data)
+        nbin = in(var, keys(nbins)) ? nbins[var] : nothing
+        discs[var] = get_discretizer(data[var], disc_types[var], nbin)
     end
     return discs
 end
+
+# function get_discretizers(
+#         data::DataFrame,
+#         disc_types::Dict{Symbol,DataType};
+#         discalg::DiscretizationAlgorithm = DiscretizeBayesianBlocks(),
+#         max_data_size::Int = 10000
+#     )
+#     discs = Dict{Symbol, LinCatDiscretizer}()
+
+#     for var in names(data)
+#         if disc_types[var] == LinearDiscretizer{Float64,Int}
+#             # compute bins using only a subset of the data because it the 
+#             # bayesian blocks algorithm doesn't seem to scale that well
+#             data_size = length(data[var])
+#             data_size = min(data_size, max_data_size)
+#             discs[var] = LinearDiscretizer(
+#                 binedges(discalg, data[var][1:data_size]))
+#         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
+#             # assumes integer valued
+#             discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
+#         else
+#             throw(ArgumentError("$(disc_types[var]) not implemented"))
+#         end
+#     end
+#     return discs
+# end
+
+# function get_discretizers(
+#         data::DataFrame, 
+#         disc_types::Dict{Symbol,DataType},
+#         n_bins::Dict{Symbol,Int}
+#     )
+
+#     discs = Dict{Symbol, LinCatDiscretizer}()
+#     for var in names(data)
+#         if disc_types[var] == LinearDiscretizer{Float64,Int}
+
+#             # maps continuous to discrete bins
+#             low = minimum(data[var])
+#             high = maximum(data[var])
+
+#             # handle the low = high case by creating a single bin containing
+#             # low to high + epsilon
+#             # not a great solution, though this should not come up in practice
+#             if low == high
+#                 discs[var] = LinearDiscretizer(linspace(low, high + 1e-8, 2))
+#                 println("Warning: single bin in fitting bayes net")
+#             else
+#                 discs[var] = LinearDiscretizer(linspace(low, high, n_bins[var] + 1))
+#             end
+            
+#         elseif disc_types[var] == CategoricalDiscretizer{Int,Int}
+#             # identity mapping between bins
+#             discs[var] = CategoricalDiscretizer(convert(Array{Int}, data[var]))
+#         else
+#             throw(ArgumentError("$(disc_types[var]) not implemented"))
+#         end
+#     end
+#     return discs
+# end
 
 function fit_bn(
         data::DataFrame,
@@ -273,12 +329,8 @@ function fit_bn(
             :vehlength=>:vehwidth
         )
     )
-    # if n_bins not provided, infer binning from data
-    if isempty(n_bins)
-        discs = get_discretizers(data, disc_types)
-    else
-        discs = get_discretizers(data, disc_types, n_bins)
-    end
+    # if n_bins is empty this will infer the bins from the data
+    discs = get_discretizers(data, disc_types, n_bins)
     
     # encode and fit a discrete bayes net
     bn = fit_bn(data, discs, edges)
