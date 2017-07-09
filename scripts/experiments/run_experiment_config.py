@@ -50,7 +50,7 @@ def fit_bayes_net(config):
     cmd += '--output_filepath {} '.format(
         config.get(s, 'base_bn_filepath'))
     cmd_dir = os.path.join(ROOTDIR, 'scene_generation')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+    run_cmd(cmd, config.get(s, 'base_bn_logfile'), cmd_dir=cmd_dir, 
             dry_run=config.dry_run)
 
 def fit_proposal_bayes_net(config):
@@ -70,7 +70,7 @@ def fit_proposal_bayes_net(config):
         config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='prop/')
     cmd_dir = os.path.join(ROOTDIR, 'scene_generation')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+    run_cmd(cmd, config.get(s, 'prop_bn_logfile'), cmd_dir=cmd_dir, 
         dry_run=config.dry_run)
 
 def generate_prediction_data(config):
@@ -82,7 +82,8 @@ def generate_prediction_data(config):
         config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='gen/')
     cmd_dir = os.path.join(ROOTDIR, 'collection')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+    run_cmd(cmd, config.get(s, 'generation_logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
 
 def subselect_prediction_data(config):
     s = 'generation'
@@ -95,7 +96,8 @@ def subselect_prediction_data(config):
     cmd += '--subselect_proposal_filepath {} '.format(
         config.get(s, 'subselect_proposal_dataset'))
     cmd_dir = os.path.join(ROOTDIR, 'collection')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+    run_cmd(cmd, config.get(s, 'subselect_logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
 
 def run_generation(config):
     s = 'generation'

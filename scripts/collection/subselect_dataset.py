@@ -9,7 +9,6 @@ import os
 
 def copy_attrs(src, dest):
     for k in src.keys():
-        
         try:
             v = src[k]
         except Exception as e:
@@ -18,10 +17,6 @@ def copy_attrs(src, dest):
             if k.startswith('utf8_'):
                 k = k.replace('utf8_', '')
                 v = ''.join(chr(i) for i in v)
-                if v.lower() == 'true':
-                    v = True
-                elif v.lower() == 'false':
-                    v = False
             elif isinstance(v, np.generic):
                 v = np.asscalar(v)
             dest[k] = v

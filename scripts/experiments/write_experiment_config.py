@@ -64,7 +64,10 @@ def write_generation(config):
     config.add_section(s)
 
     # logistics
-    config.set(s, 'logfile', '%(expdir)s/log/generation.log')
+    config.set(s, 'base_bn_logfile', '%(expdir)s/log/base_bn.log')
+    config.set(s, 'prop_bn_logfile', '%(expdir)s/log/prop_bn.log')
+    config.set(s, 'generation_logfile', '%(expdir)s/log/generation.log')
+    config.set(s, 'subselect_logfile', '%(expdir)s/log/subselect.log')
 
     # common 
     feature_timesteps = 1
@@ -80,11 +83,11 @@ def write_generation(config):
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
     config.set(s, 'prop/num_monte_carlo_runs', '1')                     #
     config.set(s, 'prop/cem_end_prob', '.5')
-    config.set(s, 'prop/max_iters', '1000')                             #
-    config.set(s, 'prop/population_size', '4000')                       #
-    config.set(s, 'prop/top_k_fraction', '.25')
-    config.set(s, 'prop/n_prior_samples', '100000')
-    config.set(s, 'prop/n_static_prior_samples', '10000')
+    config.set(s, 'prop/max_iters', '100')                             #
+    config.set(s, 'prop/population_size', '10000')                       #
+    config.set(s, 'prop/top_k_fraction', '.1')
+    config.set(s, 'prop/n_prior_samples', '50000')
+    config.set(s, 'prop/n_static_prior_samples', '5000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
     # prime time for proposal should be exactly the number of feature timesteps
 

@@ -19,7 +19,7 @@ function fit_bn(
         debug_size::Int = 1000000,
         n_bins::Dict{Symbol,Int} = Dict(
             :relvelocity=>8,
-            :forevelocity=>8,
+            :forevelocity=>6,
             :foredistance=>10,
             :vehlength=>6,
             :vehwidth=>6,

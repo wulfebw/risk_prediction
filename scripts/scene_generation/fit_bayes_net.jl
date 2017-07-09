@@ -279,6 +279,9 @@ function fit_bn(
     else
         discs = get_discretizers(data, disc_types, n_bins)
     end
+    
+    # encode and fit a discrete bayes net
+    bn = fit_bn(data, discs, edges)
 
     # print out
     for (k, v) in discs
@@ -289,9 +292,11 @@ function fit_bn(
             println("mapping: $(v.d2n)\n")
         end
     end
-    
-    # encode and fit a discrete bayes net
-    bn = fit_bn(data, discs, edges)
+
+    for k in keys(discs)
+        println("variable: $(k)")
+        println("distributions: \n $(get(bn, k).distributions)")
+    end
 
     return bn, discs
 end
