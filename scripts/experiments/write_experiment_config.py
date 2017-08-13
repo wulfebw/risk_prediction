@@ -209,11 +209,26 @@ def write_prediction(config):
         'generation', 'gen/feature_timesteps'))
     config.set(s, 'batch/use_likelihood_weights', 'True')
 
+def write_validation(config):
+    s = 'validation'
+    config.add_section(s)
+
+    # logistics
+    config.set(s, 'logfile', '%(expdir)s/log/validation.log')
+    config.set(s, 'dataset_filepath', os.path.join('../', config.get(
+        'collection', 'col/output_filepath')))
+    config.set(s, 'viz_dir', '../%(expdir)s/viz/validation')
+    config.set(s, 'num_epochs', '0')
+    config.set(s, 'batch/learning_rate', '0')
+    config.set(s, 'batch/min_lr', '0')
+
+
 def write_config(filepath):
     config = configparser.SafeConfigParser(defaults=DEFAULTS)
     write_collection(config)
     write_generation(config)
     write_prediction(config)
+    write_validation(config)
     with open(filepath, 'w') as outfile:
         config.write(outfile)
 
