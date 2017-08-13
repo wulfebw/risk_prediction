@@ -58,6 +58,15 @@ def write_collection(config):
 
     # ngsim collection
     # TODO
+
+    # subselect
+    config.set(s, 'subselect_logfile', '%(expdir)s/log/col_subselect.log')
+    config.set(s, 'subselect_dataset', 
+        '%(expdir)s/data/subselect_validation_data.h5')
+    config.set(s, 'subselect_feature_dataset', 
+        '%(expdir)s/data/subselect_feature_validation_data.h5')
+    config.set(s, 'subselect_proposal_dataset', 
+        '%(expdir)s/data/subselect_proposal_validation_data.h5')
     
 def write_generation(config):
     s = 'generation'
@@ -67,7 +76,7 @@ def write_generation(config):
     config.set(s, 'base_bn_logfile', '%(expdir)s/log/base_bn.log')
     config.set(s, 'prop_bn_logfile', '%(expdir)s/log/prop_bn.log')
     config.set(s, 'generation_logfile', '%(expdir)s/log/generation.log')
-    config.set(s, 'subselect_logfile', '%(expdir)s/log/subselect.log')
+    config.set(s, 'subselect_logfile', '%(expdir)s/log/gen_subselect.log')
 
     # common 
     feature_timesteps = 1
