@@ -188,7 +188,7 @@ def write_prediction(config):
     # batch prediction
     ## dataset / logistics
     config.set(s, 'batch/dataset_filepath', os.path.join('../', config.get(
-        'generation', 'subselect_dataset')))
+        'generation', 'subselect_proposal_dataset')))
     config.set(s, 'batch/snapshot_dir', '../%(expdir)s/data/snapshots')
     config.set(s, 'batch/viz_dir', '../%(expdir)s/data/viz')
     config.set(s, 'batch/summary_dir', '../%(expdir)s/data/summaries')
@@ -230,6 +230,7 @@ def write_validation(config):
     config.set(s, 'learning_rate', '0')
     config.set(s, 'min_lr', '0')
     config.set(s, 'use_likelihood_weights', 'False')
+    config.set(s, 'train_split', '.99')
 
 
 def write_config(filepath):

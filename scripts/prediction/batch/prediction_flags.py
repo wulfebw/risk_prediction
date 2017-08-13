@@ -57,6 +57,9 @@ tf.app.flags.DEFINE_integer('target_index',
 tf.app.flags.DEFINE_boolean('shuffle_data', 
                             True,
                             """Whether to shuffle the data in loading it.""")
+tf.app.flags.DEFINE_float('train_split', 
+                            .8,
+                            """Fraction of data used for training""")
 
 # network constants
 tf.app.flags.DEFINE_integer('max_norm', 
