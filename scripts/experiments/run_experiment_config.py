@@ -136,11 +136,22 @@ def run_prediction(config):
     elif prediction_type == 'td':
         run_td_prediction(config)
 
+def run_validation(config):
+    s = 'validation'
+    print_intro(s)
+
+    cmd = 'python fit_predictor.py '
+    cmd += build_cmd(config.items('prediction'), prefix='batch/')
+    cmd += build_cmd(config.items(s))
+    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+
 def run_experiment(config):
     run_setup(config)
     run_collection(config)
     run_generation(config)
     run_prediction(config)
+    run_validation(config)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='parses the config filepath')
