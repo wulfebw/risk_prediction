@@ -2,7 +2,7 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'debug'                #
+EXPERIMENT_NAME = 'debug_stochastic_5_sec_collision'                #
 DEFAULTS = {
     'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
@@ -10,7 +10,7 @@ DEFAULTS = {
     'err_p_a_to_i': .0,
     'err_p_i_to_a': 1.,
     'overall_response_time': .4,
-    'lon_accel_std_dev': 0.,                                        #
+    'lon_accel_std_dev': 1.,                                        #
     'lat_accel_std_dev': 0.,                                        #
 }
 
@@ -33,7 +33,7 @@ def write_collection(config):
     config.set(s, 'col/extract_well_behaved', 'true')
     config.set(s, 'col/extract_neighbor', 'true')
     config.set(s, 'col/extract_behavioral', 'true')
-    config.set(s, 'col/extract_neighbor_behavioral', 'true')
+    config.set(s, 'col/extract_neighbor_behavioral', 'false')
     config.set(s, 'col/extract_car_lidar', 'true')
     config.set(s, 'col/extract_car_lidar_range_rate', 'true')
     config.set(s, 'col/extract_road_lidar', 'false')
@@ -41,20 +41,20 @@ def write_collection(config):
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '3000')                             #
-    config.set(s, 'col/num_monte_carlo_runs', '1')
+    config.set(s, 'col/num_scenarios', '1000')                             #
+    config.set(s, 'col/num_monte_carlo_runs', '30')
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
     config.set(s, 'col/overall_response_time', '%(overall_response_time)s')
     config.set(s, 'col/lon_accel_std_dev', '%(lon_accel_std_dev)s')
     config.set(s, 'col/lat_accel_std_dev', '%(lat_accel_std_dev)s')
-    config.set(s, 'col/prime_time', '30.')
-    config.set(s, 'col/sampling_time', '.1')
+    config.set(s, 'col/prime_time', '60.')
+    config.set(s, 'col/sampling_time', '5.')
     config.set(s, 'col/min_init_dist', '10')                                #
     config.set(s, 'col/heuristic_behavior_type', 'passive')                 #
     # don't change these numbers of vehicles
-    config.set(s, 'col/max_num_vehicles', '90') 
-    config.set(s, 'col/min_num_vehicles', '90')
+    config.set(s, 'col/max_num_vehicles', '75') 
+    config.set(s, 'col/min_num_vehicles', '75')
 
     # ngsim collection
     # TODO
@@ -81,13 +81,13 @@ def write_generation(config):
     # e.g., the sampling time from generation
     # and do this by passing them in explictly in the run call
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
-    config.set(s, 'prop/num_monte_carlo_runs', '1')                     #
+    config.set(s, 'prop/num_monte_carlo_runs', '2')                     #
     config.set(s, 'prop/cem_end_prob', '.5')
-    config.set(s, 'prop/max_iters', '100')                             #
+    config.set(s, 'prop/max_iters', '500')                             #
     config.set(s, 'prop/population_size', '10000')                       #
     config.set(s, 'prop/top_k_fraction', '.1')
-    config.set(s, 'prop/n_prior_samples', '50000')
-    config.set(s, 'prop/n_static_prior_samples', '5000')
+    config.set(s, 'prop/n_prior_samples', '100000')
+    config.set(s, 'prop/n_static_prior_samples', '2000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
     # prime time for proposal should be exactly the number of feature timesteps
 
@@ -111,14 +111,14 @@ def write_generation(config):
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
     config.set(s, 'gen/num_scenarios', '2000000')                          #
-    config.set(s, 'gen/num_monte_carlo_runs', '1')                        #
+    config.set(s, 'gen/num_monte_carlo_runs', '30')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'gen/err_p_i_to_a', '%(err_p_i_to_a)s')
     config.set(s, 'gen/overall_response_time', '%(overall_response_time)s')
     config.set(s, 'gen/lon_accel_std_dev', '%(lon_accel_std_dev)s')
     config.set(s, 'gen/lat_accel_std_dev', '%(lat_accel_std_dev)s')
-    prime_time = (feature_timesteps * feature_step_size) * .1 + .2
+    prime_time = (feature_timesteps * feature_step_size) * .1 + .3
     config.set(s, 'gen/prime_time', '{}'.format(prime_time))
     config.set(s, 'gen/sampling_time', '5.')                               #
     config.set(s, 'gen/heuristic_behavior_type', 'passive')                 #
@@ -191,12 +191,12 @@ def write_prediction(config):
     config.set(s, 'batch/num_epochs', '200')
     config.set(s, 'batch/save_every', '2')
     config.set(s, 'batch/debug_size', '3000000')                            #
-    config.set(s, 'batch/target_index', '4')                              #
+    config.set(s, 'batch/target_index', '3')                              #
     config.set(s, 'batch/hidden_layer_dims', "'128 128 128'")
     config.set(s, 'batch/learning_rate', '5e-4')
     config.set(s, 'batch/min_lr', '1e-5')
     config.set(s, 'batch/decrease_lr_threshold', '.0')
-    config.set(s, 'batch/decay_lr_ratio', '.95')
+    config.set(s, 'batch/decay_lr_ratio', '.99')
     config.set(s, 'batch/loss_type', 'ce')                              #
     config.set(s, 'batch/task_type', 'regression')                      #
     num_target_bins = None
