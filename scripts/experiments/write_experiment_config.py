@@ -2,7 +2,7 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'debug_stochastic_5_sec_collision'                #
+EXPERIMENT_NAME = 'debug_stochastic_5_sec'                #
 DEFAULTS = {
     'nprocs': 24,                                                       #
     'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
@@ -88,7 +88,7 @@ def write_generation(config):
     config.set(s, 'prop/top_k_fraction', '.1')
     config.set(s, 'prop/n_prior_samples', '100000')
     config.set(s, 'prop/n_static_prior_samples', '2000')
-    config.set(s, 'prop/viz_dir', '%(expdir)s/viz/')
+    config.set(s, 'prop/viz_dir', '%(expdir)s/viz/prop')
     # prime time for proposal should be exactly the number of feature timesteps
 
     # generation of validation / training data
@@ -219,8 +219,9 @@ def write_validation(config):
         'collection', 'col/output_filepath')))
     config.set(s, 'viz_dir', '../%(expdir)s/viz/validation')
     config.set(s, 'num_epochs', '0')
-    config.set(s, 'batch/learning_rate', '0')
-    config.set(s, 'batch/min_lr', '0')
+    config.set(s, 'learning_rate', '0')
+    config.set(s, 'min_lr', '0')
+    config.set(s, 'use_likelihood_weights', 'False')
 
 
 def write_config(filepath):
