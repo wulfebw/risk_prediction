@@ -30,6 +30,19 @@ def run_heuristic_collection(config):
     cmd_dir = os.path.join(ROOTDIR, 'collection')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
         dry_run=config.dry_run)
+
+def subselect_data(config, s, dataset_filepath):
+    cmd = 'python subselect_dataset.py '
+    cmd += '--dataset_filepath {} '.format(dataset_filepath)
+    cmd += '--subselect_filepath {} '.format(
+        config.get(s, 'subselect_dataset'))
+    cmd += '--subselect_feature_filepath {} '.format(
+        config.get(s, 'subselect_feature_dataset'))
+    cmd += '--subselect_proposal_filepath {} '.format(
+        config.get(s, 'subselect_proposal_dataset'))
+    cmd_dir = os.path.join(ROOTDIR, 'collection')
+    run_cmd(cmd, config.get(s, 'subselect_logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
     
 def run_collection(config):
     s = 'collection'
@@ -40,6 +53,8 @@ def run_collection(config):
         run_heuristic_collection(config)
     elif data_source == 'ngsim':
         run_ngsim_collection(config)
+
+    subselect_data(config, s, config.get(s, 'col/output_filepath'))
 
 # generation
 def fit_bayes_net(config):
@@ -87,17 +102,7 @@ def generate_prediction_data(config):
 
 def subselect_prediction_data(config):
     s = 'generation'
-    cmd = 'python subselect_dataset.py '
-    cmd += '--dataset_filepath {} '.format(config.get(s, 'gen/output_filepath'))
-    cmd += '--subselect_filepath {} '.format(
-        config.get(s, 'subselect_dataset'))
-    cmd += '--subselect_feature_filepath {} '.format(
-        config.get(s, 'subselect_feature_dataset'))
-    cmd += '--subselect_proposal_filepath {} '.format(
-        config.get(s, 'subselect_proposal_dataset'))
-    cmd_dir = os.path.join(ROOTDIR, 'collection')
-    run_cmd(cmd, config.get(s, 'subselect_logfile'), cmd_dir=cmd_dir, 
-        dry_run=config.dry_run)
+    subselect_data(config, s, config.get(s, 'gen/output_filepath'))
 
 def run_generation(config):
     s = 'generation'
