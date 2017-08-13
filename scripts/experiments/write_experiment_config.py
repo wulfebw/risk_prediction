@@ -61,12 +61,9 @@ def write_collection(config):
 
     # subselect
     config.set(s, 'subselect_logfile', '%(expdir)s/log/col_subselect.log')
-    config.set(s, 'subselect_dataset', 
-        '%(expdir)s/data/subselect_validation_data.h5')
     config.set(s, 'subselect_feature_dataset', 
         '%(expdir)s/data/subselect_feature_validation_data.h5')
-    config.set(s, 'subselect_proposal_dataset', 
-        '%(expdir)s/data/subselect_proposal_validation_data.h5')
+    config.set(s, 'subselect_proposal', 'False')
     
 def write_generation(config):
     s = 'generation'
@@ -141,6 +138,7 @@ def write_generation(config):
         '%(expdir)s/data/subselect_feature_prediction_data.h5')
     config.set(s, 'subselect_proposal_dataset', 
         '%(expdir)s/data/subselect_proposal_prediction_data.h5')
+    config.set(s, 'subselect_proposal', 'True')
 
 def write_prediction(config):
     s = 'prediction'

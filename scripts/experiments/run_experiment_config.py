@@ -34,12 +34,14 @@ def run_heuristic_collection(config):
 def subselect_data(config, s, dataset_filepath):
     cmd = 'python subselect_dataset.py '
     cmd += '--dataset_filepath {} '.format(dataset_filepath)
-    cmd += '--subselect_filepath {} '.format(
-        config.get(s, 'subselect_dataset'))
     cmd += '--subselect_feature_filepath {} '.format(
         config.get(s, 'subselect_feature_dataset'))
-    cmd += '--subselect_proposal_filepath {} '.format(
-        config.get(s, 'subselect_proposal_dataset'))
+    if config.get(s, 'subselect_proposal') == 'True':
+        cmd += '--subselect_proposal '
+        cmd += '--subselect_filepath {} '.format(
+            config.get(s, 'subselect_dataset'))
+        cmd += '--subselect_proposal_filepath {} '.format(
+            config.get(s, 'subselect_proposal_dataset'))
     cmd_dir = os.path.join(ROOTDIR, 'collection')
     run_cmd(cmd, config.get(s, 'subselect_logfile'), cmd_dir=cmd_dir, 
         dry_run=config.dry_run)

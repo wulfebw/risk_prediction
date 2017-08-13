@@ -66,7 +66,8 @@ def select_nonconstant_features(input_filepath, output_filepath,
         outfile['risk/targets'][s:e,:] = infile['risk/targets'][s:e,:]
     
     # metadata
-    outfile['risk/weights'] = infile['risk/weights'].value
+    if 'risk/weights' in infile.keys():
+        outfile['risk/weights'] = infile['risk/weights'].value
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = infile['risk/batch_idxs'].value
 
@@ -124,6 +125,9 @@ if __name__ == '__main__':
     parser.add_argument('--subselect_proposal_filepath', 
                             default='', type=str,
                             help="filepath to output proposal subselected data")
+    parser.add_argument('--subselect_proposal', 
+                            action='store_true',
+                            help="whether to subselect proposal samples")
     args = parser.parse_args()
 
     path, filename = os.path.split(args.dataset_filepath)
@@ -141,10 +145,12 @@ if __name__ == '__main__':
     # one in which all the samples are included, but only nonconstant features 
     # are captured, a second where all features are included, but only proposal
     # samples are kept, and a third with both these conditions
-    select_proposal_samples(args.dataset_filepath, 
-        args.subselect_proposal_filepath)
     select_nonconstant_features(args.dataset_filepath, 
         args.subselect_feature_filepath)
-    select_nonconstant_features(args.subselect_proposal_filepath, 
-        args.subselect_filepath)
+
+    if args.subselect_proposal:
+        select_proposal_samples(args.dataset_filepath, 
+            args.subselect_proposal_filepath)
+        select_nonconstant_features(args.subselect_proposal_filepath, 
+            args.subselect_filepath)
 
