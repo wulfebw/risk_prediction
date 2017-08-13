@@ -218,6 +218,7 @@ def write_validation(config):
     config.set(s, 'dataset_filepath', os.path.join('../', config.get(
         'collection', 'col/output_filepath')))
     config.set(s, 'viz_dir', '../%(expdir)s/viz/validation')
+    config.set(s, 'load_network', 'True')
     config.set(s, 'num_epochs', '0')
     config.set(s, 'learning_rate', '0')
     config.set(s, 'min_lr', '0')
