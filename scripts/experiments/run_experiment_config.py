@@ -115,6 +115,16 @@ def run_generation(config):
     generate_prediction_data(config)
     subselect_prediction_data(config)
 
+def run_visualization(config):
+    s = 'visualization'
+    print_intro(s)
+
+    cmd = 'python visualization_utilities.py '
+    cmd += build_cmd(config.items(s), prefix='viz/')
+    cmd_dir = os.path.join(ROOTDIR, 'visualization')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run, blocking=False)
+
 # prediction
 def run_batch_prediction(config):
     s = 'prediction'
@@ -143,20 +153,35 @@ def run_prediction(config):
     elif prediction_type == 'td':
         run_td_prediction(config)
 
+def run_direct_validation(config):
+    s = 'validation'
+    cmd = 'python fit_predictor.py '
+    cmd += build_cmd(config.items('prediction'), prefix='batch/')
+    cmd += build_cmd(config.items(s), prefix='direct/')
+    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
+    run_cmd(cmd, config.get(s, 'direct/logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run, blocking=False)
+
+def run_indirect_validation(config):
+    s = 'validation'
+    cmd = 'python fit_predictor.py '
+    cmd += build_cmd(config.items('prediction'), prefix='batch/')
+    cmd += build_cmd(config.items(s), prefix='indirect/')
+    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
+    run_cmd(cmd, config.get(s, 'indirect/logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+
 def run_validation(config):
     s = 'validation'
     print_intro(s)
 
-    cmd = 'python fit_predictor.py '
-    cmd += build_cmd(config.items('prediction'), prefix='batch/')
-    cmd += build_cmd(config.items(s))
-    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+    run_direct_validation(config)
+    run_indirect_validation(config)
 
 def run_experiment(config):
     run_setup(config)
     run_collection(config)
     run_generation(config)
+    run_visualization(config)
     run_prediction(config)
     run_validation(config)
 

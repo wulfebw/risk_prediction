@@ -123,6 +123,10 @@ end
 
 parse_flags!(FLAGS, ARGS)
 
+if !isdir(FLAGS["viz_dir"])
+    mkdir(FLAGS["viz_dir"])
+end
+
 @time fit_proposal_bayes_net(FLAGS["base_bn_filepath"],
     FLAGS,
     output_filepath = FLAGS["output_filepath"],
