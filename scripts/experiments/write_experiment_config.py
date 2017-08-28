@@ -2,15 +2,15 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'stochastic_5_sec_w_beh_w_err_10_timestep_2_substep'                #
+EXPERIMENT_NAME = 'stochastic_5_sec_w_prop_bn_.3_response_1.2_lon_std'                #
 DEFAULTS = {
     'nprocs': 20,                                                       #
-    'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
+    'expdir': '/scratch/wulfebw/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
-    'err_p_a_to_i': .01,
-    'err_p_i_to_a': .3,
-    'overall_response_time': .2,
-    'lon_accel_std_dev': 1.,                                        #
+    'err_p_a_to_i': .0,
+    'err_p_i_to_a': 1.,
+    'overall_response_time': .3,
+   'lon_accel_std_dev': 1.2,                                        #
     'lat_accel_std_dev': .1,                                        #
 }
 
@@ -42,7 +42,7 @@ def write_collection(config):
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
     config.set(s, 'col/num_scenarios', '5000')                             #
-    config.set(s, 'col/num_monte_carlo_runs', '20')                        #
+    config.set(s, 'col/num_monte_carlo_runs', '30')                        #
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
     config.set(s, 'col/overall_response_time', '%(overall_response_time)s')
@@ -51,7 +51,7 @@ def write_collection(config):
     config.set(s, 'col/prime_time', '60.')
     config.set(s, 'col/sampling_time', '5.')
     config.set(s, 'col/min_init_dist', '10')                                #
-    config.set(s, 'col/heuristic_behavior_type', 'correlated')                 #
+    config.set(s, 'col/heuristic_behavior_type', 'passive')                 #
     # don't change these numbers of vehicles
     config.set(s, 'col/max_num_vehicles', '70') 
     config.set(s, 'col/min_num_vehicles', '70')
@@ -76,8 +76,8 @@ def write_generation(config):
     config.set(s, 'subselect_logfile', '%(expdir)s/log/gen_subselect.log')
 
     # common 
-    feature_timesteps = 10
-    feature_step_size = 2
+    feature_timesteps = 1
+    feature_step_size = 1
 
     # base bayes net training
     config.set(s, 'base_bn_filepath', '%(expdir)s/data/base_bn.jld')
@@ -92,7 +92,7 @@ def write_generation(config):
     config.set(s, 'prop/max_iters', '500')                             #
     config.set(s, 'prop/population_size', '10000')                       #
     config.set(s, 'prop/top_k_fraction', '.2')
-    config.set(s, 'prop/n_prior_samples', '100000')
+    config.set(s, 'prop/n_prior_samples', '80000')
     config.set(s, 'prop/n_static_prior_samples', '2000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/prop')
     # prime time for proposal should be exactly the number of feature timesteps
@@ -116,18 +116,18 @@ def write_generation(config):
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '2000000')                          #
-    config.set(s, 'gen/num_monte_carlo_runs', '20')                        #
+    config.set(s, 'gen/num_scenarios', '1000000')                          #
+    config.set(s, 'gen/num_monte_carlo_runs', '30')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'gen/err_p_i_to_a', '%(err_p_i_to_a)s')
     config.set(s, 'gen/overall_response_time', '%(overall_response_time)s')
     config.set(s, 'gen/lon_accel_std_dev', '%(lon_accel_std_dev)s')
     config.set(s, 'gen/lat_accel_std_dev', '%(lat_accel_std_dev)s')
-    prime_time = (feature_timesteps * feature_step_size) * .1 + .5
+    prime_time = (feature_timesteps * feature_step_size) * .1 + .4
     config.set(s, 'gen/prime_time', '{}'.format(prime_time))
     config.set(s, 'gen/sampling_time', '5.')                               #
-    config.set(s, 'gen/heuristic_behavior_type', 'correlated')                 #
+    config.set(s, 'gen/heuristic_behavior_type', 'passive')                 #
     config.set(s, 'gen/max_num_vehicles', '15')                            #
     config.set(s, 'gen/min_num_vehicles', '15')                            #
 
@@ -171,25 +171,18 @@ def write_prediction(config):
 
     # td prediction
     ## logistics
-    relpath = '../../../'
-    config.set(s, 'td/log-dir', '{}/data/'.format(os.path.join(
-        relpath, config.get('DEFAULT', 'expdir'))))
+    config.set(s, 'td/log-dir', '%(expdir)s/data/')
     config.set(s, 'td/num-workers', '%(nprocs)s')
     config.set(s, 'td/config', 'risk_env_config')
 
     ### validation dataset
-    config.set(s, 'td/validation_dataset_filepath', os.path.join(
-        relpath, config.get('generation', 'subselect_proposal_dataset')))
-
+    config.set(s, 'td/validation_dataset_filepath', config.get('generation', 'subselect_proposal_dataset'))
     ### bayes net filepaths
-    config.set(s, 'td/base_bn_filepath', os.path.join(
-        relpath, config.get('generation', 'base_bn_filepath')))
-    config.set(s, 'td/prop_bn_filepath', os.path.join(
-        relpath, config.get('generation', 'prop_bn_filepath')))
+    config.set(s, 'td/base_bn_filepath', config.get('generation', 'base_bn_filepath')) 
+    config.set(s, 'td/prop_bn_filepath', config.get('generation', 'prop_bn_filepath'))
 
     ## viz
-    config.set(s, 'td/viz_dir', os.path.join(
-        relpath, config.get('generation', 'prop/viz_dir')))
+    config.set(s, 'td/viz_dir', config.get('generation', 'prop/viz_dir'))
 
     ## hyperparams
     config.set(s, 'td/hidden_layer_sizes', "'128,128,128'")                   #
@@ -198,7 +191,7 @@ def write_prediction(config):
     config.set(s, 'td/learning_rate_end', '5e-5')
     config.set(s, 'td/dropout_keep_prob', '1.')
     config.set(s, 'td/l2_reg', '0.')
-    config.set(s, 'td/target_loss_index', '4')                       #
+    config.set(s, 'td/target_loss_index', '3')                       #
     horizon = float(config.get('generation', 'gen/sampling_time')) / .1
     discount = (horizon - 1) / horizon
     config.set(s, 'td/discount', str(discount))
@@ -208,18 +201,18 @@ def write_prediction(config):
 
     # batch prediction
     ## dataset / logistics
-    config.set(s, 'batch/dataset_filepath', os.path.join('../', config.get(
-        'generation', 'subselect_proposal_dataset')))
-    config.set(s, 'batch/snapshot_dir', '../%(expdir)s/data/snapshots')
-    config.set(s, 'batch/viz_dir', '../%(expdir)s/viz/prediction')
-    config.set(s, 'batch/summary_dir', '../%(expdir)s/data/summaries')
+    config.set(s, 'batch/dataset_filepath', config.get(
+        'generation', 'subselect_proposal_dataset'))
+    config.set(s, 'batch/snapshot_dir', '%(expdir)s/data/snapshots')
+    config.set(s, 'batch/viz_dir', '%(expdir)s/viz/prediction')
+    config.set(s, 'batch/summary_dir', '%(expdir)s/data/summaries')
 
     ## hyperparams
     config.set(s, 'batch/batch_size', '2000')                              #
     config.set(s, 'batch/num_epochs', '200')
     config.set(s, 'batch/save_every', '2')
     config.set(s, 'batch/debug_size', '10000000')                            #
-    config.set(s, 'batch/target_index', '4')                              #
+    config.set(s, 'batch/target_index', '3')                              #
     config.set(s, 'batch/hidden_layer_dims', "'128 128 128'")
     config.set(s, 'batch/learning_rate', '5e-4')
     config.set(s, 'batch/min_lr', '1e-5')
@@ -244,10 +237,10 @@ def write_validation(config):
     # prediction on the original dataset used for collection
     # using the network trained on the generated data
     config.set(s, 'indirect/logfile', '%(expdir)s/log/indirect_validation.log')
-    config.set(s, 'indirect/dataset_filepath', os.path.join('../', config.get(
-        'collection', 'col/output_filepath')))
-    config.set(s, 'indirect/summary_dir', '../%(expdir)s/data/indirect_validation_summaries')
-    config.set(s, 'indirect/viz_dir', '../%(expdir)s/viz/indirect_validation')
+    config.set(s, 'indirect/dataset_filepath', config.get(
+        'collection', 'col/output_filepath'))
+    config.set(s, 'indirect/summary_dir', '%(expdir)s/data/indirect_validation_summaries')
+    config.set(s, 'indirect/viz_dir', '%(expdir)s/viz/indirect_validation')
     config.set(s, 'indirect/load_network', 'True')
     config.set(s, 'indirect/num_epochs', '0')
     config.set(s, 'indirect/learning_rate', '0')
@@ -258,11 +251,11 @@ def write_validation(config):
     # train and predict on the original dataset directly, but only using the 
     # 0/1 labels
     config.set(s, 'direct/logfile', '%(expdir)s/log/direct_validation.log')
-    config.set(s, 'direct/dataset_filepath', os.path.join('../', config.get(
-        'collection', 'col/output_filepath')))
-    config.set(s, 'direct/summary_dir', '../%(expdir)s/data/direct_validation_summaries')
-    config.set(s, 'direct/viz_dir', '../%(expdir)s/viz/direct_validation')
-    config.set(s, 'direct/snapshot_dir', '../%(expdir)s/data/direct_snapshots')
+    config.set(s, 'direct/dataset_filepath', config.get(
+        'collection', 'col/output_filepath'))
+    config.set(s, 'direct/summary_dir', '%(expdir)s/data/direct_validation_summaries')
+    config.set(s, 'direct/viz_dir', '%(expdir)s/viz/direct_validation')
+    config.set(s, 'direct/snapshot_dir', '%(expdir)s/data/direct_snapshots')
     config.set(s, 'direct/use_likelihood_weights', 'False')
     config.set(s, 'direct/num_target_bins', '2')
 
