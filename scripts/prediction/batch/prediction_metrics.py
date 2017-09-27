@@ -12,12 +12,17 @@ import seaborn as sns
 
 import dataset_loaders
 
+
+
 TARGET_LABELS = [
     'lane change collision',
     'rear end ego vehicle in front',
     'rear end ego vehicle in rear',
     'hard brake',
     'low time to collision'
+]
+TARGET_LABELS = [
+    'Hard Brake Target',
 ]
 COLORS = ['r','b','g','m','gold']
 
@@ -117,7 +122,7 @@ def classification_score(y, y_pred, probs, lw, name, viz_dir):
     plt.ylim([0.0, 1.05])
     plt.xlabel('Recall')
     plt.ylabel('Precision')
-    plt.title('Precision-Recall Curves of Various Targets for {}'.format(name))
+    plt.title('Precision-Recall Curve'.format(name))
     output_filepath = os.path.join(viz_dir, 'prc_{}.png'.format(name))
     plt.legend()
     plt.tight_layout()
@@ -137,7 +142,7 @@ def regression_score(y, y_pred, name, data=None, eps=1e-16,
     ll = np.sum(y * np.log(y_pred)) + np.sum((1 - y) * np.log(1 - y_pred)) 
     ce = -ll
     mse = np.sum((y - y_pred) ** 2)
-    r2 = 1 - ((y - y_pred) ** 2).sum() / ((y - y.mean(axis=0)) ** 2).sum()
+    r2 = 1 - ((y - y_pred) ** 2).sum() / (((y - y.mean(axis=0)) ** 2).sum() + 1e-8)
 
     # worst indices
     if len(np.shape(y)) > 1:
