@@ -85,7 +85,8 @@ class RNN(Network):
         self.probs = tf.nn.softmax(self.scores) * tf.expand_dims(self.sequence_mask, 2)
 
         # accuracy
-        same = tf.cast(tf.equal(tf.cast(np.argmax(self.scores, axis=-1), tf.int32), self.targets), tf.float32) * self.sequence_mask
+        same = tf.equal(tf.cast(tf.argmax(self.scores, axis=-1), tf.int32), self.targets)
+        same = tf.cast(same, tf.float32) * self.sequence_mask
         self.acc = tf.reduce_sum(same) / tf.reduce_sum(tf.cast(self.lengths, tf.float32))
 
         # summaries
@@ -135,6 +136,12 @@ class RNN(Network):
         
         for epoch in range(n_epochs):
 
+            # shuffle train set
+            idxs = np.random.permutation(len(data['train_x']))
+            data['train_x'] = data['train_x'][idxs]
+            data['train_y'] = data['train_y'][idxs]
+            data['train_lengths'] = data['train_lengths'][idxs]
+
             # train
             total_loss = 0
             for bidx in range(n_batches):
@@ -171,7 +178,7 @@ class RNN(Network):
                 total_loss += loss
                 val_writer.add_summary(summary, step)
                 sys.stdout.write('\rval epoch: {} / {} batch: {} / {} loss: {}'.format(
-                    epoch+1, n_epochs, bidx+1, n_batches, 
+                    epoch+1, n_epochs, bidx+1, n_val_batches, 
                     total_loss / (self.batch_size * (bidx+1))))
             print('\n')
 

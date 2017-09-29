@@ -52,7 +52,7 @@ def load_ngsim_trajectory_data(
             'angular_rate_frenet'
         ],
         target_keys=[
-            'lidar_1'
+            'lidar_10'
         ],
         binedges=[10,15,25,50],
         max_censor_ratio=.3,
