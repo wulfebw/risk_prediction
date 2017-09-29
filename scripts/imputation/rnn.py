@@ -131,8 +131,10 @@ class RNN(Network):
             val_writer=None):
         sess = tf.get_default_session()
         
-        n_batches = utils.compute_n_batches(len(data['train_x']), self.batch_size)
-        n_val_batches = utils.compute_n_batches(len(data['val_x']), self.batch_size)
+        n_samples = len(data['train_x'])
+        n_batches = utils.compute_n_batches(n_samples, self.batch_size)
+        n_val_samples = len(data['val_x'])
+        n_val_batches = utils.compute_n_batches(n_val_samples, self.batch_size)
         
         for epoch in range(n_epochs):
 
@@ -145,13 +147,11 @@ class RNN(Network):
             # train
             total_loss = 0
             for bidx in range(n_batches):
-                s = bidx * self.batch_size
-                e = s + self.batch_size
-                
+                idxs = utils.compute_batch_idxs(bidx * self.batch_size, self.batch_size, n_samples)
                 feed_dict = {
-                    self.inputs:data['train_x'][s:e],
-                    self.targets:data['train_y'][s:e],
-                    self.lengths:data['train_lengths'][s:e]
+                    self.inputs:data['train_x'][idxs],
+                    self.targets:data['train_y'][idxs],
+                    self.lengths:data['train_lengths'][idxs]
                 }
                 outputs_list = [self.loss, self.summary_op, self.global_step, self.train_op]
                 loss, summary, step, _ = sess.run(outputs_list, feed_dict=feed_dict)
@@ -160,6 +160,7 @@ class RNN(Network):
                 sys.stdout.write('\repoch: {} / {} batch: {} / {} loss: {}'.format(
                     epoch+1, n_epochs, bidx+1, n_batches, 
                     total_loss / (self.batch_size * (bidx+1))))
+            self.validate(data['train_x'], data['train_y'], data['train_lengths'], writer, epoch)
             print('\n')
 
             # val
@@ -167,10 +168,11 @@ class RNN(Network):
             for bidx in range(n_val_batches):
                 s = bidx * self.batch_size
                 e = s + self.batch_size
+                idxs = utils.compute_batch_idxs(bidx * self.batch_size, self.batch_size, n_val_samples)
                 feed_dict = {
-                    self.inputs:data['val_x'][s:e],
-                    self.targets:data['val_y'][s:e],
-                    self.lengths:data['val_lengths'][s:e],
+                    self.inputs:data['val_x'][idxs],
+                    self.targets:data['val_y'][idxs],
+                    self.lengths:data['val_lengths'][idxs],
                     self.dropout_keep_prop_ph: 1.
                 }
                 outputs_list = [self.loss, self.summary_op, self.global_step]
@@ -180,22 +182,47 @@ class RNN(Network):
                 sys.stdout.write('\rval epoch: {} / {} batch: {} / {} loss: {}'.format(
                     epoch+1, n_epochs, bidx+1, n_val_batches, 
                     total_loss / (self.batch_size * (bidx+1))))
+            self.validate(data['val_x'], data['val_y'], data['val_lengths'], val_writer, epoch)
             print('\n')
 
     def predict(self, inputs, lengths):
         sess = tf.get_default_session()
-        n_batches = utils.compute_n_batches(len(inputs), self.batch_size)
+        n_samples = len(inputs)
+        n_batches = utils.compute_n_batches(n_samples, self.batch_size)
         probs = np.zeros((len(inputs), self.max_len, self.output_dim))
         for bidx in range(n_batches):
-            s = bidx * self.batch_size
-            e = s + self.batch_size
+            idxs = utils.compute_batch_idxs(bidx * self.batch_size, self.batch_size, n_samples)
 
-            probs[s:e] = sess.run(self.probs, feed_dict={
-                self.inputs:inputs[s:e],
-                self.lengths:lengths[s:e],
+            probs[idxs] = sess.run(self.probs, feed_dict={
+                self.inputs:inputs[idxs],
+                self.lengths:lengths[idxs],
                 self.dropout_keep_prop_ph: 1.
             })
 
         preds = np.argmax(probs, axis=-1)
         return probs, preds
+
+    def validate(self, inputs, targets, lengths, writer, itr, max_samples=1000):
+        # optionally subsample the dataset
+        n_samples = len(inputs)
+        if n_samples > max_samples:
+            idxs = np.random.randint(0, n_samples, max_samples)
+        else:
+            idxs = list(range(n_samples))
+
+        # only consider the subset of indices from here onward
+        inputs = inputs[idxs]
+        lengths = lengths[idxs]
+        targets = targets[idxs]
+
+        # predict and compute the summary
+        probs, preds = self.predict(inputs, lengths)
+        summary_preds, summary_targets = [], []
+        for i, l in enumerate(lengths):
+            summary_preds += list(preds[i,:l])
+            summary_targets += list(targets[i,:l])
+        summary = utils.classification_summary(summary_preds, summary_targets, self.name)
+
+        # write the summary
+        writer.add_summary(summary, itr)
     

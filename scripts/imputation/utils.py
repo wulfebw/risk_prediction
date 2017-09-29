@@ -3,6 +3,8 @@ import h5py
 import numpy as np
 import os
 import pandas as pd
+import sklearn.metrics
+import tensorflow as tf
 
 import rnn_cells
 
@@ -19,6 +21,21 @@ def compute_n_batches(n_samples, batch_size):
         n_batches += 1
     return n_batches
 
+def compute_batch_idxs(start, batch_size, size):
+    if start >= size:
+        return list(np.random.randint(low=0, high=size, size=batch_size))
+    
+    end = start + batch_size
+
+    if end <= size:
+        return list(range(start, end))
+
+    else:
+        base_idxs = list(range(start, size))
+        remainder = end - size
+        idxs = list(np.random.randint(low=0, high=size, size=remainder))
+        return base_idxs + idxs
+       
 def compute_lengths(arr):
     sums = np.sum(np.array(arr), axis=2)
     lengths = []
@@ -33,6 +50,16 @@ def compute_lengths(arr):
 def maybe_mkdir(d):
     if not os.path.exists(d):
         os.mkdir(d)
+
+def classification_summary(preds, targets, name=''):
+    prc, rcl, f_score, sup = sklearn.metrics.precision_recall_fscore_support(
+        targets, preds, average='micro')
+    summary = tf.Summary(value=[
+        tf.Summary.Value(tag="{}/precision".format(name), simple_value=prc),
+        tf.Summary.Value(tag="{}/recall".format(name), simple_value=rcl),
+        tf.Summary.Value(tag="{}/f-score".format(name), simple_value=f_score)
+    ])
+    return summary
 
 def load_ngsim_trajectory_data(
         filepath, 

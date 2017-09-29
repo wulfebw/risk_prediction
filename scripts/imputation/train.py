@@ -14,7 +14,7 @@ def main():
         dataset_filepath,
         binedges=binedges,
         max_len=max_len,
-        max_samples=10000,
+        max_samples=123,
         train_ratio=.9
     )
     print(len(data['train_x']))
@@ -28,7 +28,7 @@ def main():
         hidden_dim=128,
         max_len=max_len,
         output_dim=len(binedges),
-        batch_size=500,
+        batch_size=50,
         learning_rate=.0005,
         dropout_keep_prob=.75
     )
