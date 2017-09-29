@@ -1,4 +1,5 @@
 
+import collections
 import numpy as np
 import sys
 import tensorflow as tf
@@ -224,5 +225,11 @@ class RNN(Network):
         summary = utils.classification_summary(summary_preds, summary_targets, self.name)
 
         # write the summary
+        writer.add_summary(summary, itr)
+
+        # also write a baseline summary
+        ctr = collections.Counter(summary_targets)
+        baseline_preds = ctr.most_common(1)[0][0] * np.ones_like(summary_targets)
+        summary = utils.classification_summary(baseline_preds, summary_targets, 'baseline')
         writer.add_summary(summary, itr)
     
