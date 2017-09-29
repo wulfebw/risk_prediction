@@ -57,6 +57,9 @@ tf.app.flags.DEFINE_integer('target_index',
 tf.app.flags.DEFINE_boolean('shuffle_data', 
                             True,
                             """Whether to shuffle the data in loading it.""")
+tf.app.flags.DEFINE_float('train_split', 
+                            .8,
+                            """Fraction of data used for training""")
 
 # network constants
 tf.app.flags.DEFINE_integer('max_norm', 
@@ -149,7 +152,6 @@ tf.app.flags.DEFINE_string('run_filepath',
                             'run_collect_debug_dataset.jl',
                             'Filepath to run file.')
 
-
 def custom_parse_flags(flags):
     # hidden layer dims
     if flags.hidden_layer_dims != '':
@@ -164,4 +166,4 @@ def custom_parse_flags(flags):
 
     # task
     if flags.num_target_bins is not None:
-        assert flags.task_type == 'classification'
+        print('flags.num_target_bins is typically only used for classification')

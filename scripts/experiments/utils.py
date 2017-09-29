@@ -49,7 +49,7 @@ class Timer(object):
     def __exit__(self, *args):
         print('Elapsed Time: {}'.format(time.time() - self.start))
 
-def run_cmd(cmd, logfilepath, cmd_dir='.', dry_run=False):
+def run_cmd(cmd, logfilepath, cmd_dir='.', dry_run=False, blocking=True):
     print('-' * 50) 
     print('{}running cmd: {}\n{}'.format(bcolors.BOLD, bcolors.ENDC, cmd))
     cmd_str = '\n'.join(cmd.split('--'))
@@ -58,7 +58,10 @@ def run_cmd(cmd, logfilepath, cmd_dir='.', dry_run=False):
     if not dry_run:
         log = open(logfilepath, 'a')
         with ChangeDir(cmd_dir) as cd, Timer() as t:
-            subprocess.call(cmd, shell=True, stdout=log, stderr=log)
+            if blocking:
+                subprocess.call(cmd, shell=True, stdout=log, stderr=log)
+            else:
+                subprocess.Popen(cmd, shell=True, stdout=log, stderr=log)
     print('-' * 50) 
 
 

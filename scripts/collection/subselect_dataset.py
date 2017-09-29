@@ -9,7 +9,6 @@ import os
 
 def copy_attrs(src, dest):
     for k in src.keys():
-        
         try:
             v = src[k]
         except Exception as e:
@@ -18,10 +17,6 @@ def copy_attrs(src, dest):
             if k.startswith('utf8_'):
                 k = k.replace('utf8_', '')
                 v = ''.join(chr(i) for i in v)
-                if v.lower() == 'true':
-                    v = True
-                elif v.lower() == 'false':
-                    v = False
             elif isinstance(v, np.generic):
                 v = np.asscalar(v)
             dest[k] = v
@@ -71,11 +66,13 @@ def select_nonconstant_features(input_filepath, output_filepath,
         outfile['risk/targets'][s:e,:] = infile['risk/targets'][s:e,:]
     
     # metadata
-    outfile['risk/weights'] = infile['risk/weights'].value
+    if 'risk/weights' in infile.keys():
+        outfile['risk/weights'] = infile['risk/weights'].value
     outfile['risk/seeds'] = infile['risk/seeds'].value
     outfile['risk/batch_idxs'] = infile['risk/batch_idxs'].value
 
     copy_attrs(infile['risk'].attrs, outfile['risk'].attrs)
+    outfile['risk'].attrs['feature_names'] = infile['risk'].attrs['feature_names'][nonzero_fidxs]
 
     infile.close()
     outfile.close()
@@ -128,6 +125,9 @@ if __name__ == '__main__':
     parser.add_argument('--subselect_proposal_filepath', 
                             default='', type=str,
                             help="filepath to output proposal subselected data")
+    parser.add_argument('--subselect_proposal', 
+                            action='store_true',
+                            help="whether to subselect proposal samples")
     args = parser.parse_args()
 
     path, filename = os.path.split(args.dataset_filepath)
@@ -145,10 +145,12 @@ if __name__ == '__main__':
     # one in which all the samples are included, but only nonconstant features 
     # are captured, a second where all features are included, but only proposal
     # samples are kept, and a third with both these conditions
-    select_proposal_samples(args.dataset_filepath, 
-        args.subselect_proposal_filepath)
     select_nonconstant_features(args.dataset_filepath, 
         args.subselect_feature_filepath)
-    select_nonconstant_features(args.subselect_proposal_filepath, 
-        args.subselect_filepath)
+
+    if args.subselect_proposal:
+        select_proposal_samples(args.dataset_filepath, 
+            args.subselect_proposal_filepath)
+        select_nonconstant_features(args.subselect_proposal_filepath, 
+            args.subselect_filepath)
 

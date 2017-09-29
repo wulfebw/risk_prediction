@@ -30,6 +30,21 @@ def run_heuristic_collection(config):
     cmd_dir = os.path.join(ROOTDIR, 'collection')
     run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
         dry_run=config.dry_run)
+
+def subselect_data(config, s, dataset_filepath):
+    cmd = 'python subselect_dataset.py '
+    cmd += '--dataset_filepath {} '.format(dataset_filepath)
+    cmd += '--subselect_feature_filepath {} '.format(
+        config.get(s, 'subselect_feature_dataset'))
+    if config.get(s, 'subselect_proposal') == 'True':
+        cmd += '--subselect_proposal '
+        cmd += '--subselect_filepath {} '.format(
+            config.get(s, 'subselect_dataset'))
+        cmd += '--subselect_proposal_filepath {} '.format(
+            config.get(s, 'subselect_proposal_dataset'))
+    cmd_dir = os.path.join(ROOTDIR, 'collection')
+    run_cmd(cmd, config.get(s, 'subselect_logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
     
 def run_collection(config):
     s = 'collection'
@@ -41,6 +56,8 @@ def run_collection(config):
     elif data_source == 'ngsim':
         run_ngsim_collection(config)
 
+    subselect_data(config, s, config.get(s, 'col/output_filepath'))
+
 # generation
 def fit_bayes_net(config):
     s = 'generation' 
@@ -50,7 +67,7 @@ def fit_bayes_net(config):
     cmd += '--output_filepath {} '.format(
         config.get(s, 'base_bn_filepath'))
     cmd_dir = os.path.join(ROOTDIR, 'scene_generation')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+    run_cmd(cmd, config.get(s, 'base_bn_logfile'), cmd_dir=cmd_dir, 
             dry_run=config.dry_run)
 
 def fit_proposal_bayes_net(config):
@@ -70,7 +87,7 @@ def fit_proposal_bayes_net(config):
         config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='prop/')
     cmd_dir = os.path.join(ROOTDIR, 'scene_generation')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+    run_cmd(cmd, config.get(s, 'prop_bn_logfile'), cmd_dir=cmd_dir, 
         dry_run=config.dry_run)
 
 def generate_prediction_data(config):
@@ -82,20 +99,12 @@ def generate_prediction_data(config):
         config.get(s, 'prop_bn_filepath'))
     cmd += build_cmd(config.items(s), prefix='gen/')
     cmd_dir = os.path.join(ROOTDIR, 'collection')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+    run_cmd(cmd, config.get(s, 'generation_logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run)
 
 def subselect_prediction_data(config):
     s = 'generation'
-    cmd = 'python subselect_dataset.py '
-    cmd += '--dataset_filepath {} '.format(config.get(s, 'gen/output_filepath'))
-    cmd += '--subselect_filepath {} '.format(
-        config.get(s, 'subselect_dataset'))
-    cmd += '--subselect_feature_filepath {} '.format(
-        config.get(s, 'subselect_feature_dataset'))
-    cmd += '--subselect_proposal_filepath {} '.format(
-        config.get(s, 'subselect_proposal_dataset'))
-    cmd_dir = os.path.join(ROOTDIR, 'collection')
-    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+    subselect_data(config, s, config.get(s, 'gen/output_filepath'))
 
 def run_generation(config):
     s = 'generation'
@@ -105,6 +114,16 @@ def run_generation(config):
     fit_proposal_bayes_net(config)
     generate_prediction_data(config)
     subselect_prediction_data(config)
+
+def run_visualization(config):
+    s = 'visualization'
+    print_intro(s)
+
+    cmd = 'python visualization_utilities.py '
+    cmd += build_cmd(config.items(s), prefix='viz/')
+    cmd_dir = os.path.join(ROOTDIR, 'visualization')
+    run_cmd(cmd, config.get(s, 'logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run, blocking=False)
 
 # prediction
 def run_batch_prediction(config):
@@ -134,11 +153,37 @@ def run_prediction(config):
     elif prediction_type == 'td':
         run_td_prediction(config)
 
+def run_direct_validation(config):
+    s = 'validation'
+    cmd = 'python fit_predictor.py '
+    cmd += build_cmd(config.items('prediction'), prefix='batch/')
+    cmd += build_cmd(config.items(s), prefix='direct/')
+    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
+    run_cmd(cmd, config.get(s, 'direct/logfile'), cmd_dir=cmd_dir, 
+        dry_run=config.dry_run, blocking=False)
+
+def run_indirect_validation(config):
+    s = 'validation'
+    cmd = 'python fit_predictor.py '
+    cmd += build_cmd(config.items('prediction'), prefix='batch/')
+    cmd += build_cmd(config.items(s), prefix='indirect/')
+    cmd_dir = os.path.join(ROOTDIR, 'prediction/batch')
+    run_cmd(cmd, config.get(s, 'indirect/logfile'), cmd_dir=cmd_dir, dry_run=config.dry_run)
+
+def run_validation(config):
+    s = 'validation'
+    print_intro(s)
+
+    run_direct_validation(config)
+    run_indirect_validation(config)
+
 def run_experiment(config):
     run_setup(config)
     run_collection(config)
     run_generation(config)
+    run_visualization(config)
     run_prediction(config)
+    run_validation(config)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='parses the config filepath')
