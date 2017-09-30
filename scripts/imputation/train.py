@@ -1,5 +1,6 @@
 
 import numpy as np
+np.set_printoptions(suppress=True, precision=5, threshold=10000)
 import os
 import tensorflow as tf
 
@@ -14,10 +15,10 @@ def main():
         dataset_filepath,
         binedges=binedges,
         max_len=max_len,
-        max_samples=123,
-        train_ratio=.9
+        max_samples=None,
+        train_ratio=.9,
+        target_keys=['lidar_10']
     )
-    print(len(data['train_x']))
 
     exp_dir = '../../data/experiments/imputation'
     utils.maybe_mkdir(exp_dir)
@@ -28,7 +29,7 @@ def main():
         hidden_dim=128,
         max_len=max_len,
         output_dim=len(binedges),
-        batch_size=50,
+        batch_size=500,
         learning_rate=.0005,
         dropout_keep_prob=.75
     )
@@ -38,7 +39,7 @@ def main():
         sess.run(tf.global_variables_initializer())
         model.train(
             data, 
-            n_epochs=100000,
+            n_epochs=1000,
             writer=writer,
             val_writer=val_writer
         )

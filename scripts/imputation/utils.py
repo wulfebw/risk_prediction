@@ -1,6 +1,7 @@
 
 import h5py
 import numpy as np
+np.set_printoptions(suppress=True, precision=5, threshold=10000)
 import os
 import pandas as pd
 import sklearn.metrics
@@ -50,6 +51,12 @@ def compute_lengths(arr):
 def maybe_mkdir(d):
     if not os.path.exists(d):
         os.mkdir(d)
+
+def select_until_length(arr, lengths):
+    values = []
+    for i, l in enumerate(lengths):
+        values += list(arr[i,:l])
+    return np.array(values)
 
 def classification_summary(preds, targets, name=''):
     prc, rcl, f_score, sup = sklearn.metrics.precision_recall_fscore_support(
@@ -140,11 +147,6 @@ def load_ngsim_trajectory_data(
         binedges, 
         right=True
     )
-        
-    # normalize features
-    if normalize:
-        x -= np.mean(x, axis=(1,2), keepdims=True)
-        x /= np.std(x, axis=(1,2), keepdims=True) + 1e-8
     
     # train / val split
     train_idx = int(len(valid_sample_idxs) * train_ratio)
@@ -154,7 +156,25 @@ def load_ngsim_trajectory_data(
     val_x = x[train_idx:]
     val_y = y[train_idx:]
     val_lengths = lengths[train_idx:]
-    
+
+    # normalize features
+    if normalize:
+
+        # compute statistics only on the nonzero elements of the train set
+        nonzero_train_x = select_until_length(train_x, train_lengths)
+        mean = np.mean(nonzero_train_x, axis=(0), keepdims=True)
+        nonzero_train_x -= mean
+        std = np.std(nonzero_train_x, axis=(0), keepdims=True) + 1e-8
+        
+        # normalize both train and val, and then set zero elements to zero again
+        train_x = (train_x - mean) / std
+        for i, l in enumerate(train_lengths):
+            train_x[i,l:] = 0
+
+        val_x = (val_x - mean) / std
+        for i, l in enumerate(val_lengths):
+            val_x[i,l:] = 0
+
     data = dict(
         train_x=train_x,
         train_y=train_y,
