@@ -26,7 +26,7 @@ def main():
     model = rnn.RNN(
         name='supervised_imputation',
         input_dim=data['train_x'].shape[2],
-        hidden_dim=128,
+        hidden_dim=256,
         max_len=max_len,
         output_dim=len(binedges),
         batch_size=500,
@@ -35,6 +35,10 @@ def main():
     )
     writer = tf.summary.FileWriter(os.path.join(exp_dir, 'train'))
     val_writer = tf.summary.FileWriter(os.path.join(exp_dir, 'val'))
+
+    utils.write_baseline_summary(data['train_lengths'], data['train_y'], writer)
+    utils.write_baseline_summary(data['val_lengths'], data['val_y'], val_writer)
+    
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         model.train(

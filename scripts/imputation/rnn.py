@@ -1,5 +1,4 @@
 
-import collections
 import numpy as np
 import sys
 import tensorflow as tf
@@ -203,7 +202,7 @@ class RNN(Network):
         preds = np.argmax(probs, axis=-1)
         return probs, preds
 
-    def validate(self, inputs, targets, lengths, writer, itr, max_samples=1000):
+    def validate(self, inputs, targets, lengths, writer, itr, max_samples=2000):
         # optionally subsample the dataset
         n_samples = len(inputs)
         if n_samples > max_samples:
@@ -226,10 +225,3 @@ class RNN(Network):
 
         # write the summary
         writer.add_summary(summary, itr)
-
-        # also write a baseline summary
-        ctr = collections.Counter(summary_targets)
-        baseline_preds = ctr.most_common(1)[0][0] * np.ones_like(summary_targets)
-        summary = utils.classification_summary(baseline_preds, summary_targets, 'baseline')
-        writer.add_summary(summary, itr)
-    

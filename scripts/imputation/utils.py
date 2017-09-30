@@ -1,9 +1,11 @@
 
+import collections
 import h5py
 import numpy as np
 np.set_printoptions(suppress=True, precision=5, threshold=10000)
 import os
 import pandas as pd
+import sklearn.dummy
 import sklearn.metrics
 import tensorflow as tf
 
@@ -67,6 +69,15 @@ def classification_summary(preds, targets, name=''):
         tf.Summary.Value(tag="{}/f-score".format(name), simple_value=f_score)
     ])
     return summary
+
+def write_baseline_summary(lengths, targets, writer):
+    valid_targets = select_until_length(targets, lengths)
+    c = sklearn.dummy.DummyClassifier('most_frequent')
+    c.fit(None, valid_targets)
+    baseline_preds = c.predict(np.ones_like(valid_targets).reshape(-1,1))
+    summary = classification_summary(baseline_preds, valid_targets, 'baseline')
+    writer.add_summary(summary, 0)
+    writer.add_summary(summary, 1000)
 
 def load_ngsim_trajectory_data(
         filepath, 
