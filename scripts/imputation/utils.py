@@ -61,23 +61,24 @@ def select_until_length(arr, lengths):
     return np.array(values)
 
 def classification_summary(preds, targets, name=''):
-    prc, rcl, f_score, sup = sklearn.metrics.precision_recall_fscore_support(
-        targets, preds, average='micro')
-    summary = tf.Summary(value=[
-        tf.Summary.Value(tag="{}/precision".format(name), simple_value=prc),
-        tf.Summary.Value(tag="{}/recall".format(name), simple_value=rcl),
-        tf.Summary.Value(tag="{}/f-score".format(name), simple_value=f_score)
-    ])
-    return summary
+    prc, rcl, f_score, sup = sklearn.metrics.precision_recall_fscore_support(targets, preds, average=None)
+    n_classes = len(prc)
+    summaries = []
+    for c in range(n_classes):
+        summaries += [tf.Summary.Value(tag="{}/precision_class_{}".format(name, c), simple_value=prc[c])]
+        summaries += [tf.Summary.Value(tag="{}/recall_class_{}".format(name, c), simple_value=rcl[c])]
+        summaries += [tf.Summary.Value(tag="{}/f-score_class_{}".format(name, c), simple_value=f_score[c])]
+    prc, rcl, f_score, sup = sklearn.metrics.precision_recall_fscore_support(targets, preds, average='micro')
+    summaries += [tf.Summary.Value(tag="{}/f-score_overall".format(name), simple_value=f_score[c])]
+    return tf.Summary(value=summaries)
 
 def write_baseline_summary(lengths, targets, writer):
     valid_targets = select_until_length(targets, lengths)
-    c = sklearn.dummy.DummyClassifier('most_frequent')
+    c = sklearn.dummy.DummyClassifier('stratified')
     c.fit(None, valid_targets)
     baseline_preds = c.predict(np.ones_like(valid_targets).reshape(-1,1))
     summary = classification_summary(baseline_preds, valid_targets, 'baseline')
     writer.add_summary(summary, 0)
-    writer.add_summary(summary, 1000)
 
 def load_ngsim_trajectory_data(
         filepath, 

@@ -217,10 +217,8 @@ class RNN(Network):
 
         # predict and compute the summary
         probs, preds = self.predict(inputs, lengths)
-        summary_preds, summary_targets = [], []
-        for i, l in enumerate(lengths):
-            summary_preds += list(preds[i,:l])
-            summary_targets += list(targets[i,:l])
+        summary_targets = utils.select_until_length(targets, lengths)
+        summary_preds = utils.select_until_length(preds, lengths)
         summary = utils.classification_summary(summary_preds, summary_targets, self.name)
 
         # write the summary
