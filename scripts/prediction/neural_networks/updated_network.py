@@ -1,13 +1,16 @@
 
 import collections
 import numpy as np
+import os
 import sys
 import tensorflow as tf
 
 import utils
 
-sys.path.append('../../imputation/')
-import rnn_cells
+path = os.path.dirname(os.path.realpath(__file__))
+path =  os.path.abspath(os.path.join(path,'..','..',))
+sys.path.append(path)
+import imputation.utils as rnn_utils
 
 class Network(object):
 
@@ -19,7 +22,8 @@ class Network(object):
             dropout_keep_prob=1.,
             learning_rate=0.001,
             grad_clip=1.,
-            is_recurrent=False):
+            is_recurrent=False,
+            batch_size=None):
         self.name = name
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -27,6 +31,8 @@ class Network(object):
         self.learning_rate = learning_rate
         self.grad_clip = grad_clip
         self.is_recurrent = is_recurrent
+        assert not (is_recurrent and batch_size is None)
+        self.batch_size = batch_size
 
         self.build_model()
 
@@ -40,12 +46,12 @@ class Network(object):
 
     def build_placeholders(self):
         if self.is_recurrent:
-            input_shape = (None, self.max_len, self.input_dim)
+            input_shape = (self.batch_size, self.max_len, self.input_dim)
         else:
-            input_shape = (None, self.input_dim)
+            input_shape = (self.batch_size, self.input_dim)
 
         self.inputs = tf.placeholder(tf.float32, input_shape, 'inputs')
-        self.targets = tf.placeholder(tf.float32, (None, self.output_dim), 'targets')
+        self.targets = tf.placeholder(tf.float32, (self.batch_size, self.output_dim), 'targets')
         self.dropout_keep_prop_ph = tf.placeholder_with_default(
             self.dropout_keep_prob, (), 'dropout_keep_prob')
         self.global_step = tf.Variable(0, trainable=False, name='global_step')
@@ -86,6 +92,9 @@ class Network(object):
             val_writer=None,
             stop_early=False):
         sess = tf.get_default_session()
+
+        if self.batch_size is not None:
+            batch_size = self.batch_size
         
         n_samples = len(data['x_train'])
         n_batches = utils.compute_n_batches(n_samples, batch_size)
@@ -146,6 +155,8 @@ class Network(object):
                 last_val_losses.append(total_loss)
 
     def predict(self, inputs, batch_size=100):
+        if self.batch_size is not None:
+            batch_size = self.batch_size
         sess = tf.get_default_session()
         n_samples = len(inputs)
         n_batches = utils.compute_n_batches(n_samples, batch_size)
@@ -177,6 +188,7 @@ class FFNN(Network):
             self,
             name,
             input_dim,
+            batch_size=100,
             hidden_layer_dims=(128,64),
             **kwargs):
         self.hidden_layer_dims = hidden_layer_dims
@@ -210,11 +222,11 @@ class RNN(Network):
             **kwargs):
         self.hidden_dim = hidden_dim
         self.max_len = max_len
-        super(FFNN, self).__init__(name, input_dim, is_recurrent=True, **kwargs)
+        super(RNN, self).__init__(name, input_dim, is_recurrent=True, **kwargs)
 
     def build_network(self):
-        self.cell_fw = utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
-        self.cell_bw = utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
+        self.cell_fw = rnn_utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
+        self.cell_bw = rnn_utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
         
         outputs, states = tf.nn.bidirectional_dynamic_rnn(
             self.cell_fw,
@@ -224,8 +236,8 @@ class RNN(Network):
             time_major=False
         )
 
-        last_h_fw = self.enc_cell_fw.get_output(states[0])
-        last_h_bw = self.enc_cell_bw.get_output(states[1])
+        last_h_fw = self.cell_fw.get_output(states[0])
+        last_h_bw = self.cell_bw.get_output(states[1])
         last_h = tf.concat([last_h_fw, last_h_bw], 1)
         
         self.scores = tf.contrib.layers.fully_connected(

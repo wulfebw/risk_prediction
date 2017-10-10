@@ -7,7 +7,10 @@ import os
 import pandas as pd
 import sklearn.dummy
 import sklearn.metrics
+import sys
 import tensorflow as tf
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import rnn_cells
 
@@ -69,7 +72,7 @@ def classification_summary(preds, targets, name=''):
         summaries += [tf.Summary.Value(tag="{}/recall_class_{}".format(name, c), simple_value=rcl[c])]
         summaries += [tf.Summary.Value(tag="{}/f-score_class_{}".format(name, c), simple_value=f_score[c])]
     prc, rcl, f_score, sup = sklearn.metrics.precision_recall_fscore_support(targets, preds, average='micro')
-    summaries += [tf.Summary.Value(tag="{}/f-score_overall".format(name), simple_value=f_score[c])]
+    summaries += [tf.Summary.Value(tag="{}/f-score_overall".format(name), simple_value=f_score)]
     return tf.Summary(value=summaries)
 
 def write_baseline_summary(lengths, targets, writer):
@@ -107,6 +110,7 @@ def load_ngsim_trajectory_data(
         max_samples=None,
         shuffle=True,
         normalize=True,
+        discretize=True,
         censor=50.):
     # select from the different roadways
     infile = h5py.File(filepath, 'r')

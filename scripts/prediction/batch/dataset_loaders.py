@@ -37,7 +37,7 @@ def enforce_censor_values(features, feature_labels):
                 features[:, fidx] = np.clip(features[:, fidx], low, high)
     return features
 
-def normalize_features(data, threshold=1e-8):
+def normalize_features(data, mean=None, std=None, threshold=1e-8):
     """
     Description:
         - Normalize the dataset (features).
@@ -55,15 +55,18 @@ def normalize_features(data, threshold=1e-8):
     else:
         axes = (0,1)
 
-    mean = np.mean(data['x_train'], axis=axes)
-    data['x_train'] = (data['x_train'] - mean)
+    if mean is None or std is None:
+        mean = np.mean(data['x_train'], axis=axes)
+        data['x_train'] = (data['x_train'] - mean)
 
-    # compute the standard deviation after mean subtraction
-    std = np.std(data['x_train'], axis=axes)
+        # compute the standard deviation after mean subtraction
+        std = np.std(data['x_train'], axis=axes)
 
-    # if the standard deviation is sufficiently low
-    # then just divide by 1
-    std[std < threshold] = 1
+        # if the standard deviation is sufficiently low
+        # then just divide by 1
+        std[std < threshold] = 1
+    else:
+        data['x_train'] = (data['x_train'] - mean)
 
     # normalize
     data['x_train'] = data['x_train'] / std
@@ -113,7 +116,7 @@ def risk_dataset_loader(input_filepath, normalize=True,
         target_index=None, load_likelihood_weights=False, 
         likelihood_weight_threshold=2.,
         ignore_behavioral_features=True,
-        fore_limit=8):
+        fore_limit=8, mean=None, std=None):
     """
     Description:
         - Load a risk dataset from file, optionally normalizing it.
@@ -240,7 +243,7 @@ def risk_dataset_loader(input_filepath, normalize=True,
 
     # normalize using train statistics
     if normalize:
-        data = normalize_features(data)
+        data = normalize_features(data, mean=mean, std=std)
 
     # add seeds and batch_idxs if they exist
     data['seeds'] = infile.get('risk/seeds', np.array([]))

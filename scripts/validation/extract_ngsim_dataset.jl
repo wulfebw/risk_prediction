@@ -4,13 +4,13 @@ using NGSIM
 
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
-prime = 25 # /10 = seconds to prime to make all features available
-feature_timesteps = 20 # number of timesteps to record features
-frameskip = 300 # /10 = seconds to skip between samples
-framecollect = 300 # /10 = seconds to collect
-frameoffset = 400 # from ends of the trajectories
-@assert frameskip >= framecollect
-@assert prime >= feature_timesteps + 2
+
+feature_timesteps = 40 # number of timesteps to record features
+feature_step_size = 2 # number of timesteps between features
+prime = feature_timesteps * feature_step_size + 5 # /10 = seconds to prime to make all features available
+framecollect = 50 # /10 = seconds to collect
+frameskip = framecollect + prime # /10 = seconds to skip between samples
+frameoffset = 1000 # from ends of the trajectories
 @assert frameoffset >= framecollect
 
 output_filename = "ngsim_$(Int(ceil(framecollect / 10)))_sec_$(feature_timesteps)_feature_timesteps.h5"
@@ -33,16 +33,18 @@ subexts = [
 ext = MultiFeatureExtractor(subexts)
 target_ext = TargetExtractor()
 
+n_trajs = 6
+
 # set the dataset names for the individual trajectories
 dataset_filepaths = String[]
-for trajdata_index in 1:6
+for trajdata_index in 1:n_trajs
     dataset_filepath = replace(output_filepath, ".h5", "_traj_$(trajdata_index).h5")
     push!(dataset_filepaths, dataset_filepath)
 end
 
 tic()
 # extract 
-@parallel (+) for trajdata_index in 1:6
+@parallel (+) for trajdata_index in 1:n_trajs
     # dataset for storing feature => target pairs
     dataset = Dataset(
             dataset_filepaths[trajdata_index],
@@ -98,7 +100,7 @@ tic()
         valid_idxs = collect(values(veh_id_to_idx))
             
         # extract features
-        pull_features!(ext, rec, roadway, models, features, feature_timesteps)
+        pull_features!(ext, rec, roadway, models, features, feature_timesteps, step_size=feature_step_size)
             
         # update with next framecollect frames
         for frame in (initial_frame + 1):(initial_frame + framecollect)
@@ -115,7 +117,6 @@ tic()
         #     targets[:, 1:actual_num_veh], saveframe)
         update!(dataset, features[:, :, valid_idxs], 
             targets[:, valid_idxs], saveframe)
-        break
     end
     finalize!(dataset)
     0 # for @parallel purposes
