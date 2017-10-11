@@ -23,7 +23,8 @@ class Network(object):
             learning_rate=0.001,
             grad_clip=1.,
             is_recurrent=False,
-            batch_size=None):
+            batch_size=None,
+            l2_reg=1e-5):
         self.name = name
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -33,6 +34,7 @@ class Network(object):
         self.is_recurrent = is_recurrent
         assert not (is_recurrent and batch_size is None)
         self.batch_size = batch_size
+        self.l2_reg = l2_reg
 
         self.build_model()
 
@@ -58,13 +60,21 @@ class Network(object):
 
     def build_loss(self):
         # compute for each timestep
-        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+        data_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
             labels=self.targets, logits=self.scores))
+
+        # define variables for model and add regularization loss
+        self.var_list = tf.trainable_variables()
+        reg_loss = self.l2_reg * tf.reduce_mean([tf.nn.l2_loss(v) for v in self.var_list])
+
+        self.loss = data_loss + reg_loss
+
         # summaries
+        tf.summary.scalar('data_loss', data_loss)
+        tf.summary.scalar('reg_loss', reg_loss)
         tf.summary.scalar('loss', self.loss)
 
     def build_train_op(self):
-        self.var_list = tf.trainable_variables()
         
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
         grads_vars = optimizer.compute_gradients(self.loss, self.var_list)
@@ -225,23 +235,17 @@ class RNN(Network):
         super(RNN, self).__init__(name, input_dim, is_recurrent=True, **kwargs)
 
     def build_network(self):
-        self.cell_fw = rnn_utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
-        self.cell_bw = rnn_utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
+        self.cell = rnn_utils._build_recurrent_cell(self.hidden_dim, self.dropout_keep_prop_ph)
         
-        outputs, states = tf.nn.bidirectional_dynamic_rnn(
-            self.cell_fw,
-            self.cell_bw,
+        outputs, states = tf.nn.dynamic_rnn(
+            self.cell,
             inputs=self.inputs,
             dtype=tf.float32,
             time_major=False
         )
 
-        last_h_fw = self.cell_fw.get_output(states[0])
-        last_h_bw = self.cell_bw.get_output(states[1])
-        last_h = tf.concat([last_h_fw, last_h_bw], 1)
-        
         self.scores = tf.contrib.layers.fully_connected(
-            last_h,
+            self.cell.get_output(states),
             self.output_dim,
             activation_fn=None
         )
