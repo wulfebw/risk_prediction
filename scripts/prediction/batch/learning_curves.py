@@ -2,7 +2,7 @@
 import collections
 import h5py
 import numpy as np
-np.set_printoptions(suppress=True, precision=6)
+np.set_printoptions(suppress=True, precision=6, threshold=10000)
 import os
 import sys
 import tensorflow as tf
@@ -65,6 +65,7 @@ def plot_stats(filepath_template, stats):
     for (s,e) in range_keys:
         plot_samples_size_loss_type(stats[(s,e)], (s,e))
         plt.savefig(filepath_template.format('{}_{}'.format(s,e)))
+        plt.clf()
 
 def compute_ce_loss(probs, true, thresh=1e-8):
     probs[probs<thresh] = thresh
@@ -75,10 +76,12 @@ def compute_ce_loss(probs, true, thresh=1e-8):
 def train_model(
         data, 
         n_itr=3,
-        hidden_dim=256,
-        dropout_keep_prob=.5,
-        n_epochs=100,
-        batch_size=1000):
+        hidden_dim=128,
+        dropout_keep_prob=.95,
+        n_epochs=50,
+        batch_size=100,
+        l2_reg=1e-3,
+        learning_rate=1e-4):
     n_samples, timesteps, input_dim = data['x_train'].shape
     stats = collections.defaultdict(list)
     for itr in range(n_itr):
@@ -91,11 +94,13 @@ def train_model(
             dropout_keep_prob=dropout_keep_prob, 
             max_len=timesteps, 
             batch_size=batch_size,
-            learning_rate=.0002
+            learning_rate=learning_rate,
+            l2_reg=l2_reg
         )
         sess = tf.InteractiveSession()
         sess.run(tf.global_variables_initializer())
-        model.train(data, n_epochs=n_epochs, stop_early=True)
+
+        model.train(data, n_epochs=n_epochs, stop_early=False)
 
         probs, preds = model.predict(data['x_val'])
         val_loss = compute_ce_loss(probs, data['y_val'])
@@ -119,12 +124,11 @@ def train_model(
 
 def learning_curve(
         data,
-        n_steps=7,
+        n_steps=6,
         min_samples=1000):
     
     # compute sizes
     max_samples = data['x_train'].shape[0]
-    max_val_samples = data['x_val'].shape[0]
     sizes = np.geomspace(min_samples, max_samples, n_steps).astype(int)
     sizes[-1] = max_samples
 
@@ -138,10 +142,8 @@ def learning_curve(
     # for each size in the set of sizes, train on that size of data
     for size in sizes:
         print('\nsample size: {}'.format(size))
-        # select random samples without replacement from the train and val sets
-        train_idxs = np.random.choice(max_samples, size=size, replace=False)
-        data['x_train'] = np.copy(base_x_train[train_idxs])
-        data['y_train'] = np.copy(base_y_train[train_idxs])
+        data['x_train'] = np.copy(base_x_train[:size])
+        data['y_train'] = np.copy(base_y_train[:size])
 
         # train on the data, returning stats about the trained model
         stats[size] = train_model(data)
@@ -150,7 +152,7 @@ def learning_curve(
 
 def learning_curves(
         data, 
-        timestep_ranges=[(20,40),(15,35),(10,30),(5,25),(0,20)]):
+        timestep_ranges=[(30,40),(20,30),(10,20),(0,10)]):
     '''
     For each of the provided ranges, select those timesteps and then compute
     a learning curve varying the data according to the timesteps
@@ -177,7 +179,7 @@ def learning_curves(
 
 def main():
     filepath = '../../../data/datasets/ngsim_5_sec_40_feature_timesteps.h5'
-    data = load_data(filepath, debug_size=1200)
+    data = load_data(filepath, debug_size=None)
     stats = learning_curves(data)
     output_filepath = '../../../data/datasets/learning_curve_stats.npy'
     np.save(output_filepath, stats)
