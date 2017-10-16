@@ -7,7 +7,7 @@
 | turn_rate_frenet          |                                                                   |           |
 | turn_rate_global          |                                                                   |           |
 | relative_offset           | lane offset, positive is to left                                  | m         |
-| fore_fore_m_dist          | distance to vehicle two in front of the ego vehicle               | m         |
+| fore_fore_m_dist          | distance to vehicle two in front of the ego vehicle (fore_fore_...* are added to mitigate partially observable problems) | m         |
 | fore_fore_fore_fore_fore_fore_mrelative_heading |
 | fore_fore_fore_fore_fore_fore_fore_m_width |
 | fore_m_is_avail           | 1 if no vehicle in front                                          | bool      |
