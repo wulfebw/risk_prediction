@@ -75,14 +75,17 @@ def compute_ce_loss(probs, true, thresh=1e-8):
 
 def train_model(
         data, 
-        n_itr=3,
-        hidden_dim=128,
-        dropout_keep_prob=.95,
-        n_epochs=50,
-        batch_size=100,
-        l2_reg=1e-3,
-        learning_rate=1e-4):
+        n_itr=2,
+        hidden_dim=64,
+        dropout_keep_prob=1.,
+        n_updates=500,
+        batch_size=1000,
+        l2_reg=0.,
+        learning_rate=2e-4):
     n_samples, timesteps, input_dim = data['x_train'].shape
+    updates_per_epoch = n_samples / batch_size
+    n_epochs = int(n_updates // updates_per_epoch)
+    print('n_epochs ', n_epochs)
     stats = collections.defaultdict(list)
     for itr in range(n_itr):
         print('\nitr: {}'.format(itr))
@@ -133,8 +136,8 @@ def learning_curve(
     sizes[-1] = max_samples
 
     # copy data again, this time so the number of training samples can vary
-    base_x_train = np.copy(data['x_train'])
-    base_y_train = np.copy(data['y_train'])
+    data['base_x_train'] = np.copy(data['x_train'])
+    data['base_y_train'] = np.copy(data['y_train'])
 
     # collect stats in dict
     stats = dict()
@@ -142,8 +145,8 @@ def learning_curve(
     # for each size in the set of sizes, train on that size of data
     for size in sizes:
         print('\nsample size: {}'.format(size))
-        data['x_train'] = np.copy(base_x_train[:size])
-        data['y_train'] = np.copy(base_y_train[:size])
+        data['x_train'] = np.copy(data['base_x_train'][:size])
+        data['y_train'] = np.copy(data['base_y_train'][:size])
 
         # train on the data, returning stats about the trained model
         stats[size] = train_model(data)
@@ -152,7 +155,7 @@ def learning_curve(
 
 def learning_curves(
         data, 
-        timestep_ranges=[(30,40),(20,30),(10,20),(0,10)]):
+        timestep_ranges=[(35,40),(0,5)]):
     '''
     For each of the provided ranges, select those timesteps and then compute
     a learning curve varying the data according to the timesteps
