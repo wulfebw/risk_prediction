@@ -3,31 +3,39 @@ using AutoRisk
 using HDF5
 using NGSIM
 
-# extraction settings and constants
-timestep_delta = 2 # timesteps between feature extractions
-record_length = 10 # number of frames for record to track in the past
-offset = 2000 # from ends of the trajectories
-maxframes = 100 # nothing for no max
+include("dataset_feature_extractors.jl")
 
-output_filename = "ngsim_feature_trajectories_5.h5"
-output_filepath = joinpath("../../data/datasets/", output_filename)
+
+# extraction settings and constants
+timestep_delta = 1 # timesteps between feature extractions
+record_length = 10 # number of frames for record to track in the past
+offset = 500 # from ends of the trajectories
+maxframes = nothing # nothing for no max
+
+output_filename = "ngsim_feature_trajectories_behavior_inferece.h5"
+output_filepath = joinpath("../../data/datasets/oct", output_filename)
 
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 println("output filepath: $(output_filepath)")
 
 # feature extractor (note the lack of behavioral features)
-subexts = [
-        CoreFeatureExtractor(),
-        TemporalFeatureExtractor(),
-        CarLidarFeatureExtractor(180, carlidar_max_range = 100.)
-    ]
+# use these feature extractors for lidar imputation:
+# subexts = [
+#         CoreFeatureExtractor(),
+#         TemporalFeatureExtractor(),
+#         CarLidarFeatureExtractor(180, carlidar_max_range = 100.)
+#     ]
+# use these features for behavioral feature inference
+subexts = AbstractFeatureExtractor[
+    BehaviorDatasetFeatureExtractor()
+]
 ext = MultiFeatureExtractor(subexts)
 n_features = length(ext)
 features = Dict{Int, Dict{Int, Array{Float64}}}()
 
 tic()
 # extract 
-for traj_idx in 1:1
+for traj_idx in 1:6
 
     # setup
     trajdata = load_trajdata(traj_idx)
@@ -77,7 +85,7 @@ for (traj_idx, feature_dict) in features
         maxlen = max(maxlen, size(veh_features, 2))
     end
 end
-println(maxlen)
+println("max length across samples: $(maxlen)")
 
 # write trajectory features
 h5file = h5open(output_filepath, "w")
