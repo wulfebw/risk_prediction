@@ -68,14 +68,14 @@ def visualize(data, vis_dir):
         data['tgt_y_val'],
         label=data['target_names']
     )
-    # hist_features(
-    #     os.path.join(vis_dir, '{}.png'),
-    #     data['src_x_train'],
-    #     data['src_x_val'],
-    #     data['tgt_x_train'],
-    #     data['tgt_x_val'],
-    #     labels=data['feature_names']
-    # )
+    hist_features(
+        os.path.join(vis_dir, '{}.png'),
+        data['src_x_train'],
+        data['src_x_val'],
+        data['tgt_x_train'],
+        data['tgt_x_val'],
+        labels=data['feature_names']
+    )
 
 def load_results(filepath):
     return np.load(filepath).item()
@@ -93,18 +93,18 @@ def visualize_results(res, label='', c='red'):
     sizes, losses = extract_tgt_results(res)
     plt.plot(sizes, losses, label=label, c=c)
     ax = plt.gca()
-    ax.set_ylim([-.1,2])
+    ax.set_ylim([-.1,.8])
 
 if __name__ == '__main__':
-    filepath = '../../../data/datasets/da_results_with_adapt_40980.npy'
+    filepath = '../../../data/datasets/da_results_with_adapt_34697.npy'
     res = load_results(filepath)
     visualize_results(res, label='with adaptation', c='blue')
 
-    filepath = '../../../data/datasets/da_results_without_adapt_40980.npy'
+    filepath = '../../../data/datasets/da_results_without_adapt_34697.npy'
     res = load_results(filepath)
     visualize_results(res, label='without adaptation', c='red')
 
-    filepath = '../../../data/datasets/da_results_target_only_40980.npy'
+    filepath = '../../../data/datasets/da_results_target_only_34697.npy'
     res = load_results(filepath)
     visualize_results(res, label='target_only', c='green')
 

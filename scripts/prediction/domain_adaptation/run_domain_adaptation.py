@@ -11,9 +11,9 @@ import visualization_utils
 def run_training(
         dataset, 
         val_dataset,
-        n_updates=5000,
+        n_updates=20000,
         lambda_final=1.,
-        lambda_steps=200,
+        lambda_steps=2000,
         batch_size=100):
 
     # unpack shapes
@@ -35,8 +35,8 @@ def run_training(
         output_dim=2,  
         lambda_final=lambda_final,
         lambda_steps=lambda_steps,
-        dropout_keep_prob=.6,
-        encoder_hidden_layer_dims=(256,256,256,256)
+        dropout_keep_prob=1.,
+        encoder_hidden_layer_dims=(128,64,64)
     )
 
     sess.run(tf.global_variables_initializer())
@@ -54,16 +54,17 @@ def run_training(
     return dict(train_info=train_info, val_info=val_info)
 
 def main(
-        visualize=True,
+        visualize=False,
         batch_size=100,
         vis_dir='../../../data/visualizations/domain_adaptation',
         output_filepath_template='../../../data/datasets/da_results_*_{}.npy',
-        source_filepath='../../../data/datasets/oct/bn_train_data.h5',
-        target_filepath='../../../data/datasets/ngsim_5_sec_40_feature_timesteps.h5',
-        n_tgt_train_samples = [500, 1000, 5000, 10000, 20000, None],
-        n_src_train_samples = [None, None, None, None, None, None],
+        source_filepath='../../../data/datasets/oct/improved_bn_train_data.h5',
+        target_filepath='../../../data/datasets/ngsim_5_sec_10_feature_timesteps.h5',
+        n_tgt_train_samples = [500, 5000, 10000, 20000, None],
+        n_src_train_samples = [150000, 150000, 150000, 150000, 150000],
+        debug_size=190000,
         mode='with_adapt',
-        seeds=[1,2,3,4,5,6]):
+        seeds=[10,11,12,13,14]):
     
     # set output filepath template based on mode
     output_filepath_template = output_filepath_template.replace('*', mode)
@@ -79,6 +80,8 @@ def main(
         n_src_train_samples = n_tgt_train_samples
         source_filepath = target_filepath
         lambda_final = 0
+    elif mode == 'frustratingly':
+        lambda_final = 0.
     else:
         raise(ValueError('invalid mode: {}'.format(mode)))
 
@@ -100,7 +103,9 @@ def main(
             target_filepath,
             max_tgt_train_samples=n_tgt_train_samples[i],
             max_src_train_samples=n_src_train_samples[i],
-            timestep=-1
+            debug_size=debug_size,
+            timestep=0,
+            mode=mode
         )
         
         if visualize:

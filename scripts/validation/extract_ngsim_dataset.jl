@@ -1,17 +1,23 @@
 using AutomotiveDrivingModels
 using AutoRisk
+using HDF5
 using NGSIM
+
+include("dataset_feature_extractors.jl")
 
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 
-feature_timesteps = 40 # number of timesteps to record features
-feature_step_size = 2 # number of timesteps between features
+feature_timesteps = 30 # number of timesteps to record features
+feature_step_size = 10 # number of timesteps between features
 prime = feature_timesteps * feature_step_size + 5 # /10 = seconds to prime to make all features available
-framecollect = 50 # /10 = seconds to collect
+framecollect = 100 # /10 = seconds to collect target values
 frameskip = framecollect + prime # /10 = seconds to skip between samples
 frameoffset = 1000 # from ends of the trajectories
 @assert frameoffset >= framecollect
+
+# use previously extracted behavioral features if this filepath != ""
+ngsim_behavior_filepath = "../../data/datasets/oct/ngsim_idm_params.h5"
 
 output_filename = "ngsim_$(Int(ceil(framecollect / 10)))_sec_$(feature_timesteps)_feature_timesteps.h5"
 output_filepath = joinpath("../../data/datasets/", output_filename)
@@ -21,17 +27,6 @@ println("prime steps: $(prime)")
 println("feature steps: $(feature_timesteps)")
 println("sampling steps: $(framecollect)")
 println("output filepath: $(output_filepath)")
-
-# feature extractor (note the lack of behavioral features)
-subexts = [
-        CoreFeatureExtractor(),
-        TemporalFeatureExtractor(),
-        WellBehavedFeatureExtractor(),
-        NeighborFeatureExtractor(),
-        CarLidarFeatureExtractor()
-    ]
-ext = MultiFeatureExtractor(subexts)
-target_ext = TargetExtractor()
 
 n_trajs = 6
 
@@ -45,6 +40,38 @@ end
 tic()
 # extract 
 @parallel (+) for trajdata_index in 1:n_trajs
+
+    # subextractors
+    subexts = [
+        CoreFeatureExtractor(),
+        TemporalFeatureExtractor(),
+        WellBehavedFeatureExtractor(),
+        NeighborFeatureExtractor(),
+    ]
+
+    # load behavioral features if available and create extractor for them
+    
+    if ngsim_behavior_filepath != ""
+        ngsim_behavior_features = Dict{Int, Array{Float64}}()
+        f = h5open(ngsim_behavior_filepath, "r")
+        thetas = f["thetas"]
+        ids = f["ids"]
+        n_samples = size(ids, 2)
+        for i in 1:n_samples
+            traj_id, veh_id = tuple(ids[:,i]...)
+            if traj_id == trajdata_index
+                ngsim_behavior_features[veh_id] = thetas[:,i]
+            end
+        end
+        ngsim_behavior_ext = NGSIMNeighborFeatureExtractor(
+            ngsim_behavior_features
+        )
+        push!(subexts, ngsim_behavior_ext)
+    end
+
+    ext = MultiFeatureExtractor(subexts)
+    target_ext = TargetExtractor()
+
     # dataset for storing feature => target pairs
     dataset = Dataset(
             dataset_filepaths[trajdata_index],
@@ -66,7 +93,7 @@ tic()
     targets = zeros(length(target_ext), max_n_objects)
     final_frame = nframes(trajdata) - frameoffset
     for initial_frame in frameoffset : frameskip : final_frame
-        println("traj: $(trajdata_index) / 6\tframe $(initial_frame) / $(final_frame)")
+        println("traj: $(trajdata_index) / $(n_trajs)\tframe $(initial_frame) / $(final_frame)")
             
         # get the relevant scene
         get!(scene, trajdata, initial_frame - prime)

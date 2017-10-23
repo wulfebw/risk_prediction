@@ -62,7 +62,7 @@ def build_datasets(data, batch_size):
         )
     return dataset, val_dataset
 
-def normalize(src_train, tgt_train, src_val, tgt_val):
+def normalize_combined(src_train, tgt_train, src_val, tgt_val):
     # count samples for weighting the respective means
     n_src = len(src_train)
     n_tgt = len(tgt_train)
@@ -90,20 +90,61 @@ def normalize(src_train, tgt_train, src_val, tgt_val):
 
     return src_train, tgt_train, src_val, tgt_val, mean, std
 
+def normalize_individual(x_train, x_val):
+    mean = np.mean(x_train, axis=0, keepdims=True)
+    x_train -= mean
+    std = np.std(x_train, axis=0, keepdims=True) + 1e-8
+    x_train /= std
+
+    x_val = (x_val - mean) / std
+    return x_train, x_val, mean, std
+
+def normalize(src_train, tgt_train, src_val, tgt_val, mode):
+    if mode == 'combined':
+        src_train, tgt_train, src_val, tgt_val, mean, std = normalize_combined(
+            src_train, tgt_train, src_val, tgt_val)
+        return src_train, tgt_train, src_val, tgt_val, dict(mean=mean, std=std)
+    elif mode == 'individual':
+        src_train, src_val, src_mean, src_std = normalize_individual(src_train, src_val)
+        tgt_train, tgt_val, tgt_mean, tgt_std = normalize_individual(tgt_train, tgt_val)
+        stats = dict(src_mean=src_mean, src_std=src_std, tgt_mean=tgt_mean, tgt_std=tgt_std)
+        return src_train, tgt_train, src_val, tgt_val, stats
+
 def to_multiclass(y):
     ret = np.zeros((len(y), 2))
     ret[:,0] = 1-y
     ret[:,1] = y
     return ret
 
+def transform_frustratingly(src, tgt, names):
+    n_samples, input_dim = src.shape
+    rtn_src = np.zeros((n_samples, input_dim * 3))
+    rtn_src[:,:input_dim] = src
+    rtn_src[:,input_dim: 2 * input_dim] = src
+
+    n_samples, input_dim = tgt.shape
+    rtn_tgt = np.zeros((n_samples, input_dim * 3))
+    rtn_tgt[:,:input_dim] = tgt
+    rtn_tgt[:,input_dim*2: 3*input_dim] = tgt
+
+    rtn_names = list(names)
+    for n in names:
+        rtn_names += [n + '_src']
+    for n in names:
+        rtn_names += [n + '_tgt']
+
+    return rtn_src, rtn_tgt, rtn_names
+
 def load_data(
         source_filepath, 
         target_filepath,
         max_src_train_samples=None,
         max_tgt_train_samples=None,
+        debug_size=None,
         target_idx=4,
         train_split=.8,
-        timestep=-1):
+        timestep=-1,
+        mode=''):
     
     # load files and feature names and target names
     src_file = h5py.File(source_filepath, 'r')
@@ -115,22 +156,47 @@ def load_data(
     assert src_target_names == tgt_target_names
 
     # subselect src features to only those features also in the target set
-    keep_idxs = [i for (i,name) in enumerate(src_feature_names) if name in tgt_feature_names]
+    # need to do this in a manner such that the features align
+    # accomplish this by iterating the target feature names
+    # finding the src feature name that matches the current target
+    # and add its index if it exists
+    keep_idxs = []
+    for tgt_name in tgt_feature_names:
+        for i, src_name in enumerate(src_feature_names):
+            if src_name == tgt_name:
+                keep_idxs.append(i)
+                break
 
     # check that the order of the features is the same
     assert all(src_feature_names[keep_idxs] == tgt_feature_names)
     src_feature_names = src_feature_names[keep_idxs]
 
-    # select features and targets
-    src_features = src_file['risk/features'][...,keep_idxs]
-    src_targets = src_file['risk/targets'][:,target_idx]
-    tgt_features = tgt_file['risk/features'].value
-    tgt_targets = tgt_file['risk/targets'][:,target_idx]
+    # select features and targets 
+    # perform some subselection for debugging case
+    if debug_size is not None:
+        src_features = src_file['risk/features'][:debug_size]
+        src_features = src_features[...,keep_idxs]
+        src_targets = src_file['risk/targets'][:debug_size,target_idx]
+        tgt_features = tgt_file['risk/features'].value[:debug_size]
+        tgt_targets = tgt_file['risk/targets'][:debug_size,target_idx]
+    else:
+        src_features = src_file['risk/features'].value[...,keep_idxs]
+        src_targets = src_file['risk/targets'][:,target_idx]
+        tgt_features = tgt_file['risk/features'].value
+        tgt_targets = tgt_file['risk/targets'][:,target_idx]
 
     # subselect the last timestep for now
     if len(src_features.shape) > 2:
         src_features = src_features[:,timestep]
         tgt_features = tgt_features[:,timestep]
+
+    # apply mode-specific transforms
+    if mode == 'frustratingly':
+        src_features, tgt_features, src_feature_names = transform_frustratingly(
+            src_features, 
+            tgt_features,
+            src_feature_names
+        )
 
     # convert target values to multiclass
     src_targets = to_multiclass(src_targets)
@@ -165,15 +231,21 @@ def load_data(
         tgt_x_train = tgt_x_train[:max_tgt_train_samples]
         tgt_y_train = tgt_y_train[:max_tgt_train_samples]
 
+    # two options:
+    # 1. combined normalization
     # normalize features based on the combined source and target features
     # the reason for this is that if you normalize the source and target 
     # separately, different unnormalized values might correspond to the 
     # same normalized value, and this seems undesireable
-    src_x_train, tgt_x_train, src_x_val, tgt_x_val, mean, std = normalize(
+    # 2. individual normalization
+    # normalize source and target separately
+    # I think this is likely better just from looking at some simple cases
+    src_x_train, tgt_x_train, src_x_val, tgt_x_val, stats = normalize(
         src_x_train,
         tgt_x_train,
         src_x_val,
-        tgt_x_val
+        tgt_x_val,
+        mode='combined'
     )
 
     return dict(
@@ -185,8 +257,7 @@ def load_data(
         tgt_y_train=tgt_y_train,
         tgt_x_val=tgt_x_val,
         tgt_y_val=tgt_y_val,
-        mean=mean,
-        std=std,
+        stats=stats,
         feature_names=src_feature_names,
         target_names=src_target_names
     )
