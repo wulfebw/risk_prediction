@@ -2,15 +2,15 @@ import configparser
 import os
 
 # constant accross all
-EXPERIMENT_NAME = 'stochastic_5_sec_w_prop_bn_.3_response_1.2_lon_std'                #
+EXPERIMENT_NAME = 'debug'                #
 DEFAULTS = {
-    'nprocs': 20,                                                       #
+    'nprocs': 25,                                                       #
     'expdir': '/scratch/wulfebw/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
-    'err_p_a_to_i': .0,
-    'err_p_i_to_a': 1.,
-    'overall_response_time': .3,
-   'lon_accel_std_dev': 1.2,                                        #
+    'err_p_a_to_i': .05,
+    'err_p_i_to_a': .3,
+    'overall_response_time': .2,
+    'lon_accel_std_dev': .3,                                        #
     'lat_accel_std_dev': .1,                                        #
 }
 
@@ -26,32 +26,33 @@ def write_collection(config):
     config.set(s, 'col/output_filepath', '%(expdir)s/data/bn_train_data.h5')
 
     ## feature extraction
-    config.set(s, 'col/feature_timesteps', '1')
+    config.set(s, 'col/feature_timesteps', '10')
+    config.set(s, 'col/feature_step_size', '10')
     config.set(s, 'col/extractor_type', 'multi')
     config.set(s, 'col/extract_core', 'true')
     config.set(s, 'col/extract_temporal', 'true')
     config.set(s, 'col/extract_well_behaved', 'true')
     config.set(s, 'col/extract_neighbor', 'true')
     config.set(s, 'col/extract_behavioral', 'true')
-    config.set(s, 'col/extract_neighbor_behavioral', 'false')
-    config.set(s, 'col/extract_car_lidar', 'true')
-    config.set(s, 'col/extract_car_lidar_range_rate', 'true')
+    config.set(s, 'col/extract_neighbor_behavioral', 'true')
+    config.set(s, 'col/extract_car_lidar', 'false')
+    config.set(s, 'col/extract_car_lidar_range_rate', 'false')
     config.set(s, 'col/extract_road_lidar', 'false')
 
     # heuristic collection
     config.set(s, 'col/generator_type', 'factored')
     config.set(s, 'col/num_lanes', '%(num_lanes)s')
-    config.set(s, 'col/num_scenarios', '5000')                             #
-    config.set(s, 'col/num_monte_carlo_runs', '30')                        #
+    config.set(s, 'col/num_scenarios', '1000')                             #
+    config.set(s, 'col/num_monte_carlo_runs', '500')                        #
     config.set(s, 'col/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'col/err_p_i_to_a', '%(err_p_i_to_a)s')
     config.set(s, 'col/overall_response_time', '%(overall_response_time)s')
     config.set(s, 'col/lon_accel_std_dev', '%(lon_accel_std_dev)s')
     config.set(s, 'col/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     config.set(s, 'col/prime_time', '60.')
-    config.set(s, 'col/sampling_time', '5.')
+    config.set(s, 'col/sampling_time', '10.')
     config.set(s, 'col/min_init_dist', '10')                                #
-    config.set(s, 'col/heuristic_behavior_type', 'passive')                 #
+    config.set(s, 'col/heuristic_behavior_type', 'correlated')                 #
     # don't change these numbers of vehicles
     config.set(s, 'col/max_num_vehicles', '70') 
     config.set(s, 'col/min_num_vehicles', '70')
@@ -76,8 +77,8 @@ def write_generation(config):
     config.set(s, 'subselect_logfile', '%(expdir)s/log/gen_subselect.log')
 
     # common 
-    feature_timesteps = 1
-    feature_step_size = 1
+    feature_timesteps = int(config.get('collection', 'col/feature_timesteps'))
+    feature_step_size = int(config.get('collection', 'col/feature_step_size'))
 
     # base bayes net training
     config.set(s, 'base_bn_filepath', '%(expdir)s/data/base_bn.jld')
@@ -87,13 +88,13 @@ def write_generation(config):
     # e.g., the sampling time from generation
     # and do this by passing them in explictly in the run call
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
-    config.set(s, 'prop/num_monte_carlo_runs', '3')                     #
-    config.set(s, 'prop/cem_end_prob', '.5')
-    config.set(s, 'prop/max_iters', '500')                             #
+    config.set(s, 'prop/num_monte_carlo_runs', '5')                     #
+    config.set(s, 'prop/cem_end_prob', '.1')
+    config.set(s, 'prop/max_iters', '300')                             #
     config.set(s, 'prop/population_size', '10000')                       #
-    config.set(s, 'prop/top_k_fraction', '.2')
-    config.set(s, 'prop/n_prior_samples', '80000')
-    config.set(s, 'prop/n_static_prior_samples', '2000')
+    config.set(s, 'prop/top_k_fraction', '.05')
+    config.set(s, 'prop/n_prior_samples', '50000')
+    config.set(s, 'prop/n_static_prior_samples', '4000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/prop')
     # prime time for proposal should be exactly the number of feature timesteps
 
@@ -109,15 +110,15 @@ def write_generation(config):
     config.set(s, 'gen/extract_well_behaved', 'true')
     config.set(s, 'gen/extract_neighbor', 'true')
     config.set(s, 'gen/extract_behavioral', 'true')
-    config.set(s, 'gen/extract_neighbor_behavioral', 'false')
-    config.set(s, 'gen/extract_car_lidar', 'true')
-    config.set(s, 'gen/extract_car_lidar_range_rate', 'true')
+    config.set(s, 'gen/extract_neighbor_behavioral', 'true')
+    config.set(s, 'gen/extract_car_lidar', 'false')
+    config.set(s, 'gen/extract_car_lidar_range_rate', 'false')
     config.set(s, 'gen/extract_road_lidar', 'false')
 
     ## collection with bayes net
     config.set(s, 'gen/generator_type', 'joint')
-    config.set(s, 'gen/num_scenarios', '1000000')                          #
-    config.set(s, 'gen/num_monte_carlo_runs', '30')                        #
+    config.set(s, 'gen/num_scenarios', '10000')                          #
+    config.set(s, 'gen/num_monte_carlo_runs', '500')                        #
     config.set(s, 'gen/num_lanes', '%(num_lanes)s')
     config.set(s, 'gen/err_p_a_to_i', '%(err_p_a_to_i)s')
     config.set(s, 'gen/err_p_i_to_a', '%(err_p_i_to_a)s')
@@ -126,10 +127,10 @@ def write_generation(config):
     config.set(s, 'gen/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     prime_time = (feature_timesteps * feature_step_size) * .1 + .4
     config.set(s, 'gen/prime_time', '{}'.format(prime_time))
-    config.set(s, 'gen/sampling_time', '5.')                               #
-    config.set(s, 'gen/heuristic_behavior_type', 'passive')                 #
-    config.set(s, 'gen/max_num_vehicles', '15')                            #
-    config.set(s, 'gen/min_num_vehicles', '15')                            #
+    config.set(s, 'gen/sampling_time', '10.')                               #
+    config.set(s, 'gen/heuristic_behavior_type', 'correlated')                 #
+    config.set(s, 'gen/max_num_vehicles', '20')                            #
+    config.set(s, 'gen/min_num_vehicles', '20')                            #
 
     # subselect dataset filepath
     config.set(s, 'subselect_dataset', 
@@ -191,7 +192,7 @@ def write_prediction(config):
     config.set(s, 'td/learning_rate_end', '5e-5')
     config.set(s, 'td/dropout_keep_prob', '1.')
     config.set(s, 'td/l2_reg', '0.')
-    config.set(s, 'td/target_loss_index', '3')                       #
+    config.set(s, 'td/target_loss_index', '2')                       #
     horizon = float(config.get('generation', 'gen/sampling_time')) / .1
     discount = (horizon - 1) / horizon
     config.set(s, 'td/discount', str(discount))
@@ -212,7 +213,7 @@ def write_prediction(config):
     config.set(s, 'batch/num_epochs', '200')
     config.set(s, 'batch/save_every', '2')
     config.set(s, 'batch/debug_size', '10000000')                            #
-    config.set(s, 'batch/target_index', '3')                              #
+    config.set(s, 'batch/target_index', '2')                              #
     config.set(s, 'batch/hidden_layer_dims', "'128 128 128'")
     config.set(s, 'batch/learning_rate', '5e-4')
     config.set(s, 'batch/min_lr', '1e-5')

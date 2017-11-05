@@ -3,17 +3,17 @@ using AutoRisk
 using HDF5
 using NGSIM
 
-include("dataset_feature_extractors.jl")
+@everywhere include("dataset_feature_extractors.jl")
 
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 
-feature_timesteps = 30 # number of timesteps to record features
+feature_timesteps = 50 # number of timesteps to record features
 feature_step_size = 10 # number of timesteps between features
 prime = feature_timesteps * feature_step_size + 5 # /10 = seconds to prime to make all features available
 framecollect = 100 # /10 = seconds to collect target values
 frameskip = framecollect + prime # /10 = seconds to skip between samples
-frameoffset = 1000 # from ends of the trajectories
+frameoffset = 1200 # from ends of the trajectories
 @assert frameoffset >= framecollect
 
 # use previously extracted behavioral features if this filepath != ""

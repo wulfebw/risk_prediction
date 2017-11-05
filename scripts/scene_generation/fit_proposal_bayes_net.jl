@@ -168,14 +168,13 @@ function run_cem(
             pull_features!(ext, col.eval.rec, col.roadway, 
                 proposal_vehicle_index, col.models)
             empty!(col.eval.rec)
-            
+
             # evaluate this scene (i.e., extract targets)
             evaluate!(col.eval, col.scene, col.models, col.roadway, seed)
-            
+
             # extract utilities and weights
-            utilities[scene_idx] = mean(
-                col.eval.targets[target_indices, proposal_vehicle_index])
-            weights[scene_idx] = col.gen.weights[proposal_vehicle_index]
+            utilities[scene_idx] = get_targets(col.eval)[target_indices, proposal_vehicle_index][1]
+            weights[scene_idx] = get_weights(col.gen)[proposal_vehicle_index][1]
 
             data[:, scene_idx] = extract_bn_features(
                 ext.features[:], 
@@ -218,8 +217,9 @@ function run_cem(
         JLD.save(output_filepath, "bn", prop_bn, "discs", discs)
 
         # report progress
-        weighted_utils = mean(utilities .* weights)
-        println("\niter: $(iter) / $(max_iters) \tweighted utilities: $(weighted_utils)")
+	unweighted_utils = mean(utilities)
+	weighted_utils = mean(utilities .* weights)
+        println("\niter: $(iter) / $(max_iters) \tweighted utilities: $(weighted_utils)\tunweighted utilities: $(unweighted_utils)")
 
         # check if the target probability has been sufficiently optimized
         # do this in an unweighted fashion

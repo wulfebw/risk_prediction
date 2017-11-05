@@ -32,8 +32,8 @@ def compute_lengths(arr):
 def remove_collisions_from_x_y(
         xs, 
         ys, 
-        col_thresh=10., 
-        ttc_thresh=3.):
+        col_thresh=8., 
+        ttc_thresh=2.):
     # removes indices where the ttc is below a threshold
     # compares distance between vehicles and the length of the rear vehicle
     safe_idxs = []
@@ -103,11 +103,18 @@ def load_ngsim_data(
         reaction_time_offset=0):
     
     infile = h5py.File(filepath, 'r')
-    traj_key = None
-    if traj_key is None:
-        features = np.vstack([infile[k].value for k in infile.keys()])
+    keys = sorted(infile.keys())
+    features = np.vstack([infile[k].value for k in keys])
+    
+    # collect keys for the vehicles, which are (trajectory id, ego veh id)
+    traj_ids = []
+    for k in keys:
+        n_samples = len(infile[k])
+        traj_ids.extend([int(k)] * n_samples)
+    traj_ids = np.array(traj_ids)
+    ego_ids = features[:,0,idm_id_idx].astype(int)
+    traj_ego_ids = [(ti, ei) for (ti, ei) in zip(traj_ids, ego_ids)]
 
-    idm_ego_ids = features[:,0,idm_id_idx]
     idm_features = features[:,:,idm_feature_idxs]
     # compute relative velocity
     idm_features[:,:,-1] = idm_features[:,:,-1] - idm_features[:,:,0] 
@@ -131,7 +138,7 @@ def load_ngsim_data(
         xs.append(x)
         ys.append(y)
 
-    return xs, ys, idm_ego_ids
+    return xs, ys, traj_ego_ids
 
 def extract_idm_params_from_x_y(
         ego_id,
@@ -204,17 +211,39 @@ if __name__ == '__main__':
 
     # ngsim
     filepath = '../../data/datasets/oct/ngsim_feature_trajectories_behavior_inferece.h5'
-    results_filepath = '../../data/datasets/ngsim_idm_parameters/results.npy'
+    results_dir = '../../data/datasets/ngsim_idm_parameters/'
     xs, ys, ids = load_ngsim_data(
         filepath, 
         remove_collisions=True,
         reaction_time_offset=4
     )
+
     processes = 20
-    results = extract_idm_params(xs, ys, ids, processes)
+    results = extract_idm_params(xs, ys, ids, processes,
+        a_bounds=(2.,6.),
+        v0_bounds=(25.,35.),
+        s0_bounds=(0.01,4.),
+        T_bounds=(.2,1.),
+        b_bounds=(2.,5.)
+    )
 
     # save the results
+    results_filepath = os.path.join(results_dir, 'results.npy')
     np.save(results_filepath, results)
+
+    parameters_filepath = os.path.join(results_dir, 'ngsim_idm_params.h5')
+    thetas = []
+    ids = []
+    for ego_id, result in results.items():
+        if result is not None:
+            ids.append(ego_id)
+            thetas.append(result.x)
+    thetas = np.array(thetas)
+    ids = np.array(ids).astype(int)
+    f = h5py.File(parameters_filepath, 'w')
+    f.create_dataset('thetas', data=thetas)
+    f.create_dataset('ids', data=ids)
+    f.close()
 
     losses = np.array([r.fun for (k,r) in results.items() if r is not None])
     print('\nmean loss: {}'.format(np.mean(losses)))

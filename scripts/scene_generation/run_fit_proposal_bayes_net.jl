@@ -47,7 +47,7 @@ function fit_proposal_bayes_net(
         max_iters::Int = 500,
         N::Int = 1000,
         top_k_fraction::Float64 = .5,
-        target_indices::Vector{Int} = [4],
+        target_indices::Vector{Int} = [3],
         n_prior_samples::Int = 60000,
         n_static_prior_samples::Int = 10000
     )

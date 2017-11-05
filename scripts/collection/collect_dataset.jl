@@ -125,7 +125,7 @@ function build_factored_generator(flags)
             weights = StatsBase.Weights([.2,.3,.5])
             behavior_gen = PredefinedBehaviorGenerator(params, weights)
         elseif heuristic_behavior_type == "correlated"
-            behavior_gen = CorrelatedBehaviorGenerator(passive, aggressive)
+            behavior_gen = CorrelatedGaussianBehaviorGenerator(passive, aggressive)
         else
             throw(ArgumentError(
                 "invalid heuristic behavior type $(heuristic_behavior_type)"))
@@ -199,9 +199,9 @@ function build_joint_generator(flags)
 
     # for debugging purposes allow for constant behavior
     if flags["heuristic_behavior_type"] == "passive"
-        behgen = CorrelatedBehaviorGenerator(min_p, min_p)
+        behgen = CorrelatedGaussianBehaviorGenerator(min_p, min_p)
     else
-        behgen = CorrelatedBehaviorGenerator(min_p, max_p)
+        behgen = CorrelatedGaussianBehaviorGenerator(min_p, max_p)
     end
     gen = BayesNetLaneGenerator(base_bn, base_sampler, prop_bn, prop_sampler,
         num_veh_per_lane, behgen)
