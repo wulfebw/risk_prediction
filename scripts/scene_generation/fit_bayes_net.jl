@@ -29,7 +29,7 @@ function load_dataset(input_filepath::String; debug_size::Int = 10000000)
     infile = h5open(input_filepath, "r")
     debug_size = min(debug_size, size(infile["risk/features"], 3))
     features = read(infile["risk/features"])[:,end,1:debug_size]
-    targets = read(infile["risk/targets"])[:,1:debug_size]
+    targets = read(infile["risk/targets"])[:,:,1:debug_size]
     return features, targets
 end
 
@@ -60,7 +60,7 @@ function preprocess_features(
     @assert in("length", feature_names) msg
 
     # threshold based on collision probability if applicable
-    valid_target_inds = find(sum(targets[1:3,:], 1) / 3. .<= max_collision_prob)
+    valid_target_inds = find(sum(targets[1:3,:,:], 1) / 3. .<= max_collision_prob)
 
     # threshold velocities
     vel_ind = find(feature_names .== "velocity")[1]

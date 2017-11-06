@@ -242,6 +242,7 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
         hard_brake_n_past_frames = hard_brake_n_past_frames,
         ttc_threshold = ttc_threshold
         )
+    target_timesteps = Int(ceil(sampling_time / sampling_period))
     # must prime for at least feature_timesteps
     # @assert feature_timesteps < prime_time / sampling_period
     if feature_timesteps > (prime_time / sampling_period)
@@ -252,8 +253,8 @@ function build_evaluator(flags, ext::AbstractFeatureExtractor)
     max_num_scenes = Int(ceil((prime_time + sampling_time) / sampling_period))
     rec = SceneRecord(max_num_scenes, sampling_period, max_num_veh)
     features = Array{Float64}(feature_dim, feature_timesteps, max_num_veh)
-    targets = Array{Float64}(target_dim, max_num_veh)
-    agg_targets = Array{Float64}(target_dim, max_num_veh)
+    targets = Array{Float64}(target_dim, target_timesteps, max_num_veh)
+    agg_targets = Array{Float64}(target_dim, target_timesteps, max_num_veh)
 
     if evaluator_type == "bootstrap"
         if prediction_model_type == "neural_network"
@@ -277,6 +278,7 @@ function build_dataset(output_filepath::String, flags,
         weights::Union{Array{Float64},Void})
     # formulate attributes of the dataset
     feature_timesteps = flags["feature_timesteps"]
+    target_timesteps = Int(ceil(flags["sampling_time"] / flags["sampling_period"]))
     chunk_dim = flags["chunk_dim"]
     target_dim = flags["target_dim"]
     max_num_samples = flags["num_scenarios"] * flags["max_num_vehicles"]
@@ -285,7 +287,7 @@ function build_dataset(output_filepath::String, flags,
     attrs = convert(Dict, flags)
     attrs["feature_names"] = feature_names(ext)
     attrs["target_names"] = feature_names(target_ext)
-    dataset = Dataset(output_filepath, feature_dim, feature_timesteps, target_dim,
+    dataset = Dataset(output_filepath, feature_dim, feature_timesteps, target_dim, target_timesteps,
         max_num_samples, chunk_dim = chunk_dim, init_file = false, attrs = attrs,
         use_weights = use_weights)
     return dataset

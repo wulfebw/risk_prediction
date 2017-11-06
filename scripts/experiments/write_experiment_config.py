@@ -5,7 +5,8 @@ import os
 EXPERIMENT_NAME = 'debug'                #
 DEFAULTS = {
     'nprocs': 25,                                                       #
-    'expdir': '/scratch/wulfebw/experiments/{}'.format(EXPERIMENT_NAME),
+    # 'expdir': '/scratch/wulfebw/experiments/{}'.format(EXPERIMENT_NAME),
+    'expdir': '../../data/experiments/{}'.format(EXPERIMENT_NAME),
     'num_lanes': 1,
     'err_p_a_to_i': .05,
     'err_p_i_to_a': .3,
@@ -26,8 +27,8 @@ def write_collection(config):
     config.set(s, 'col/output_filepath', '%(expdir)s/data/bn_train_data.h5')
 
     ## feature extraction
-    config.set(s, 'col/feature_timesteps', '10')
-    config.set(s, 'col/feature_step_size', '10')
+    config.set(s, 'col/feature_timesteps', '1')
+    config.set(s, 'col/feature_step_size', '1')
     config.set(s, 'col/extractor_type', 'multi')
     config.set(s, 'col/extract_core', 'true')
     config.set(s, 'col/extract_temporal', 'true')
@@ -50,7 +51,7 @@ def write_collection(config):
     config.set(s, 'col/lon_accel_std_dev', '%(lon_accel_std_dev)s')
     config.set(s, 'col/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     config.set(s, 'col/prime_time', '60.')
-    config.set(s, 'col/sampling_time', '10.')
+    config.set(s, 'col/sampling_time', '20.')
     config.set(s, 'col/min_init_dist', '10')                                #
     config.set(s, 'col/heuristic_behavior_type', 'correlated')                 #
     # don't change these numbers of vehicles
@@ -96,6 +97,8 @@ def write_generation(config):
     config.set(s, 'prop/n_prior_samples', '50000')
     config.set(s, 'prop/n_static_prior_samples', '4000')
     config.set(s, 'prop/viz_dir', '%(expdir)s/viz/prop')
+    config.set(s, 'prop/start_target_timestep', '101')
+    config.set(s, 'prop/end_target_timestep', '200')
     # prime time for proposal should be exactly the number of feature timesteps
 
     # generation of validation / training data
@@ -127,10 +130,10 @@ def write_generation(config):
     config.set(s, 'gen/lat_accel_std_dev', '%(lat_accel_std_dev)s')
     prime_time = (feature_timesteps * feature_step_size) * .1 + .4
     config.set(s, 'gen/prime_time', '{}'.format(prime_time))
-    config.set(s, 'gen/sampling_time', '10.')                               #
+    config.set(s, 'gen/sampling_time', '20.')                               #
     config.set(s, 'gen/heuristic_behavior_type', 'correlated')                 #
-    config.set(s, 'gen/max_num_vehicles', '20')                            #
-    config.set(s, 'gen/min_num_vehicles', '20')                            #
+    config.set(s, 'gen/max_num_vehicles', '25')                            #
+    config.set(s, 'gen/min_num_vehicles', '25')                            #
 
     # subselect dataset filepath
     config.set(s, 'subselect_dataset', 

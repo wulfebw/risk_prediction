@@ -19,20 +19,24 @@ add_entry!(FLAGS, "num_monte_carlo_runs", 1,
     Int, "num times to run each scene")
 add_entry!(FLAGS, "prime_time", 0., 
     Float64, "how long to prime a scene")
-add_entry!(FLAGS, "sampling_time", 5.,
+add_entry!(FLAGS, "sampling_time", 20.,
     Float64, "how long to simulate a scene and track collisions")
-add_entry!(FLAGS, "cem_end_prob", .5,
+add_entry!(FLAGS, "cem_end_prob", .1,
     Float64, "event probability at which to stop training")
 add_entry!(FLAGS, "max_iters", 500,
     Int, "max iterations of cem")
-add_entry!(FLAGS, "population_size", 200,
+add_entry!(FLAGS, "population_size", 1000,
     Int, "pop size of cem")
-add_entry!(FLAGS, "top_k_fraction", .5,
+add_entry!(FLAGS, "top_k_fraction", .05,
     Float64, "fraction of pop to keep (.2 means keep top 20%)")
-add_entry!(FLAGS, "n_prior_samples", 80000,
+add_entry!(FLAGS, "n_prior_samples", 50000,
     Int, "number of samples from the base bn to start with")
-add_entry!(FLAGS, "n_static_prior_samples", 10000,
+add_entry!(FLAGS, "n_static_prior_samples", 5000,
     Int, "constant number of prior samples added to dataset")
+add_entry!(FLAGS, "start_target_timestep", 100,
+    Int, "timestep in target array to begin considering values")
+add_entry!(FLAGS, "end_target_timestep", 200,
+    Int, "timestep in target array to begin considering values")
 
 function fit_proposal_bayes_net(
         base_bn_filepath::Union{String},
@@ -115,7 +119,9 @@ function fit_proposal_bayes_net(
         n_prior_samples = n_prior_samples,
         n_static_prior_samples = n_static_prior_samples,
         output_filepath = output_filepath,
-        viz_dir = viz_dir
+        viz_dir = viz_dir,
+        start_target_timestep = FLAGS["start_target_timestep"],
+        end_target_timestep = FLAGS["end_target_timestep"]
     )
     col = cols[1]
     JLD.save(output_filepath, "bn", col.gen.prop_bn, "discs", discs)
@@ -139,5 +145,5 @@ end
     max_iters = FLAGS["max_iters"],
     top_k_fraction = FLAGS["top_k_fraction"],
     n_prior_samples = FLAGS["n_prior_samples"],
-    n_static_prior_samples = FLAGS["n_static_prior_samples"]
+    n_static_prior_samples = FLAGS["n_static_prior_samples"],
 )

@@ -8,12 +8,12 @@ using NGSIM
 # extraction settings and constants
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 
-feature_timesteps = 50 # number of timesteps to record features
-feature_step_size = 10 # number of timesteps between features
+feature_timesteps = 1 # number of timesteps to record features
+feature_step_size = 1 # number of timesteps between features
 prime = feature_timesteps * feature_step_size + 5 # /10 = seconds to prime to make all features available
-framecollect = 100 # /10 = seconds to collect target values
+framecollect = 200 # /10 = seconds to collect target values
 frameskip = framecollect + prime # /10 = seconds to skip between samples
-frameoffset = 1200 # from ends of the trajectories
+frameoffset = 1000 # from ends of the trajectories
 @assert frameoffset >= framecollect
 
 # use previously extracted behavioral features if this filepath != ""
@@ -78,6 +78,7 @@ tic()
             length(ext),
             feature_timesteps,
             length(target_ext),
+            framecollect,
             500000,
             init_file = false,
             attrs = Dict("feature_names"=>feature_names(ext), 
@@ -90,10 +91,14 @@ tic()
     scene = Scene(max_n_objects)
     rec = SceneRecord(prime + framecollect, 0.1, max_n_objects)
     features = zeros(length(ext), feature_timesteps, max_n_objects)
-    targets = zeros(length(target_ext), max_n_objects)
+    targets = zeros(length(target_ext), framecollect, max_n_objects)
     final_frame = nframes(trajdata) - frameoffset
     for initial_frame in frameoffset : frameskip : final_frame
         println("traj: $(trajdata_index) / $(n_trajs)\tframe $(initial_frame) / $(final_frame)")
+
+        # reset scene record and scene
+        empty!(rec)
+        empty!(scene)
             
         # get the relevant scene
         get!(scene, trajdata, initial_frame - prime)
@@ -104,7 +109,7 @@ tic()
         veh_id_to_idx_before = get_veh_id_to_idx(scene, Dict{Int,Int}())
 
         # prime
-        for frame in (initial_frame - prime):initial_frame
+        for frame in (initial_frame - prime):(initial_frame - 1)
             AutomotiveDrivingModels.update!(rec, get!(scene, trajdata, frame))
         end
 
@@ -130,12 +135,13 @@ tic()
         pull_features!(ext, rec, roadway, models, features, feature_timesteps, step_size=feature_step_size)
             
         # update with next framecollect frames
-        for frame in (initial_frame + 1):(initial_frame + framecollect)
+        for frame in initial_frame:(initial_frame + framecollect - 1)
             AutomotiveDrivingModels.update!(rec, get!(scene, trajdata, frame))
         end
             
         # extract targets
-        extract_targets!(target_ext, rec, roadway, targets, veh_id_to_idx, true)
+        start_frame = rec.nframes - (prime + 1)
+        extract_targets!(target_ext, rec, roadway, targets, veh_id_to_idx, true, start_frame)
             
         # update dataset with features, targets
         saveframe = trajdata_index * 100000 + initial_frame
@@ -143,7 +149,7 @@ tic()
         # update!(dataset, features[:, :, 1:actual_num_veh], 
         #     targets[:, 1:actual_num_veh], saveframe)
         update!(dataset, features[:, :, valid_idxs], 
-            targets[:, valid_idxs], saveframe)
+            targets[:, :, valid_idxs], saveframe)
     end
     finalize!(dataset)
     0 # for @parallel purposes

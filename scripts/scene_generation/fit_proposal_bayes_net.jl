@@ -119,14 +119,22 @@ function run_cem(
         weight_threshold::Float64 = 10.,
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
         viz_dir::String = "../../data/bayesnets/viz",
-        permit_diff_disc::Bool = false
+        permit_diff_disc::Bool = false,
+        start_target_timestep::Int = 0,
+        end_target_timestep::Union{Int,Void} = nothing
     )
     # initialize
     col = cols[1]
     n_vars = length(keys(col.gen.base_bn.name_to_index))
-    n_targets, n_vehicles = size(col.eval.targets)
+    n_targets, target_timesteps, n_vehicles = size(col.eval.targets)
     top_k = Int(ceil(top_k_fraction * N))
     proposal_vehicle_index = get_target_vehicle_index(col.gen, col.roadway)
+    if end_target_timestep == nothing
+        end_target_timestep = target_timesteps
+    else
+        msg = "end_target_timestep ($(end_target_timestep)) must be <= target_timesteps ($(target_timesteps))"
+        @assert(end_target_timestep <= target_timesteps, msg)
+    end
 
     # derive prior values
     disc_types = get_disc_types(col.gen.base_assignment_sampler)
@@ -173,7 +181,9 @@ function run_cem(
             evaluate!(col.eval, col.scene, col.models, col.roadway, seed)
 
             # extract utilities and weights
-            utilities[scene_idx] = get_targets(col.eval)[target_indices, proposal_vehicle_index][1]
+            cur_utilities = get_targets(col.eval)
+            cur_utilities = cur_utilities[target_indices, start_target_timestep:end_target_timestep, proposal_vehicle_index]
+            utilities[scene_idx] = mean(cur_utilities)
             weights[scene_idx] = get_weights(col.gen)[proposal_vehicle_index][1]
 
             data[:, scene_idx] = extract_bn_features(
@@ -217,8 +227,8 @@ function run_cem(
         JLD.save(output_filepath, "bn", prop_bn, "discs", discs)
 
         # report progress
-	unweighted_utils = mean(utilities)
-	weighted_utils = mean(utilities .* weights)
+       unweighted_utils = mean(utilities)
+       weighted_utils = mean(utilities .* weights)
         println("\niter: $(iter) / $(max_iters) \tweighted utilities: $(weighted_utils)\tunweighted utilities: $(unweighted_utils)")
 
         # check if the target probability has been sufficiently optimized
