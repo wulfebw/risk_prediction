@@ -60,7 +60,7 @@ function preprocess_features(
     @assert in("length", feature_names) msg
 
     # threshold based on collision probability if applicable
-    valid_target_inds = find(sum(targets[1:3,:,:], 1) / 3. .<= max_collision_prob)
+    valid_target_inds = find(sum(targets[1:3,:,:], (1,2)) / 3. .<= max_collision_prob)
 
     # threshold velocities
     vel_ind = find(feature_names .== "velocity")[1]

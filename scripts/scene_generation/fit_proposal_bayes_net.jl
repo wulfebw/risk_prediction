@@ -118,6 +118,7 @@ function run_cem(
         n_static_prior_samples::Int = 10000,
         weight_threshold::Float64 = 10.,
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
+        stats_filepath::String = "../../data/bayesnets/stats.jld",
         viz_dir::String = "../../data/bayesnets/viz",
         permit_diff_disc::Bool = false,
         start_target_timestep::Int = 0,
@@ -183,7 +184,7 @@ function run_cem(
             # extract utilities and weights
             cur_utilities = get_targets(col.eval)
             cur_utilities = cur_utilities[target_indices, start_target_timestep:end_target_timestep, proposal_vehicle_index]
-            utilities[scene_idx] = mean(cur_utilities)
+            utilities[scene_idx] = sum(cur_utilities)
             weights[scene_idx] = get_weights(col.gen)[proposal_vehicle_index][1]
 
             data[:, scene_idx] = extract_bn_features(
@@ -202,13 +203,19 @@ function run_cem(
         @spawnat 1 visualize_stats(stats, iter, viz_dir)
                 
         # select top fraction of population
+        # where that fraction depends on how many samples are positive
         weights[invalid_indices] = 0.
+        cur_k = length(find(utilities .* weights .> 0))
+        cur_k = min(top_k, cur_k)
         indices = reverse(sortperm(utilities .* weights))
-        indices = indices[1:top_k]
+        indices = indices[1:cur_k]
+        # permute so that overwriting later doesn't replace only well-performing
+        # samples, but rather a random set
+        indices = indices[randperm(cur_k)]
 
         # add that set to the prior, and remove older samples
         df_data = DataFrame(data[:, indices], FEATURE_NAMES)
-        prior = vcat(prior, df_data)[(top_k + 1):end, :]
+        prior = vcat(prior, df_data)[(cur_k + 1):end, :]
         training_data = vcat(prior, static_prior)
 
         # refit bayesnet and reset in the collectors
@@ -225,11 +232,17 @@ function run_cem(
 
         # save checkpoint
         JLD.save(output_filepath, "bn", prop_bn, "discs", discs)
+        JLD.save(stats_filepath, "stats", stats)
 
         # report progress
-       unweighted_utils = mean(utilities)
-       weighted_utils = mean(utilities .* weights)
-        println("\niter: $(iter) / $(max_iters) \tweighted utilities: $(weighted_utils)\tunweighted utilities: $(unweighted_utils)")
+        unweighted_utils = mean(utilities)
+        weighted_utils = mean(utilities .* weights)
+        println("""
+            iter: $(iter) / $(max_iters)
+            weighted utilities: $(weighted_utils)
+            unweighted utilities: $(unweighted_utils)
+            number of samples with positive utility: $(cur_k)
+        """)
 
         # check if the target probability has been sufficiently optimized
         # do this in an unweighted fashion

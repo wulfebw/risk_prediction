@@ -42,6 +42,7 @@ function fit_proposal_bayes_net(
         base_bn_filepath::Union{String},
         flags::Flags;
         output_filepath::String = "../../data/bayesnets/prop_test.jld",
+        stats_filepath::String = "../../data/bayesnets/stats.jld",
         viz_dir::String = "../../data/bayesnets/viz",
         num_monte_carlo_runs::Int = 1,
         prime_time::Union{Float64,Void} = nothing,
@@ -119,6 +120,7 @@ function fit_proposal_bayes_net(
         n_prior_samples = n_prior_samples,
         n_static_prior_samples = n_static_prior_samples,
         output_filepath = output_filepath,
+        stats_filepath = stats_filepath,
         viz_dir = viz_dir,
         start_target_timestep = FLAGS["start_target_timestep"],
         end_target_timestep = FLAGS["end_target_timestep"]
@@ -136,6 +138,7 @@ end
 @time fit_proposal_bayes_net(FLAGS["base_bn_filepath"],
     FLAGS,
     output_filepath = FLAGS["output_filepath"],
+    stats_filepath = joinpath(FLAGS["viz_dir"], "stats.jld"),
     viz_dir = FLAGS["viz_dir"],
     num_monte_carlo_runs = FLAGS["num_monte_carlo_runs"],
     prime_time = FLAGS["prime_time"],

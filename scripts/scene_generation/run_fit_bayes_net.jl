@@ -16,7 +16,7 @@ function fit_bn(
         input_filepath::String, 
         output_filepath::String,
         viz_filepath::String;
-        debug_size::Int = 1000000,
+        debug_size::Int = 100000,
         n_bins::Dict{Symbol,Int} = Dict(
             :relvelocity=>8,
             :forevelocity=>6,
