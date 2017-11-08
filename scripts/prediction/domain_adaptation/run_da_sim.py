@@ -36,6 +36,7 @@ def run_training(
         lambda_final,
         src_only_adversarial,
         n_updates=10000,
+        val_every=1,
         batch_size=100):
 
     # unpack shapes
@@ -68,7 +69,6 @@ def run_training(
         sess.run(tf.global_variables_initializer())
 
         # train the model
-        val_every = 1
         stats = model.train(
             dataset, 
             val_dataset=val_dataset, 
@@ -87,7 +87,8 @@ def hyperparam_search(
         learning_rates,
         n_itr,
         stats_filepath_template,
-        batch_size=100):
+        batch_size=100,
+        n_updates=10000):
     
     # set values conditional on mode
     if mode == 'with_adapt':
@@ -118,7 +119,8 @@ def hyperparam_search(
             stats['learning_rate'],
             lambda_final,
             stats['src_only_adversarial'],
-            batch_size=batch_size
+            batch_size=batch_size,
+            n_updates=n_updates
         )
 
         stats = utils.process_stats(stats, metakeys=[
@@ -129,6 +131,15 @@ def hyperparam_search(
         ])
         stats_filepath = stats_filepath_template.format(stats['score'], itr)
         np.save(stats_filepath, stats)
+        print(
+            '\nsize: {}\ndropout: {:.5f}\nlr: {:.5f}\nsrc_only_adv: {}\nscore: {:.5f}'.format(
+                stats['network_size'], 
+                stats['dropout_keep_prob'], 
+                stats['learning_rate'], 
+                stats['src_only_adversarial'],
+                stats['score']
+            )
+        )
 
 def main(
         mode='with_adapt',
@@ -139,10 +150,11 @@ def main(
         vis_dir='../../../data/visualizations/domain_adaptation',
         batch_size=1000,
         debug_size=100000,
-        n_pos_tgt_train_samples=[10,100,400,1600]):
+        n_pos_tgt_train_samples=[10,100,400,1600],
+        n_updates=[250, 2500, 5000, 10000]):
     
     utils.maybe_mkdir(results_dir)
-    for n_pos_tgt_train in n_pos_tgt_train_samples:
+    for i, n_pos_tgt_train in enumerate(n_pos_tgt_train_samples):
 
         src, tgt = utils.load_data(
             source_filepath, 
@@ -159,14 +171,15 @@ def main(
             tgt, 
             mode, 
             network_sizes=[
-                (512, 512, 256, 256, 128, 64),
+                (512, 256, 256, 256, 128, 64),
                 (512, 256, 128, 64),
                 (128, 64)
             ],
-            dropout_keep_probs=np.linspace(.5,1,100),
-            learning_rates=np.linspace(1e-4,1e-3,100),
+            dropout_keep_probs=np.linspace(.5,1,200),
+            learning_rates=np.linspace(1e-4,1e-3,200),
             n_itr=30,
-            stats_filepath_template=template
+            stats_filepath_template=template,
+            n_updates=n_updates[i]
         )
 
 if __name__ == '__main__':
