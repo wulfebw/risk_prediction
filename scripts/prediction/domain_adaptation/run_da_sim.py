@@ -117,7 +117,9 @@ def hyperparam_search(
             batch_size=batch_size
         )
 
-        stats = utils.process_stats(stats)
+        stats = utils.process_stats(stats, metakeys=[
+            'network_size', 'dropout_keep_prob', 'learning_rate'
+        ])
         stats_filepath = stats_filepath_template.format(stats['score'], itr)
         np.save(stats_filepath, stats)
 
@@ -136,7 +138,9 @@ def main(
     src, tgt = utils.load_data(
         source_filepath, 
         target_filepath, 
-        debug_size=debug_size
+        debug_size=debug_size,
+        remove_early_collision_idx=4,
+        
     )
     hyperparam_search(
         src, 
