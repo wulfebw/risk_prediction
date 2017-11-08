@@ -1,4 +1,5 @@
 
+import argparse
 from collections import defaultdict
 import numpy as np
 import os
@@ -121,6 +122,7 @@ def hyperparam_search(
         np.save(stats_filepath, stats)
 
 def main(
+        mode='with_adapt',
         source_filepath='../../../data/datasets/nov/subselect_proposal_prediction_data.h5',
         target_filepath='../../../data/datasets/nov/bn_train_data.h5',
         results_dir='../../../data/datasets/nov/hyperparam_search',
@@ -131,28 +133,29 @@ def main(
     
     utils.maybe_mkdir(results_dir)
 
-    for mode in ['with_adapt', 'without_adapt', 'target_only']:
-
-        src, tgt = utils.load_data(
-            source_filepath, 
-            target_filepath, 
-            debug_size=debug_size
-        )
-        hyperparam_search(
-            src, 
-            tgt, 
-            mode, 
-            network_sizes=[
-                (512, 512, 256, 256, 128, 64),
-                (512, 256, 128, 64),
-                (128, 64)
-            ],
-            dropout_keep_probs=[.5, .75, 1.],
-            learning_rates=[1e-4, 2e-4, 5e-4, 8e-4],
-            n_itr=20,
-            stats_filepath_template=os.path.join(
-                results_dir, '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
-        )
+    src, tgt = utils.load_data(
+        source_filepath, 
+        target_filepath, 
+        debug_size=debug_size
+    )
+    hyperparam_search(
+        src, 
+        tgt, 
+        mode, 
+        network_sizes=[
+            (512, 512, 256, 256, 128, 64),
+            (512, 256, 128, 64),
+            (128, 64)
+        ],
+        dropout_keep_probs=[.5, .75, 1.],
+        learning_rates=[1e-4, 2e-4, 5e-4, 8e-4],
+        n_itr=20,
+        stats_filepath_template=os.path.join(
+            results_dir, '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
+    )
 
 if __name__ == '__main__':
-    stats = main()
+    parser = argparse.ArgumentParser(description='mode parser')
+    parser.add_argument('--mode', type=str, default='with_adapt')
+    args = parser.parse_args()
+    stats = main(mode=args.mode)
