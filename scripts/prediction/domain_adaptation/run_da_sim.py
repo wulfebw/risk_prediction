@@ -150,8 +150,8 @@ def main(
         vis_dir='../../../data/visualizations/domain_adaptation',
         batch_size=1000,
         debug_size=100000,
-        n_pos_tgt_train_samples=[10,100,400,1600],
-        n_updates=[250, 2500, 5000, 10000]):
+        n_pos_tgt_train_samples=[0, 10, 25, 50, 100],
+        n_updates=[200, 500, 1000, 5000, 10000]):
     
     utils.maybe_mkdir(results_dir)
     for i, n_pos_tgt_train in enumerate(n_pos_tgt_train_samples):

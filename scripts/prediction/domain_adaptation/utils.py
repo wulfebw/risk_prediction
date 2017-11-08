@@ -191,14 +191,14 @@ def align_features_targets(src, tgt):
 
     return src, tgt
 
-def find_n_pos_idx(x, n):
-    count, i = 0, 0
-    for i, v in enumerate(x):
-        if v > 0:
-            count += 1
-        if count > n:
-            break
-    return i
+def sample_binary_train_targets(d):
+    ys = d['y_train']
+    for i, (_,y) in enumerate(ys):
+        if np.random.rand() < y:
+            ys[i] = 1
+        else:
+            ys[i] = 0
+    return d
 
 def train_val_test_split(d, train_split, max_train_pos=None):
     n_samples = len(d['x'])
@@ -207,12 +207,7 @@ def train_val_test_split(d, train_split, max_train_pos=None):
     x_tr = d['x'][:tr_idx]
     y_tr = d['y'][:tr_idx]
     w_tr = d['w'][:tr_idx]
-    if max_train_pos is not None:
-        idx = find_n_pos_idx(y_tr[:,1], max_train_pos)
-        x_tr = x_tr[:idx]
-        y_tr = y_tr[:idx]
-        w_tr = w_tr[:idx]
-
+    
     val_split = (1 - train_split) / 2.
     val_idx = tr_idx + int(val_split * n_samples)
     x_val = d['x'][tr_idx:val_idx]
@@ -235,6 +230,22 @@ def train_val_test_split(d, train_split, max_train_pos=None):
         w_test=w_te
         )
     )
+    return d
+
+def find_n_pos_idx(x, n):
+    count, i = 0, 0
+    for i, v in enumerate(x):
+        if v > 0:
+            count += 1
+        if count > n:
+            break
+    return i
+
+def subselect_pos_train(d, max_train_pos):
+    idx = find_n_pos_idx(d['y_train'][:,1], max_train_pos)
+    d['x_train'] = d['x_train'][:idx]
+    d['y_train'] = d['y_train'][:idx]
+    d['w_train'] = d['w_train'][:idx]
     return d
 
 def normalize_composite(src, tgt):
@@ -303,7 +314,11 @@ def load_data(
         src_train_split=.8,
         tgt_train_split=.5,
         n_pos_tgt_train_samples=None,
+        sample_tgt_train=True,
         normalize_mode='composite'):
+    # set seed value for consistent loading
+    np.random.seed(0)
+
     # load in the datasets
     src = load_single_dataset(
         src_filepath,
@@ -329,7 +344,18 @@ def load_data(
 
     # split each into train, val, test sets
     src = train_val_test_split(src, src_train_split)
-    tgt = train_val_test_split(tgt, tgt_train_split, n_pos_tgt_train_samples)
+    tgt = train_val_test_split(tgt, tgt_train_split)
+
+    # sample tgt train target values to binarize them
+    if sample_tgt_train:
+        tgt = sample_binary_train_targets(tgt)
+
+    # subselect certain number of positive tgt train values 
+    if n_pos_tgt_train_samples is not None:
+        tgt = subselect_pos_train(tgt, n_pos_tgt_train_samples)
+
+        print(tgt['x_train'].shape)
+        input()
 
     # normalize the datasets
     src, tgt = normalize(src, tgt, normalize_mode)
