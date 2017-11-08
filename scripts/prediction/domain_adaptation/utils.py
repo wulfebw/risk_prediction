@@ -354,9 +354,6 @@ def load_data(
     if n_pos_tgt_train_samples is not None:
         tgt = subselect_pos_train(tgt, n_pos_tgt_train_samples)
 
-        print(tgt['x_train'].shape)
-        input()
-
     # normalize the datasets
     src, tgt = normalize(src, tgt, normalize_mode)
     
