@@ -191,17 +191,27 @@ def align_features_targets(src, tgt):
 
     return src, tgt
 
-def train_val_test_split(d, train_split, max_train=None):
+def find_n_pos_idx(x, n):
+    count, i = 0, 0
+    for i, v in enumerate(x):
+        if v > 0:
+            count += 1
+        if count > n:
+            break
+    return i
+
+def train_val_test_split(d, train_split, max_train_pos=None):
     n_samples = len(d['x'])
     tr_idx = int(train_split * n_samples)
     
     x_tr = d['x'][:tr_idx]
     y_tr = d['y'][:tr_idx]
     w_tr = d['w'][:tr_idx]
-    if max_train is not None:
-        x_tr = x_tr[:max_train]
-        y_tr = y_tr[:max_train]
-        w_tr = w_tr[:max_train]
+    if max_train_pos is not None:
+        idx = find_n_pos_idx(y_tr[:,1], max_train_pos)
+        x_tr = x_tr[:idx]
+        y_tr = y_tr[:idx]
+        w_tr = w_tr[:idx]
 
     val_split = (1 - train_split) / 2.
     val_idx = tr_idx + int(val_split * n_samples)
@@ -290,9 +300,9 @@ def load_data(
         start_y_timestep=101,
         end_y_timestep=None,
         remove_early_collision_idx=0,
-        train_split=.6,
-        max_src_train_samples=None,
-        max_tgt_train_samples=None,
+        src_train_split=.8,
+        tgt_train_split=.5,
+        n_pos_tgt_train_samples=None,
         normalize_mode='composite'):
     # load in the datasets
     src = load_single_dataset(
@@ -318,8 +328,8 @@ def load_data(
     src, tgt = align_features_targets(src, tgt)
 
     # split each into train, val, test sets
-    src = train_val_test_split(src, train_split, max_src_train_samples)
-    tgt = train_val_test_split(tgt, train_split, max_tgt_train_samples)
+    src = train_val_test_split(src, src_train_split)
+    tgt = train_val_test_split(tgt, tgt_train_split, n_pos_tgt_train_samples)
 
     # normalize the datasets
     src, tgt = normalize(src, tgt, normalize_mode)

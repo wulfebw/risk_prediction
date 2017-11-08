@@ -34,6 +34,7 @@ def run_training(
         dropout_keep_prob,
         learning_rate,
         lambda_final,
+        src_only_adversarial,
         n_updates=10000,
         batch_size=100):
 
@@ -59,14 +60,15 @@ def run_training(
             dropout_keep_prob=dropout_keep_prob,
             learning_rate=learning_rate,
             encoder_hidden_layer_dims=network_size,
-            classifier_hidden_layer_dims=()
+            classifier_hidden_layer_dims=(),
+            src_only_adversarial=src_only_adversarial
         )
 
         # tf initialization
         sess.run(tf.global_variables_initializer())
 
         # train the model
-        val_every = 1 # max(1, int(n_epochs / 10))
+        val_every = 1
         stats = model.train(
             dataset, 
             val_dataset=val_dataset, 
@@ -106,6 +108,7 @@ def hyperparam_search(
         stats['network_size'] = np.random.choice(network_sizes)
         stats['dropout_keep_prob'] = np.random.choice(dropout_keep_probs)
         stats['learning_rate'] = np.random.choice(learning_rates)
+        stats['src_only_adversarial'] = np.random.choice([True, False])
 
         stats['stats'] = run_training(
             dataset, 
@@ -114,11 +117,15 @@ def hyperparam_search(
             stats['dropout_keep_prob'],
             stats['learning_rate'],
             lambda_final,
+            stats['src_only_adversarial'],
             batch_size=batch_size
         )
 
         stats = utils.process_stats(stats, metakeys=[
-            'network_size', 'dropout_keep_prob', 'learning_rate'
+            'network_size', 
+            'dropout_keep_prob', 
+            'learning_rate',
+            'src_only_adversarial'
         ])
         stats_filepath = stats_filepath_template.format(stats['score'], itr)
         np.save(stats_filepath, stats)
@@ -131,32 +138,36 @@ def main(
         visualize=False,
         vis_dir='../../../data/visualizations/domain_adaptation',
         batch_size=1000,
-        debug_size=1000000):
+        debug_size=100000,
+        n_pos_tgt_train_samples=[10,100,400,1600]):
     
     utils.maybe_mkdir(results_dir)
+    for n_pos_tgt_train in n_pos_tgt_train_samples:
 
-    src, tgt = utils.load_data(
-        source_filepath, 
-        target_filepath, 
-        debug_size=debug_size,
-        remove_early_collision_idx=4,
-        
-    )
-    hyperparam_search(
-        src, 
-        tgt, 
-        mode, 
-        network_sizes=[
-            (512, 512, 256, 256, 128, 64),
-            (512, 256, 128, 64),
-            (128, 64)
-        ],
-        dropout_keep_probs=[.5, .75, 1.],
-        learning_rates=[1e-4, 2e-4, 5e-4, 8e-4],
-        n_itr=20,
-        stats_filepath_template=os.path.join(
-            results_dir, '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
-    )
+        src, tgt = utils.load_data(
+            source_filepath, 
+            target_filepath, 
+            debug_size=debug_size,
+            remove_early_collision_idx=4,
+            n_pos_tgt_train_samples=n_pos_tgt_train
+        )
+        template = os.path.join(
+                results_dir,
+                '{}_'.format(n_pos_tgt_train) + '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
+        hyperparam_search(
+            src, 
+            tgt, 
+            mode, 
+            network_sizes=[
+                (512, 512, 256, 256, 128, 64),
+                (512, 256, 128, 64),
+                (128, 64)
+            ],
+            dropout_keep_probs=np.linspace(.5,1,100),
+            learning_rates=np.linspace(1e-4,1e-3,100),
+            n_itr=30,
+            stats_filepath_template=template
+        )
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='mode parser')
