@@ -93,7 +93,7 @@ def visualize_results(res, label='', c='red'):
     sizes, losses = extract_tgt_results(res)
     plt.plot(sizes, losses, label=label, c=c)
     ax = plt.gca()
-    ax.set_ylim([-.1,.8])
+    ax.set_ylim([-.1,2.])
 
 if __name__ == '__main__':
     filepath = '../../../data/datasets/da_results_with_adapt_34697.npy'

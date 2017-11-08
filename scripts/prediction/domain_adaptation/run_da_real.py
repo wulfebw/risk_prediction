@@ -11,7 +11,8 @@ import visualization_utils
 def run_training(
         dataset, 
         val_dataset,
-        n_updates=20000,
+        extra_val_dataset=None,
+        n_updates=3000,
         lambda_final=1.,
         lambda_steps=2000,
         batch_size=100):
@@ -22,7 +23,7 @@ def run_training(
 
     # decide the number of epochs so as to achieve a specified number of updates
     n_samples = max(n_src_samples, n_tgt_samples)
-    updates_per_epoch = (n_samples / batch_size) * 2
+    updates_per_epoch = (n_samples / batch_size)
     n_epochs = int(n_updates // updates_per_epoch)
 
     # tf setup
@@ -35,8 +36,9 @@ def run_training(
         output_dim=2,  
         lambda_final=lambda_final,
         lambda_steps=lambda_steps,
-        dropout_keep_prob=1.,
-        encoder_hidden_layer_dims=(128,64,64)
+        dropout_keep_prob=.5,
+        encoder_hidden_layer_dims=(256,128,64,64),
+        classifier_hidden_layer_dims=()
     )
 
     sess.run(tf.global_variables_initializer())
@@ -47,31 +49,34 @@ def run_training(
     # evaluate the model
     train_info = utils.evaluate(model, dataset)
     val_info = utils.evaluate(model, val_dataset)
+    if extra_val_dataset is not None:
+        extra_val_info = utils.evaluate(model, extra_val_dataset)
+    else:
+        extra_val_info = None
 
     # report
-    utils.report(train_info, val_info)
+    utils.report(train_info, val_info, extra_val_info)
 
-    return dict(train_info=train_info, val_info=val_info)
+    return dict(train_info=train_info, val_info=val_info, extra_val_info=extra_val_info)
 
 def main(
         visualize=False,
         batch_size=100,
         vis_dir='../../../data/visualizations/domain_adaptation',
         output_filepath_template='../../../data/datasets/da_results_*_{}.npy',
-        source_filepath='../../../data/datasets/oct/improved_bn_train_data.h5',
-        target_filepath='../../../data/datasets/ngsim_5_sec_10_feature_timesteps.h5',
-        n_tgt_train_samples = [500, 5000, 10000, 20000, None],
-        n_src_train_samples = [150000, 150000, 150000, 150000, 150000],
-        debug_size=190000,
-        mode='with_adapt',
-        seeds=[10,11,12,13,14]):
+        source_filepath='../../../data/datasets/nov/subselect_proposal_prediction_data.h5',
+        target_filepath='../../../data/datasets/nov/bn_train_data.h5',
+        n_tgt_train_samples = [None],
+        n_src_train_samples = [None],
+        debug_size=100000,
+        mode='with_adapt'):
     
     # set output filepath template based on mode
     output_filepath_template = output_filepath_template.replace('*', mode)
 
     # modes
     if mode == 'with_adapt':
-        lambda_final = 1.
+        lambda_final = .5
     elif mode == 'without_adapt':
         lambda_final = 0.
     elif mode == 'target_only':
@@ -101,11 +106,12 @@ def main(
         data = utils.load_data(
             source_filepath, 
             target_filepath,
+            validation_filepath=validation_filepath,
             max_tgt_train_samples=n_tgt_train_samples[i],
             max_src_train_samples=n_src_train_samples[i],
             debug_size=debug_size,
-            timestep=0,
-            mode=mode
+            timestep=-1,
+            train_split=.95
         )
         
         if visualize:
@@ -113,7 +119,7 @@ def main(
             visualization_utils.visualize(data, vis_dir)
 
         # build datasets
-        dataset, val_dataset = utils.build_datasets(data, batch_size)
+        dataset, val_dataset, extra_val_dataset = utils.build_datasets(data, batch_size)
 
         # update n_tgt_samples in case fewer than requested were loaded
         n_tgt_train_samples[i] = len(dataset.xt)
@@ -128,6 +134,7 @@ def main(
         infos[cur_size] = run_training(
             dataset, 
             val_dataset, 
+            extra_val_dataset,
             batch_size=batch_size,
             lambda_final=lambda_final
         )

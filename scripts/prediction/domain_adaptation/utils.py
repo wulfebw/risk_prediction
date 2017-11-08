@@ -1,4 +1,5 @@
 
+from collections import defaultdict
 import h5py
 import matplotlib
 matplotlib.use('TkAgg')
@@ -38,6 +39,39 @@ def compute_batch_idxs(start, batch_size, size, fill='random'):
         else:
             raise ValueError('invalid fill: {}'.format(fill))
 
+def listdict2dictlist(lst):
+    dictlist = defaultdict(list)
+    for d in lst:
+        for k,v in d.items():
+            dictlist[k].append(v)
+    return dictlist
+
+def process_stats(stats, metakeys=[], score_key='tgt_loss'):
+    # actual stats stored one level down
+    res = stats['stats']
+
+    # result dictionaries
+    train = defaultdict(list)
+    val = defaultdict(list)
+
+    # aggregate
+    for epoch in res.keys():
+
+        dictlist = listdict2dictlist(res[epoch]['train'])
+        for (k,v) in dictlist.items():
+            train[k].append(np.mean(v))
+
+        dictlist = listdict2dictlist(res[epoch]['val'])
+        for (k,v) in dictlist.items():
+            val[k].append(np.mean(v))
+        
+    score = np.max(val[score_key])
+    ret = dict(train=train, val=val, score=score)
+    for key in metakeys:
+        ret[key] = stats[key]
+    return ret
+
+
 def classification_score(probs, y):
     # the reason to take the argmax here is that for the ngsim data 
     # there are no continous data, but for simulated data the values might 
@@ -73,63 +107,6 @@ def report(train_info, val_info, extra_val_info=None):
         print('****************')
     print('----------------' * 2)
 
-def build_datasets(data, batch_size):
-    # import this here because some functions about are needed 
-    # by the dataset and it throws an error when importing as usual
-    from domain_adaptation_dataset import DomainAdaptationDataset
-    dataset = DomainAdaptationDataset(
-        data['src_x_train'],
-        data['src_y_train'],
-        data['tgt_x_train'],
-        data['tgt_y_train'],
-        batch_size=batch_size
-    )
-    val_dataset = DomainAdaptationDataset(
-        data['src_x_val'],
-        data['src_y_val'],
-        data['tgt_x_val'],
-        data['tgt_y_val'],
-        batch_size=batch_size
-    )
-    if data['val_x'] is not None:
-        extra_val_dataset = DomainAdaptationDataset(
-            data['val_x'],
-            data['val_y'],
-            data['val_x'],
-            data['val_y'],
-            batch_size=batch_size
-        )
-    else:
-        extra_val_dataset = None
-    return dataset, val_dataset, extra_val_dataset
-
-def build_val_dataset(data, batch_size):
-    from domain_adaptation_dataset import DomainAdaptationDataset
-    dataset = DomainAdaptationDataset(
-        data['x_val'],
-        data['y_val'],
-        data['x_val'],
-        data['y_val'],
-        batch_size=batch_size
-    )
-    return dataset
-
-def normalize(src_train, tgt_train, src_val, tgt_val, mode):
-    if mode == 'combined':
-        src_train, tgt_train, src_val, tgt_val, mean, std = normalize_combined(
-            src_train, tgt_train, src_val, tgt_val)
-        return src_train, tgt_train, src_val, tgt_val, dict(mean=mean, std=std)
-    elif mode == 'individual':
-        src_train, src_val, src_mean, src_std = normalize_individual(src_train, src_val)
-        tgt_train, tgt_val, tgt_mean, tgt_std = normalize_individual(tgt_train, tgt_val)
-        stats = dict(src_mean=src_mean, src_std=src_std, tgt_mean=tgt_mean, tgt_std=tgt_std)
-        return src_train, tgt_train, src_val, tgt_val, stats
-
-def normalize_validation(x, stats):
-    mean = stats['mean'] if 'mean' in stats else stats['tgt_mean']
-    std =  stats['std'] if 'std' in stats else stats['tgt_std']
-    return (x - mean) / std
-
 def to_multiclass(y):
     ret = np.zeros((len(y), 2))
     ret[:,0] = 1-y
@@ -144,7 +121,7 @@ def load_features_targets_weights(f, target_idx, debug_size=None):
     targets = f['risk/targets'][:debug_size,:,target_idx]
 
     if 'risk/weights' in f.keys():
-        weights = f['risk/weights'][:debug_size]
+        weights = f['risk/weights'][:debug_size].flatten()
     else:
         weights = np.ones(n_samples)
 
