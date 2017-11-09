@@ -30,7 +30,8 @@ def build_datasets(src, tgt, batch_size):
 def run_training(
         dataset, 
         val_dataset,
-        network_size,
+        encoder_size,
+        classifier_size,
         dropout_keep_prob,
         learning_rate,
         lambda_final,
@@ -60,8 +61,8 @@ def run_training(
             lambda_steps=n_updates / 4,
             dropout_keep_prob=dropout_keep_prob,
             learning_rate=learning_rate,
-            encoder_hidden_layer_dims=network_size,
-            classifier_hidden_layer_dims=(),
+            encoder_hidden_layer_dims=encoder_size,
+            classifier_hidden_layer_dims=classifier_size,
             src_only_adversarial=src_only_adversarial
         )
 
@@ -82,7 +83,8 @@ def hyperparam_search(
         src, 
         tgt, 
         mode,
-        network_sizes,
+        encoder_sizes,
+        classifier_sizes,
         dropout_keep_probs,
         learning_rates,
         n_itr,
@@ -106,7 +108,8 @@ def hyperparam_search(
     for itr in range(n_itr):
         stats = dict()
         stats['itr'] = itr
-        stats['network_size'] = np.random.choice(network_sizes)
+        stats['encoder_size'] = np.random.choice(encoder_sizes)
+        stats['classifier_size'] = np.random.choice(classifier_sizes)
         stats['dropout_keep_prob'] = np.random.choice(dropout_keep_probs)
         stats['learning_rate'] = np.random.choice(learning_rates)
         stats['src_only_adversarial'] = np.random.choice([True, False])
@@ -114,7 +117,8 @@ def hyperparam_search(
         stats['stats'] = run_training(
             dataset, 
             val_dataset, 
-            stats['network_size'],
+            stats['encoder_size'],
+            stats['classifier_size'],
             stats['dropout_keep_prob'],
             stats['learning_rate'],
             lambda_final,
@@ -124,7 +128,8 @@ def hyperparam_search(
         )
 
         stats = utils.process_stats(stats, metakeys=[
-            'network_size', 
+            'encoder_size', 
+            'classifier_size',
             'dropout_keep_prob', 
             'learning_rate',
             'src_only_adversarial'
@@ -132,8 +137,9 @@ def hyperparam_search(
         stats_filepath = stats_filepath_template.format(stats['score'], itr)
         np.save(stats_filepath, stats)
         print(
-            '\nsize: {}\ndropout: {:.5f}\nlr: {:.5f}\nsrc_only_adv: {}\nscore: {:.5f}'.format(
-                stats['network_size'], 
+            '\nencoder size: {}\nclassifier size: {}\ndropout: {:.5f}\nlr: {:.5f}\nsrc_only_adv: {}\nscore: {:.5f}'.format(
+                stats['encoder_size'], 
+                stats['classifier_size'], 
                 stats['dropout_keep_prob'], 
                 stats['learning_rate'], 
                 stats['src_only_adversarial'],
@@ -160,7 +166,7 @@ def main(
             source_filepath, 
             target_filepath, 
             debug_size=debug_size,
-            remove_early_collision_idx=4,
+            remove_early_collision_idx=5,
             n_pos_tgt_train_samples=n_pos_tgt_train
         )
         template = os.path.join(
@@ -170,10 +176,15 @@ def main(
             src, 
             tgt, 
             mode, 
-            network_sizes=[
-                (512, 256, 256, 256, 128, 64),
+            encoder_sizes=[
                 (512, 256, 128, 64),
+                (256, 128, 64),
                 (128, 64)
+            ],
+            classifier_sizes=[
+                (),
+                (64,),
+                (64,64)
             ],
             dropout_keep_probs=np.linspace(.5,1,200),
             learning_rates=np.linspace(1e-4,1e-3,200),
