@@ -57,7 +57,8 @@ def process_epoch_stats(d, ret, missing_val=-1):
 def process_stats(
         stats, 
         metakeys=[], 
-        score_key='tgt_loss'):
+        score_key='tgt_loss',
+        agg_fn=np.max):
     # actual stats stored one level down
     res = stats['stats']
 
@@ -73,7 +74,7 @@ def process_stats(
         dictlist = listdict2dictlist(res[epoch]['val'])
         val = process_epoch_stats(dictlist, val)
         
-    score = np.max(val[score_key])
+    score = agg_fn(val[score_key])
     ret = dict(train=train, val=val, score=score)
     for key in metakeys:
         ret[key] = stats[key]
