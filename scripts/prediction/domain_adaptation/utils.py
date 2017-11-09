@@ -110,9 +110,32 @@ def compute_ce(a, b, w, eps=1e-16):
     ce = np.mean((one + zero) * w)
     return ce
 
+def y_to_binary(y, n):
+    counts = (y * n).astype(int)
+    ret = np.zeros((len(y), n))
+    for i, c in enumerate(counts):
+        ret[i,:c] = 1
+    return ret.flatten()
+
+def tile_flatten(x, n):
+    return np.tile(np.reshape(x, (-1,1)), (1,n)).flatten()
+
+def compute_avg_prc(y, scores, w, n=100):
+    optimal_scores = tile_flatten(y, n)
+    y = y_to_binary(y, n)
+    scores = tile_flatten(scores, n)
+    w = tile_flatten(w, n)
+    avg_prc = sklearn.metrics.average_precision_score(y, scores, sample_weight=w)
+    optimal = sklearn.metrics.average_precision_score(y, optimal_scores, sample_weight=w)
+    avg_prc = avg_prc / optimal
+    if np.isnan(avg_prc):
+        avg_prc = 0
+    return avg_prc
+
 def evaluate(y, probs, w):
     brier = compute_brier(y[:,1], probs[:,1], w)
     rel_err = compute_relative_error(y[:,1], probs[:,1], w)
+    avg_prc = compute_avg_prc(y[:,1], probs[:,1], w)
     idxs = np.where(y[:,1] > 0)[0]
     if len(idxs) > 0:
         pos_brier = compute_brier(y[idxs,1], probs[idxs,1], w[idxs])
@@ -128,7 +151,8 @@ def evaluate(y, probs, w):
         rel_err=rel_err,
         pos_brier=pos_brier,
         pos_rel_err=pos_rel_err,
-        pos_ce=pos_ce
+        pos_ce=pos_ce,
+        avg_prc=avg_prc
     )
 
 def to_multiclass(y):

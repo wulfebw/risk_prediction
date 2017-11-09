@@ -158,7 +158,7 @@ def main(
         batch_size=1000,
         debug_size=100000,
         n_pos_tgt_train_samples=[0, 10, 25, 50, 100],
-        n_updates=[100, 500, 1000, 5000, 10000]):
+        n_updates=[400, 1000, 5000, 10000, 20000]):
     
     utils.maybe_mkdir(results_dir)
     for i, n_pos_tgt_train in enumerate(n_pos_tgt_train_samples):
@@ -170,6 +170,7 @@ def main(
             remove_early_collision_idx=5,
             n_pos_tgt_train_samples=n_pos_tgt_train
         )
+
         template = os.path.join(
                 results_dir,
                 '{}_'.format(n_pos_tgt_train) + '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
@@ -178,9 +179,9 @@ def main(
             tgt, 
             mode, 
             encoder_sizes=[
+                (512, 512, 256, 128, 128, 64),
                 (512, 256, 128, 64),
-                (256, 128, 64),
-                (128, 64)
+                (256, 128, 64)
             ],
             classifier_sizes=[
                 (),
