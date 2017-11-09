@@ -46,7 +46,18 @@ def listdict2dictlist(lst):
             dictlist[k].append(v)
     return dictlist
 
-def process_stats(stats, metakeys=[], score_key='tgt_loss'):
+def process_epoch_stats(d, ret, missing_val=-1):
+    for (k,v) in d.items():
+        v = np.array(v).flatten()
+        idxs = np.where(v != missing_val)[0]
+        if len(idxs) > 0:
+            ret[k].append(np.mean(v[idxs]))
+    return ret
+
+def process_stats(
+        stats, 
+        metakeys=[], 
+        score_key='tgt_loss'):
     # actual stats stored one level down
     res = stats['stats']
 
@@ -58,19 +69,15 @@ def process_stats(stats, metakeys=[], score_key='tgt_loss'):
     for epoch in res.keys():
 
         dictlist = listdict2dictlist(res[epoch]['train'])
-        for (k,v) in dictlist.items():
-            train[k].append(np.mean(v))
-
+        train = process_epoch_stats(dictlist, train)
         dictlist = listdict2dictlist(res[epoch]['val'])
-        for (k,v) in dictlist.items():
-            val[k].append(np.mean(v))
+        val = process_epoch_stats(dictlist, val)
         
     score = np.max(val[score_key])
     ret = dict(train=train, val=val, score=score)
     for key in metakeys:
         ret[key] = stats[key]
     return ret
-
 
 def classification_score(probs, y):
     # the reason to take the argmax here is that for the ngsim data 
@@ -88,24 +95,40 @@ def classification_score(probs, y):
     brier = np.mean((probs - y) ** 2)
     return prc_auc, roc_auc, brier
 
-def evaluate(model, dataset):
-    src_info = model.evaluate(dataset.xs, dataset.ys, np.zeros(len(dataset.xs)), mode='src')
-    tgt_info = model.evaluate(dataset.xt, dataset.yt, np.ones(len(dataset.xt)), mode='tgt')
-    return dict(src_info=src_info, tgt_info=tgt_info)
+def compute_brier(a, b, w):
+    return np.mean((a - b) ** 2 * w)
 
-def report(train_info, val_info, extra_val_info=None):
-    print('\n')
-    print('---------------' * 2)
-    for key in ['task_loss', 'prc_auc', 'roc_auc', 'brier']:
-        print('train src {}: {:.4f}'.format(key, train_info['src_info'][key]))
-        print('train tgt {}: {:.4f}'.format(key, train_info['tgt_info'][key]))
-        print('val src {}: {:.4f}'.format(key, val_info['src_info'][key]))
-        print('val tgt {}: {:.4f}'.format(key, val_info['tgt_info'][key]))
-        if extra_val_info is not None:
-            print('extra val src {}: {:.4f}'.format(key, extra_val_info['src_info'][key]))
-            print('extra val tgt {}: {:.4f}'.format(key, extra_val_info['tgt_info'][key]))
-        print('****************')
-    print('----------------' * 2)
+def compute_relative_error(a, b, w, eps=1e-10):
+    return np.mean((np.abs(a - b) / (a + eps)) * w)
+
+def compute_ce(a, b, w, eps=1e-16):
+    one = a[:,1] * np.log(b[:,1])
+    one[np.isnan(one) + np.isinf(one)] = 0
+    zero = (1-a[:,1]) * np.log(1-b[:,1])
+    zero[np.isnan(zero) + np.isinf(zero)] = 0
+    ce = np.mean((one + zero) * w)
+    return ce
+
+def evaluate(y, probs, w):
+    brier = compute_brier(y[:,1], probs[:,1], w)
+    rel_err = compute_relative_error(y[:,1], probs[:,1], w)
+    idxs = np.where(y[:,1] > 0)[0]
+    if len(idxs) > 0:
+        pos_brier = compute_brier(y[idxs,1], probs[idxs,1], w[idxs])
+        pos_rel_err = compute_relative_error(y[idxs,1], probs[idxs,1], w[idxs])
+        pos_ce = compute_ce(y[idxs], probs[idxs], w[idxs])
+    else:
+        pos_brier = -1
+        pos_rel_err = -1
+        pos_ce = -1
+
+    return dict(
+        brier=brier,
+        rel_err=rel_err,
+        pos_brier=pos_brier,
+        pos_rel_err=pos_rel_err,
+        pos_ce=pos_ce
+    )
 
 def to_multiclass(y):
     ret = np.zeros((len(y), 2))

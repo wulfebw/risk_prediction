@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from models import encoder, classifier
 from flip_gradient import flip_gradient
-from utils import compute_n_batches, compute_batch_idxs, classification_score
+from utils import compute_n_batches, compute_batch_idxs, classification_score, evaluate
 
 class DANN(object):
     
@@ -175,7 +175,7 @@ class DANN(object):
         
     def train_batch(self, batch, epoch, n_epochs, train=True, writer=None):
         sess = tf.get_default_session()
-        outputs_list = [self.src_task_loss, self.tgt_task_loss, self.domain_acc]
+        outputs_list = [self.src_task_loss, self.tgt_task_loss, self.tgt_task_probs, self.domain_acc]
         outputs_list += [self.train_op] if train else []
         feed = {
             self.xs: batch['xs'],
@@ -188,14 +188,18 @@ class DANN(object):
         }
         fetched = sess.run(outputs_list, feed_dict=feed)
         if train:
-            src_loss, tgt_loss, acc, _ = fetched
+            src_loss, tgt_loss, tgt_probs, acc, _ = fetched
         else:
-            src_loss, tgt_loss, acc = fetched
+            src_loss, tgt_loss, tgt_probs, acc = fetched
+
         sys.stdout.write(
             '\r training: {} epoch: {} / {} src loss: {:.6f} tgt loss: {:.6f} domain accuracy: {:.4f}'.format(
             train, epoch+1, n_epochs, src_loss, tgt_loss, acc))
-        
-        return dict(src_loss=src_loss, tgt_loss=tgt_loss)
+
+        ret = dict(src_loss=src_loss, tgt_loss=tgt_loss)
+        if not train:
+            ret.update(evaluate(batch['yt'], tgt_probs, batch['wt']))
+        return ret
         
     def train(
             self,
@@ -222,87 +226,25 @@ class DANN(object):
                     stats[epoch]['val'].append(batch_stats)
 
         return stats
-                    
-    # def evaluate(self, x, y, d, batch_size=100):
-    #     sess = tf.get_default_session()
-    #     n_samples = len(x)
-    #     n_batches = compute_n_batches(n_samples, batch_size)
-    #     probs = np.zeros((len(x), self.output_dim))
-    #     outputs_list = [
-    #         self.task_probs, 
-    #         self.task_loss, 
-    #         self.task_acc,
-    #         self.domain_acc
-    #     ]
-    #     task_loss_list = []
-    #     task_acc_list = []
-    #     domain_acc_list = []
-    #     for bidx in range(n_batches):
-    #         idxs = compute_batch_idxs(bidx * batch_size, batch_size, n_samples, fill='none')
-    #         cur_probs, task_loss, task_acc, domain_acc = sess.run(outputs_list, feed_dict={
-    #             self.x: x[idxs],
-    #             self.y: y[idxs],
-    #             self.d: d[idxs],
-    #             self.dropout_keep_prob_ph: 1.
-    #         })
-    #         probs[idxs] = cur_probs
-    #         task_loss_list.append(task_loss)
-    #         task_acc_list.append(task_acc)
-    #         domain_acc_list.append(domain_acc)
-    #     prc_auc, roc_auc, brier = classification_score(probs, y)
-    #     return dict(
-    #         probs=probs, 
-    #         task_loss=np.mean(task_loss_list), 
-    #         task_acc=np.mean(task_acc_list),
-    #         domain_acc=np.mean(domain_acc_list),
-    #         prc_auc=prc_auc,
-    #         roc_auc=roc_auc,
-    #         brier=brier
-    #     )
 
-    def evaluate(self, x, y, d, batch_size=100, mode='src'):
-        # double x,y,d and then take the output based on the mode
-        x = np.vstack((x,x))
-        y = np.vstack((y,y))
-        d = np.hstack((d,d))
-
+    def predict(self, x, tgt=True, batch_size=100):
+        # setup
         sess = tf.get_default_session()
         n_samples = len(x)
         n_batches = compute_n_batches(n_samples, batch_size)
-        probs = np.zeros((len(x), self.output_dim))
-        outputs_list = [
-            self.task_probs, 
-            self.task_loss, 
-            self.task_acc,
-            self.domain_acc
-        ]
-        task_loss_list = []
-        task_acc_list = []
-        domain_acc_list = []
+        probs = np.zeros((n_samples, self.output_dim))
+
+        # decide between src or tgt probs
+        outputs_list = [self.tgt_task_probs] if tgt else [self.src_task_probs]
+        x_ph = self.xt if tgt else self.xs
+
+        # compute probs
         for bidx in range(n_batches):
             idxs = compute_batch_idxs(bidx * batch_size, batch_size, n_samples, fill='none')
-            cur_probs, task_loss, task_acc, domain_acc = sess.run(outputs_list, feed_dict={
-                self.x: x[idxs],
-                self.y: y[idxs],
-                self.d: d[idxs],
+            probs[idxs] = sess.run(outputs_list, feed_dict={
+                x_ph: x[idxs],
                 self.dropout_keep_prob_ph: 1.
             })
 
-            probs[idxs] = cur_probs
-            task_loss_list.append(task_loss)
-            task_acc_list.append(task_acc)
-            domain_acc_list.append(domain_acc)
-        half = n_samples // 2
-        probs = probs[:half] if mode == 'src' else probs[half:]
-        y = y[:half] if mode == 'src' else y[half:]
-        prc_auc, roc_auc, brier = classification_score(probs, y)
-        return dict(
-            probs=probs, 
-            task_loss=np.mean(task_loss_list), 
-            task_acc=np.mean(task_acc_list),
-            domain_acc=np.mean(domain_acc_list),
-            prc_auc=prc_auc,
-            roc_auc=roc_auc,
-            brier=brier
-        )
+        return probs
         

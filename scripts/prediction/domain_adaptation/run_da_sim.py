@@ -127,13 +127,14 @@ def hyperparam_search(
             n_updates=n_updates
         )
 
-        stats = utils.process_stats(stats, metakeys=[
+        stats = utils.process_stats(stats, score_key='pos_ce', metakeys=[
             'encoder_size', 
             'classifier_size',
             'dropout_keep_prob', 
             'learning_rate',
             'src_only_adversarial'
         ])
+
         stats_filepath = stats_filepath_template.format(stats['score'], itr)
         np.save(stats_filepath, stats)
         print(
@@ -157,7 +158,7 @@ def main(
         batch_size=1000,
         debug_size=100000,
         n_pos_tgt_train_samples=[0, 10, 25, 50, 100],
-        n_updates=[200, 500, 1000, 5000, 10000]):
+        n_updates=[20, 500, 1000, 5000, 10000]):
     
     utils.maybe_mkdir(results_dir)
     for i, n_pos_tgt_train in enumerate(n_pos_tgt_train_samples):
