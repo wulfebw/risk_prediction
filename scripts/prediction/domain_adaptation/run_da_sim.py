@@ -36,7 +36,7 @@ def run_training(
         learning_rate,
         lambda_final,
         src_only_adversarial,
-        n_updates=10000,
+        n_epochs=100,
         val_every=1,
         batch_size=100):
 
@@ -44,10 +44,10 @@ def run_training(
     n_src_samples, input_dim = dataset.xs.shape
     n_tgt_samples, _ = dataset.xt.shape
 
-    # decide the number of epochs so as to achieve a specified number of updates
+    # decide number of lambda steps based on updates per epoch
     n_samples = max(n_src_samples, n_tgt_samples)
     updates_per_epoch = (n_samples / batch_size)
-    n_epochs = int(n_updates // updates_per_epoch)
+    lambda_steps = updates_per_epoch * n_epochs / 5
 
     # tf reset
     tf.reset_default_graph()
@@ -58,7 +58,7 @@ def run_training(
             input_dim=input_dim, 
             output_dim=2,
             lambda_final=lambda_final,
-            lambda_steps=n_updates / 4,
+            lambda_steps=lambda_steps,
             dropout_keep_prob=dropout_keep_prob,
             learning_rate=learning_rate,
             encoder_hidden_layer_dims=encoder_size,
@@ -90,7 +90,7 @@ def hyperparam_search(
         n_itr,
         stats_filepath_template,
         batch_size=100,
-        n_updates=10000):
+        n_epochs=100):
     
     # set values conditional on mode
     if mode == 'with_adapt':
@@ -124,7 +124,7 @@ def hyperparam_search(
             lambda_final,
             stats['src_only_adversarial'],
             batch_size=batch_size,
-            n_updates=n_updates
+            n_epochs=n_epochs
         )
 
         stats = utils.process_stats(stats, score_key='pos_ce', agg_fn=np.min, metakeys=[
@@ -158,7 +158,7 @@ def main(
         batch_size=1000,
         debug_size=100000,
         n_pos_tgt_train_samples=[0, 10, 25, 50, 100],
-        n_updates=[400, 1000, 5000, 10000, 20000]):
+        n_epochs=[20, 20, 20, 20, 20]):
     
     utils.maybe_mkdir(results_dir)
     for i, n_pos_tgt_train in enumerate(n_pos_tgt_train_samples):
@@ -179,9 +179,9 @@ def main(
             tgt, 
             mode, 
             encoder_sizes=[
-                (512, 512, 256, 128, 128, 64),
                 (512, 256, 128, 64),
-                (256, 128, 64)
+                (256, 128, 64),
+                (128, 64)
             ],
             classifier_sizes=[
                 (),
@@ -192,7 +192,7 @@ def main(
             learning_rates=np.linspace(1e-4,1e-3,200),
             n_itr=30,
             stats_filepath_template=template,
-            n_updates=n_updates[i]
+            n_epochs=n_epochs[i]
         )
 
 if __name__ == '__main__':

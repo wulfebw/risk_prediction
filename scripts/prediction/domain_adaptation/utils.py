@@ -103,11 +103,14 @@ def compute_relative_error(a, b, w, eps=1e-10):
     return np.mean((np.abs(a - b) / (a + eps)) * w)
 
 def compute_ce(a, b, w, eps=1e-16):
+    b = np.clip(b, eps, 1-eps)
     one = a[:,1] * np.log(b[:,1])
-    one[np.isnan(one) + np.isinf(one)] = 0
-    zero = (1-a[:,1]) * np.log(1-b[:,1])
-    zero[np.isnan(zero) + np.isinf(zero)] = 0
-    ce = np.mean((one + zero) * w)
+    mask_idxs = np.where(a[:,1] == 0.)
+    one[mask_idxs] = 0
+    zero = a[:,0] * np.log(b[:,0])
+    mask_idxs = np.where(a[:,0] == 0.)
+    zero[mask_idxs] = 0
+    ce = -np.mean((one + zero) * w)
     return ce
 
 def y_to_binary(y, n):
@@ -135,7 +138,7 @@ def compute_avg_prc(y, scores, w, n=100):
 def evaluate(y, probs, w):
     brier = compute_brier(y[:,1], probs[:,1], w)
     rel_err = compute_relative_error(y[:,1], probs[:,1], w)
-    avg_prc = compute_avg_prc(y[:,1], probs[:,1], w)
+    # avg_prc = compute_avg_prc(y[:,1], probs[:,1], w)
     idxs = np.where(y[:,1] > 0)[0]
     if len(idxs) > 0:
         pos_brier = compute_brier(y[idxs,1], probs[idxs,1], w[idxs])
@@ -152,7 +155,7 @@ def evaluate(y, probs, w):
         pos_brier=pos_brier,
         pos_rel_err=pos_rel_err,
         pos_ce=pos_ce,
-        avg_prc=avg_prc
+        # avg_prc=avg_prc
     )
 
 def to_multiclass(y):
