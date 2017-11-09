@@ -89,10 +89,10 @@ def write_generation(config):
     # e.g., the sampling time from generation
     # and do this by passing them in explictly in the run call
     config.set(s, 'prop_bn_filepath', '%(expdir)s/data/prop_bn.jld')
-    config.set(s, 'prop/num_monte_carlo_runs', '10')                     #
+    config.set(s, 'prop/num_monte_carlo_runs', '2')                     #
     config.set(s, 'prop/cem_end_prob', '.1')
-    config.set(s, 'prop/max_iters', '500')                             #
-    config.set(s, 'prop/population_size', '1000')                       #
+    config.set(s, 'prop/max_iters', '1000')                             #
+    config.set(s, 'prop/population_size', '10000')                       #
     config.set(s, 'prop/top_k_fraction', '.2')
     config.set(s, 'prop/n_prior_samples', '20000')
     config.set(s, 'prop/n_static_prior_samples', '4000')
@@ -132,8 +132,8 @@ def write_generation(config):
     config.set(s, 'gen/prime_time', '{}'.format(prime_time))
     config.set(s, 'gen/sampling_time', '20.')                               #
     config.set(s, 'gen/heuristic_behavior_type', 'correlated')                 #
-    config.set(s, 'gen/max_num_vehicles', '25')                            #
-    config.set(s, 'gen/min_num_vehicles', '25')                            #
+    config.set(s, 'gen/max_num_vehicles', '70')                            #
+    config.set(s, 'gen/min_num_vehicles', '70')                            #
 
     # subselect dataset filepath
     config.set(s, 'subselect_dataset', 

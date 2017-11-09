@@ -31,7 +31,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
     # find nonzero features
     print('finding nonzero features...')
     nsamples, timesteps, feature_dim = infile['risk/features'].shape
-    _, target_dim = infile['risk/targets'].shape
+    _, target_timesteps, target_dim = infile['risk/targets'].shape
     feature_names = infile['risk'].attrs['feature_names']
     nonzero_fidxs = []
     zero_fidxs = []
@@ -47,12 +47,13 @@ def select_nonconstant_features(input_filepath, output_filepath,
     print('nonzero indices: {}'.format(nonzero_fidxs))
     print('zero indices: {}'.format(zero_fidxs))
     print('length nonzero: {}'.format(len(nonzero_fidxs)))
+    print('zero features: {}'.format(feature_names[zero_fidxs]))
     
     # select the targets, features, weights from the proposal network
     print('transferring...')
     nonzero_feature_dim = len(nonzero_fidxs)
     outfile.create_dataset("risk/features", (nsamples, timesteps, nonzero_feature_dim))
-    outfile.create_dataset("risk/targets", (nsamples, target_dim))
+    outfile.create_dataset("risk/targets", (nsamples, target_timesteps, target_dim))
 
     nbatches = int(nsamples / float(batch_size))
     if nsamples % batch_size != 0:
@@ -63,7 +64,7 @@ def select_nonconstant_features(input_filepath, output_filepath,
         s = bidx * batch_size
         e = s + batch_size
         outfile['risk/features'][s:e,:,:] = infile['risk/features'][s:e,:,nonzero_fidxs]
-        outfile['risk/targets'][s:e,:] = infile['risk/targets'][s:e,:]
+        outfile['risk/targets'][s:e] = infile['risk/targets'][s:e]
     
     # metadata
     if 'risk/weights' in infile.keys():
@@ -86,10 +87,10 @@ def select_proposal_samples(input_filepath, output_filepath, batch_size=1000):
     prop_idxs = np.where(weights[:,0] != 1.)[0]
     nsamples = len(prop_idxs)
     _, timesteps, feature_dim = infile['risk/features'].shape
-    _, target_dim = infile['risk/targets'].shape
+    _, target_timesteps, target_dim = infile['risk/targets'].shape
 
     outfile.create_dataset("risk/features", (nsamples, timesteps, feature_dim))
-    outfile.create_dataset("risk/targets", (nsamples, target_dim))
+    outfile.create_dataset("risk/targets", (nsamples, target_timesteps, target_dim))
 
     nbatches = int(nsamples / float(batch_size))
     if nsamples % batch_size != 0:
@@ -145,8 +146,8 @@ if __name__ == '__main__':
     # one in which all the samples are included, but only nonconstant features 
     # are captured, a second where all features are included, but only proposal
     # samples are kept, and a third with both these conditions
-    select_nonconstant_features(args.dataset_filepath, 
-        args.subselect_feature_filepath)
+    # select_nonconstant_features(args.dataset_filepath, 
+    #     args.subselect_feature_filepath)
 
     if args.subselect_proposal:
         select_proposal_samples(args.dataset_filepath, 
