@@ -195,9 +195,11 @@ def sample_binary_train_targets(d):
     ys = d['y_train']
     for i, (_,y) in enumerate(ys):
         if np.random.rand() < y:
-            ys[i] = 1
+            ys[i,0] = 0
+            ys[i,1] = 1
         else:
-            ys[i] = 0
+            ys[i,0] = 1
+            ys[i,1] = 0
     return d
 
 def train_val_test_split(d, train_split, max_train_pos=None):
