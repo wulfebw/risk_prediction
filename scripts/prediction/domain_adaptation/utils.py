@@ -73,11 +73,15 @@ def process_stats(
         train = process_epoch_stats(dictlist, train)
         dictlist = listdict2dictlist(res[epoch]['val'])
         val = process_epoch_stats(dictlist, val)
-        
-    score = agg_fn(val[score_key])
+
+    if len(val.keys()) > 0:
+        score = agg_fn(val[score_key])
+    else: 
+        score = -1
     ret = dict(train=train, val=val, score=score)
     for key in metakeys:
-        ret[key] = stats[key]
+        if key in stats.keys():
+            ret[key] = stats[key]
     return ret
 
 def classification_score(probs, y):
@@ -368,7 +372,8 @@ def load_data(
         tgt_train_split=.5,
         n_pos_tgt_train_samples=None,
         sample_tgt_train=True,
-        normalize_mode='composite'):
+        normalize_mode='composite',
+        perform_normalize=True):
     # set seed value for consistent loading
     np.random.seed(0)
 
@@ -408,7 +413,8 @@ def load_data(
         tgt = subselect_pos_train(tgt, n_pos_tgt_train_samples)
 
     # normalize the datasets
-    src, tgt = normalize(src, tgt, normalize_mode)
+    if perform_normalize:
+        src, tgt = normalize(src, tgt, normalize_mode)
     
     return src, tgt
 

@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from models import encoder, classifier
 from flip_gradient import flip_gradient
-from utils import compute_n_batches, compute_batch_idxs, classification_score, evaluate
+from utils import compute_n_batches, compute_batch_idxs, classification_score, evaluate, process_stats
 
 class DANN(object):
     
@@ -23,7 +23,8 @@ class DANN(object):
             encoder_hidden_layer_dims=(64,64),
             classifier_hidden_layer_dims=(),
             domain_classifier_hidden_layer_dims=(64,64),
-            src_only_adversarial=False):
+            src_only_adversarial=False,
+            shared_classifier=True):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.name = name
@@ -36,6 +37,7 @@ class DANN(object):
         self.classifier_hidden_layer_dims = classifier_hidden_layer_dims
         self.domain_classifier_hidden_layer_dims = domain_classifier_hidden_layer_dims
         self.src_only_adversarial = src_only_adversarial
+        self.shared_classifier = shared_classifier
         
         self.build_model()
     
@@ -90,17 +92,28 @@ class DANN(object):
         )
         self.src_task_probs = tf.nn.softmax(self.src_task_scores)
 
-        # task tgt classifier
+        # task tgt classifier with optional reuse
+        if self.shared_classifier:
+            reuse = True
+            tgt_classifier_feat_name = 'src_classifier_feat'
+            tgt_classifier_name = 'src_task_scores'
+        else:
+            reuse = False
+            tgt_classifier_feat_name = 'tgt_classifier_feat'
+            tgt_classifier_name = 'tgt_task_scores'
+
         tgt_classifier_feat = encoder(
             tgt_features,
-            'tgt_classifier_feat',
+            tgt_classifier_feat_name,
             hidden_layer_dims=self.classifier_hidden_layer_dims,
-            dropout_keep_prob=self.dropout_keep_prob_ph
+            dropout_keep_prob=self.dropout_keep_prob_ph,
+            reuse=reuse
         )
         self.tgt_task_scores = classifier(
             tgt_classifier_feat, 
             self.output_dim,
-            'tgt_task_scores',
+            tgt_classifier_name,
+            reuse=reuse
         )
         self.tgt_task_probs = tf.nn.softmax(self.tgt_task_scores)
 
@@ -208,7 +221,8 @@ class DANN(object):
             val_every=1,
             n_epochs=100,
             writer=None,
-            val_writer=None):
+            val_writer=None,
+            verbose=True):
         
         sess = tf.get_default_session()
         stats = defaultdict(lambda: defaultdict(list))
@@ -225,7 +239,21 @@ class DANN(object):
                         batch, epoch, n_epochs, train=False, writer=val_writer)
                     stats[epoch]['val'].append(batch_stats)
 
+            if verbose:
+                self.report(stats, epoch+1)
+
         return stats
+
+    def report(self, stats, epoch):
+        stats = process_stats(dict(stats=stats))
+        print('\n')
+        print('epoch: {}'.format(epoch))
+        print('train src loss: {}'.format(stats['train']['src_loss'][-1]))
+        print('train tgt loss: {}'.format(stats['train']['tgt_loss'][-1]))
+        if len(stats['val'].keys()) > 0:
+            print('val src loss: {}'.format(stats['val']['src_loss'][-1]))
+            print('val tgt loss: {}'.format(stats['val']['tgt_loss'][-1]))
+        print('\n')
 
     def predict(self, x, tgt=True, batch_size=100):
         # setup
