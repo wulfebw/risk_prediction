@@ -305,6 +305,12 @@ def subselect_pos_train(d, max_train_pos):
     d['w_train'] = d['w_train'][:idx]
     return d
 
+def subselect_train(d, max_train):
+    d['x_train'] = d['x_train'][:max_train]
+    d['y_train'] = d['y_train'][:max_train]
+    d['w_train'] = d['w_train'][:max_train]
+    return d
+
 def normalize_composite(src, tgt):
     # count samples for weighting the respective means
     n_src = len(src['x_train'])
@@ -371,6 +377,7 @@ def load_data(
         src_train_split=.8,
         tgt_train_split=.5,
         n_pos_tgt_train_samples=None,
+        n_tgt_train_samples=None,
         sample_tgt_train=True,
         normalize_mode='composite',
         perform_normalize=True):
@@ -411,6 +418,8 @@ def load_data(
     # subselect certain number of positive tgt train values 
     if n_pos_tgt_train_samples is not None:
         tgt = subselect_pos_train(tgt, n_pos_tgt_train_samples)
+    elif n_tgt_train_samples is not None:
+        tgt = subselect_train(tgt, n_tgt_train_samples)
 
     # normalize the datasets
     if perform_normalize:

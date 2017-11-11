@@ -167,19 +167,41 @@ def main(
         vis_dir='../../../data/visualizations/domain_adaptation',
         batch_size=1000,
         debug_size=100000,
-        n_pos_tgt_train_samples=[0, 10, 25, 50, 100],
-        n_epochs=[20, 20, 20, 20, 20]):
+        n_pos_tgt_train_samples=None, #[0, 10, 25, 50, 100],
+        n_tgt_train_samples=[387, 3948, 14167, 28066, 34988],
+        n_epochs=[20, 22, 25, 30, 40]):
     
     utils.maybe_mkdir(results_dir)
-    for i, n_pos_tgt_train in enumerate(n_pos_tgt_train_samples):
+    if n_pos_tgt_train_samples is not None:
+        n_itr = len(n_pos_tgt_train_samples)
+    elif n_tgt_train_samples is not None:
+        n_itr = len(n_tgt_train_samples)
 
-        src, tgt = utils.load_data(
-            source_filepath, 
-            target_filepath, 
-            debug_size=debug_size,
-            remove_early_collision_idx=5,
-            n_pos_tgt_train_samples=n_pos_tgt_train
-        )
+    for i in range(n_itr):
+
+        if n_pos_tgt_train_samples is not None:
+            src, tgt = utils.load_data(
+                source_filepath, 
+                target_filepath, 
+                debug_size=debug_size,
+                remove_early_collision_idx=5,
+                n_pos_tgt_train_samples=n_pos_tgt_train_samples[i],
+                src_train_split=.95,
+                tgt_train_split=.5
+            )
+        elif n_tgt_train_samples is not None:
+            src, tgt = utils.load_data(
+                source_filepath, 
+                target_filepath, 
+                debug_size=debug_size,
+                remove_early_collision_idx=5,
+                n_tgt_train_samples=n_tgt_train_samples[i],
+                src_train_split=.95,
+                tgt_train_split=.5
+            )
+
+        print(tgt['x_train'].shape)
+        continue
 
         template = os.path.join(
                 results_dir,
