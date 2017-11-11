@@ -92,6 +92,7 @@ def hyperparam_search(
         learning_rates,
         n_itr,
         stats_filepath_template,
+        src_only_adversarials=[False],
         batch_size=100,
         n_epochs=100):
     
@@ -100,8 +101,12 @@ def hyperparam_search(
         lambda_final = 0.1
         da_mode = 'unsupervised'
     elif mode == 'with_sup_adapt':
-        lambda_final = 0.5
+        lambda_final = 0.1
         da_mode = 'supervised'
+    elif mode == 'with_uni_adapt':
+        lambda_final = 0.1
+        da_mode = 'unsupervised'
+        src_only_adversarials = [True]
     elif mode == 'without_adapt':
         lambda_final = 0.
         da_mode = 'unsupervised'
@@ -121,7 +126,7 @@ def hyperparam_search(
         stats['classifier_size'] = np.random.choice(classifier_sizes)
         stats['dropout_keep_prob'] = np.random.choice(dropout_keep_probs)
         stats['learning_rate'] = np.random.choice(learning_rates)
-        stats['src_only_adversarial'] = np.random.choice([False])
+        stats['src_only_adversarial'] = np.random.choice(src_only_adversarials)
 
         stats['stats'] = run_training(
             dataset, 
@@ -221,7 +226,7 @@ def main(
             ],
             dropout_keep_probs=np.linspace(.5,1,200),
             learning_rates=np.linspace(1e-4,1e-3,200),
-            n_itr=40,
+            n_itr=30,
             stats_filepath_template=template,
             n_epochs=n_epochs[i]
         )
