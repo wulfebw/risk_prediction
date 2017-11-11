@@ -63,7 +63,8 @@ def run_training(
             learning_rate=learning_rate,
             encoder_hidden_layer_dims=encoder_size,
             classifier_hidden_layer_dims=classifier_size,
-            src_only_adversarial=src_only_adversarial
+            src_only_adversarial=src_only_adversarial,
+            shared_classifier=True
         )
 
         # tf initialization
@@ -112,7 +113,7 @@ def hyperparam_search(
         stats['classifier_size'] = np.random.choice(classifier_sizes)
         stats['dropout_keep_prob'] = np.random.choice(dropout_keep_probs)
         stats['learning_rate'] = np.random.choice(learning_rates)
-        stats['src_only_adversarial'] = np.random.choice([True, False])
+        stats['src_only_adversarial'] = np.random.choice([False])
 
         stats['stats'] = run_training(
             dataset, 
