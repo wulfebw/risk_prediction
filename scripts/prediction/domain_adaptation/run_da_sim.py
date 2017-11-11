@@ -189,6 +189,7 @@ def main(
                 src_train_split=.95,
                 tgt_train_split=.5
             )
+            n_samples = n_pos_tgt_train_samples[i]
         elif n_tgt_train_samples is not None:
             src, tgt = utils.load_data(
                 source_filepath, 
@@ -199,10 +200,11 @@ def main(
                 src_train_split=.95,
                 tgt_train_split=.5
             )
+            n_samples = n_tgt_train_samples[i]
 
         template = os.path.join(
                 results_dir,
-                '{}_'.format(n_pos_tgt_train) + '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
+                '{}_'.format(n_samples) + '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
         hyperparam_search(
             src, 
             tgt, 
