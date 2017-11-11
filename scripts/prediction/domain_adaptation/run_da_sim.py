@@ -36,6 +36,7 @@ def run_training(
         learning_rate,
         lambda_final,
         src_only_adversarial,
+        da_mode,
         n_epochs=100,
         val_every=1,
         batch_size=100):
@@ -64,7 +65,8 @@ def run_training(
             encoder_hidden_layer_dims=encoder_size,
             classifier_hidden_layer_dims=classifier_size,
             src_only_adversarial=src_only_adversarial,
-            shared_classifier=True
+            shared_classifier=True,
+            da_mode=da_mode
         )
 
         # tf initialization
@@ -84,6 +86,7 @@ def hyperparam_search(
         src, 
         tgt, 
         mode,
+        da_mode,
         encoder_sizes,
         classifier_sizes,
         dropout_keep_probs,
@@ -124,6 +127,7 @@ def hyperparam_search(
             stats['learning_rate'],
             lambda_final,
             stats['src_only_adversarial'],
+            da_mode,
             batch_size=batch_size,
             n_epochs=n_epochs
         )
@@ -151,6 +155,7 @@ def hyperparam_search(
 
 def main(
         mode='with_adapt',
+        da_mode='unsupervised',
         source_filepath='../../../data/datasets/nov/subselect_proposal_prediction_data.h5',
         target_filepath='../../../data/datasets/nov/bn_train_data.h5',
         results_dir='../../../data/datasets/nov/hyperparam_search',
@@ -178,7 +183,8 @@ def main(
         hyperparam_search(
             src, 
             tgt, 
-            mode, 
+            mode,
+            da_mode, 
             encoder_sizes=[
                 (512, 256, 128, 64),
                 (256, 128, 64),
@@ -199,5 +205,6 @@ def main(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='mode parser')
     parser.add_argument('--mode', type=str, default='with_adapt')
+    parser.add_argument('--da_mode', type=str, default='unsupervised')
     args = parser.parse_args()
-    stats = main(mode=args.mode)
+    stats = main(mode=args.mode, da_mode=args.da_mode)

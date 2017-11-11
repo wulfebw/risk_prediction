@@ -24,7 +24,8 @@ class DANN(object):
             classifier_hidden_layer_dims=(),
             domain_classifier_hidden_layer_dims=(64,64),
             src_only_adversarial=False,
-            shared_classifier=True):
+            shared_classifier=True,
+            da_mode='unsupervised'):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.name = name
@@ -38,6 +39,7 @@ class DANN(object):
         self.domain_classifier_hidden_layer_dims = domain_classifier_hidden_layer_dims
         self.src_only_adversarial = src_only_adversarial
         self.shared_classifier = shared_classifier
+        self.da_mode = da_mode
         
         self.build_model()
     
@@ -63,14 +65,14 @@ class DANN(object):
     def build_networks(self):
 
         # feature extractor
-        src_features = encoder(
+        self.src_features = src_features = encoder(
             self.xs, 
             'features', 
             hidden_layer_dims=self.encoder_hidden_layer_dims,
             dropout_keep_prob=self.dropout_keep_prob_ph
         )
 
-        tgt_features = encoder(
+        self.tgt_features = tgt_features = encoder(
             self.xt, 
             'features', 
             hidden_layer_dims=self.encoder_hidden_layer_dims,
@@ -118,7 +120,7 @@ class DANN(object):
         self.tgt_task_probs = tf.nn.softmax(self.tgt_task_scores)
 
         # domain classifier
-        lmbda = tf.train.polynomial_decay(
+        self.lmbda = lmbda = tf.train.polynomial_decay(
             self.lambda_initial, 
             self.global_step, 
             self.lambda_steps, 
@@ -166,11 +168,19 @@ class DANN(object):
         self.task_loss = self.src_task_loss + self.tgt_task_loss
 
         # domain
-        self.domain_loss = tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=self.d, logits=self.domain_scores
-            ) * tf.concat((self.ws, self.wt), axis=0)
-        )
+        if self.da_mode == 'unsupervised':
+            self.domain_loss = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(
+                    labels=self.d, logits=self.domain_scores
+                ) * tf.concat((self.ws, self.wt), axis=0)
+            )
+        elif self.da_mode == 'supervised':
+            feature_l2 = tf.reduce_sum((self.src_features - self.tgt_features) ** 2, axis=1)
+            feature_l2 = tf.maximum(feature_l2, 1e-8)
+            feature_l2 = tf.sqrt(feature_l2)
+                    
+            w = (1 - (self.ys[:,1] - self.yt[:,1]) ** 2) * self.ws * self.wt
+            self.domain_loss = tf.reduce_mean(feature_l2 * w) * self.lmbda
 
         # overall
         self.loss = self.task_loss + self.domain_loss

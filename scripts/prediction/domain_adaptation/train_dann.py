@@ -15,6 +15,7 @@ vis_dir = '/Users/wulfebw/Desktop/tmp/'
 debug_size = 100000
 batch_size = 500
 n_pos_tgt_train = None
+da_mode = 'supervised'
 
 src, tgt = utils.load_data(
     source_filepath, 
@@ -56,7 +57,8 @@ with tf.Session() as sess:
         encoder_hidden_layer_dims=(64,64),
         classifier_hidden_layer_dims=(64,64),
         src_only_adversarial=False,
-        shared_classifier=True
+        shared_classifier=True,
+        da_mode=da_mode
     )
     sess.run(tf.global_variables_initializer())
     model.train(
