@@ -97,7 +97,7 @@ def hyperparam_search(
     
     # set values conditional on mode
     if mode == 'with_adapt':
-        lambda_final = 0.5
+        lambda_final = 0.1
         da_mode = 'unsupervised'
     elif mode == 'with_sup_adapt':
         lambda_final = 0.5
@@ -167,9 +167,9 @@ def main(
         vis_dir='../../../data/visualizations/domain_adaptation',
         batch_size=1000,
         debug_size=100000,
-        n_pos_tgt_train_samples=None, #[0, 10, 25, 50, 100],
-        n_tgt_train_samples=[387, 3948, 14167, 28066, 34988],
-        n_epochs=[20, 22, 25, 30, 40]):
+        n_pos_tgt_train_samples=[0, 10, 25, 50, 75, 100],
+        n_tgt_train_samples=None, #[387, 3948, 14167, 28066, 34988],
+        n_epochs=[20, 22, 25, 30, 35, 40]):
     
     utils.maybe_mkdir(results_dir)
     if n_pos_tgt_train_samples is not None:
@@ -221,7 +221,7 @@ def main(
             ],
             dropout_keep_probs=np.linspace(.5,1,200),
             learning_rates=np.linspace(1e-4,1e-3,200),
-            n_itr=30,
+            n_itr=40,
             stats_filepath_template=template,
             n_epochs=n_epochs[i]
         )
