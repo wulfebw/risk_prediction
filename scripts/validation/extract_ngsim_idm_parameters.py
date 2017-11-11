@@ -210,8 +210,8 @@ def extract_idm_params(
 if __name__ == '__main__':
 
     # ngsim
-    filepath = '../../data/datasets/oct/ngsim_feature_trajectories_behavior_inferece.h5'
-    results_dir = '../../data/datasets/ngsim_idm_parameters/'
+    filepath = '../../data/datasets/nov/ngsim_feature_trajectories_behavior_inferece.h5'
+    results_dir = '../../data/datasets/nov/'
     xs, ys, ids = load_ngsim_data(
         filepath, 
         remove_collisions=True,
