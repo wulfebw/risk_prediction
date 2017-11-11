@@ -246,6 +246,7 @@ class DANN(object):
 
     def report(self, stats, epoch):
         stats = process_stats(dict(stats=stats))
+
         print('\n')
         print('epoch: {}'.format(epoch))
         print('train src loss: {}'.format(stats['train']['src_loss'][-1]))
@@ -253,6 +254,9 @@ class DANN(object):
         if len(stats['val'].keys()) > 0:
             print('val src loss: {}'.format(stats['val']['src_loss'][-1]))
             print('val tgt loss: {}'.format(stats['val']['tgt_loss'][-1]))
+            print('val tgt pos loss: {}'.format(stats['val']['pos_ce'][-1]))
+            print('val tgt brier: {}'.format(stats['val']['brier'][-1]))
+            print('val tgt pos brier: {}'.format(stats['val']['pos_brier'][-1]))
         print('\n')
 
     def predict(self, x, tgt=True, batch_size=100):
