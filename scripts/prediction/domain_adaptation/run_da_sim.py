@@ -86,7 +86,6 @@ def hyperparam_search(
         src, 
         tgt, 
         mode,
-        da_mode,
         encoder_sizes,
         classifier_sizes,
         dropout_keep_probs,
@@ -99,11 +98,17 @@ def hyperparam_search(
     # set values conditional on mode
     if mode == 'with_adapt':
         lambda_final = 0.5
+        da_mode = 'unsupervised'
+    elif mode == 'with_sup_adapt':
+        lambda_final = 0.5
+        da_mode = 'supervised'
     elif mode == 'without_adapt':
         lambda_final = 0.
+        da_mode = 'unsupervised'
     elif mode == 'target_only':
         src = tgt
         lambda_final = 0.
+        da_mode = 'unsupervised'
 
     # build datasets
     dataset, val_dataset, test_dataset = build_datasets(src, tgt, batch_size)
@@ -155,7 +160,6 @@ def hyperparam_search(
 
 def main(
         mode='with_adapt',
-        da_mode='unsupervised',
         source_filepath='../../../data/datasets/nov/subselect_proposal_prediction_data.h5',
         target_filepath='../../../data/datasets/nov/bn_train_data.h5',
         results_dir='../../../data/datasets/nov/hyperparam_search',
@@ -184,7 +188,6 @@ def main(
             src, 
             tgt, 
             mode,
-            da_mode, 
             encoder_sizes=[
                 (512, 256, 128, 64),
                 (256, 128, 64),
@@ -205,6 +208,5 @@ def main(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='mode parser')
     parser.add_argument('--mode', type=str, default='with_adapt')
-    parser.add_argument('--da_mode', type=str, default='unsupervised')
     args = parser.parse_args()
-    stats = main(mode=args.mode, da_mode=args.da_mode)
+    stats = main(mode=args.mode)
