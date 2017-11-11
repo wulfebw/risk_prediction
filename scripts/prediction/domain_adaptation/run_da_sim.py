@@ -200,9 +200,6 @@ def main(
                 tgt_train_split=.5
             )
 
-        print(tgt['x_train'].shape)
-        continue
-
         template = os.path.join(
                 results_dir,
                 '{}_'.format(n_pos_tgt_train) + '{:.4f}_itr_{}_' + '{}.npy'.format(mode))
