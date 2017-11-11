@@ -13,7 +13,7 @@ offset = 500 # from ends of the trajectories
 maxframes = nothing # nothing for no max
 
 output_filename = "ngsim_feature_trajectories_behavior_inferece.h5"
-output_filepath = joinpath("../../data/datasets/oct", output_filename)
+output_filepath = joinpath("../../data/datasets/nov", output_filename)
 
 models = Dict{Int, DriverModel}() # dummy, no behavior available
 println("output filepath: $(output_filepath)")

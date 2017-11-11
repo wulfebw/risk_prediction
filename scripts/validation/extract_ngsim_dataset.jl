@@ -10,14 +10,14 @@ models = Dict{Int, DriverModel}() # dummy, no behavior available
 
 feature_timesteps = 1 # number of timesteps to record features
 feature_step_size = 1 # number of timesteps between features
-prime = feature_timesteps * feature_step_size + 5 # /10 = seconds to prime to make all features available
+prime = feature_timesteps * feature_step_size + 10 # /10 = seconds to prime to make all features available
 framecollect = 200 # /10 = seconds to collect target values
 frameskip = framecollect + prime # /10 = seconds to skip between samples
-frameoffset = 1000 # from ends of the trajectories
+frameoffset = 500 # from ends of the trajectories
 @assert frameoffset >= framecollect
 
 # use previously extracted behavioral features if this filepath != ""
-ngsim_behavior_filepath = "../../data/datasets/oct/ngsim_idm_params.h5"
+ngsim_behavior_filepath = "../../data/datasets/nov/ngsim_idm_params.h5"
 
 output_filename = "ngsim_$(Int(ceil(framecollect / 10)))_sec_$(feature_timesteps)_feature_timesteps.h5"
 output_filepath = joinpath("../../data/datasets/", output_filename)
@@ -63,7 +63,7 @@ tic()
                 ngsim_behavior_features[veh_id] = thetas[:,i]
             end
         end
-        ngsim_behavior_ext = NGSIMNeighborFeatureExtractor(
+        ngsim_behavior_ext = NGSIMBehaviorFeatureExtractor(
             ngsim_behavior_features
         )
         push!(subexts, ngsim_behavior_ext)
