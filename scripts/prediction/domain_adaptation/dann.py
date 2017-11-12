@@ -267,6 +267,7 @@ class DANN(object):
             print('val tgt pos loss: {}'.format(stats['val']['pos_ce'][-1]))
             print('val tgt brier: {}'.format(stats['val']['brier'][-1]))
             print('val tgt pos brier: {}'.format(stats['val']['pos_brier'][-1]))
+            print('val tgt avg prc: {}'.format(stats['val']['avg_prc'][-1]))
         print('\n')
 
     def predict(self, x, tgt=True, batch_size=100):

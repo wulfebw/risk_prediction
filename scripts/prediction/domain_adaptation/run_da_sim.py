@@ -168,11 +168,10 @@ def main(
         source_filepath='../../../data/datasets/nov/subselect_proposal_prediction_data.h5',
         target_filepath='../../../data/datasets/nov/bn_train_data.h5',
         results_dir='../../../data/datasets/nov/hyperparam_search',
-        visualize=False,
-        vis_dir='../../../data/visualizations/domain_adaptation',
-        batch_size=1000,
+        target_idx=2,
+        batch_size=500,
         debug_size=100000,
-        n_pos_tgt_train_samples=[0, 10, 25, 50, 75, 100],
+        n_pos_tgt_train_samples=[10,50,100,250,500,1000],#[0, 10, 25, 50, 75, 100],
         n_tgt_train_samples=None, #[387, 3948, 14167, 28066, 34988],
         n_epochs=[20, 22, 25, 30, 35, 40]):
     
@@ -192,7 +191,8 @@ def main(
                 remove_early_collision_idx=5,
                 n_pos_tgt_train_samples=n_pos_tgt_train_samples[i],
                 src_train_split=.95,
-                tgt_train_split=.5
+                tgt_train_split=2./3,
+                target_idx=target_idx
             )
             n_samples = n_pos_tgt_train_samples[i]
         elif n_tgt_train_samples is not None:
@@ -203,7 +203,8 @@ def main(
                 remove_early_collision_idx=5,
                 n_tgt_train_samples=n_tgt_train_samples[i],
                 src_train_split=.95,
-                tgt_train_split=.5
+                tgt_train_split=2/3.,
+                target_idx=target_idx
             )
             n_samples = n_tgt_train_samples[i]
 
@@ -234,5 +235,14 @@ def main(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='mode parser')
     parser.add_argument('--mode', type=str, default='with_adapt')
+    parser.add_argument('--src_filepath', type=str, 
+        default='../../../data/datasets/nov/sim2real.h5')
+    parser.add_argument('--tgt_filepath', type=str, 
+        default='../../../data/datasets/nov/ngsim_20_sec_1_feature_timesteps_traj_1_3_2.h5')
+    parser.add_argument('--target_idx', type=int, default=4)
     args = parser.parse_args()
-    stats = main(mode=args.mode)
+    stats = main(
+        mode=args.mode, 
+        source_filepath=args.src_filepath,
+        target_filepath=args.tgt_filepath,
+        target_idx=args.target_idx)

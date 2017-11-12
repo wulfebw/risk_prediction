@@ -127,7 +127,7 @@ def y_to_binary(y, n):
 def tile_flatten(x, n):
     return np.tile(np.reshape(x, (-1,1)), (1,n)).flatten()
 
-def compute_avg_prc(y, scores, w, n=100):
+def compute_avg_prc(y, scores, w, n=1):
     optimal_scores = tile_flatten(y, n)
     y = y_to_binary(y, n)
     scores = tile_flatten(scores, n)
@@ -142,7 +142,7 @@ def compute_avg_prc(y, scores, w, n=100):
 def evaluate(y, probs, w):
     brier = compute_brier(y[:,1], probs[:,1], w)
     rel_err = compute_relative_error(y[:,1], probs[:,1], w)
-    # avg_prc = compute_avg_prc(y[:,1], probs[:,1], w)
+    avg_prc = compute_avg_prc(y[:,1], probs[:,1], w)
     idxs = np.where(y[:,1] > 0)[0]
     if len(idxs) > 0:
         pos_brier = compute_brier(y[idxs,1], probs[idxs,1], w[idxs])
@@ -159,7 +159,7 @@ def evaluate(y, probs, w):
         pos_brier=pos_brier,
         pos_rel_err=pos_rel_err,
         pos_ce=pos_ce,
-        # avg_prc=avg_prc
+        avg_prc=avg_prc
     )
 
 def to_multiclass(y):
