@@ -171,8 +171,8 @@ def main(
         target_idx=2,
         batch_size=500,
         debug_size=100000,
-        n_pos_tgt_train_samples=[10,50,100,250,500,1000],#[0, 10, 25, 50, 75, 100],
-        n_tgt_train_samples=None, #[387, 3948, 14167, 28066, 34988],
+        n_pos_tgt_train_samples=[1, 10, 25, 50, 75, 100],
+        n_tgt_train_samples=None,
         n_epochs=[20, 22, 25, 30, 35, 40]):
     
     utils.maybe_mkdir(results_dir)
@@ -190,7 +190,7 @@ def main(
                 debug_size=debug_size,
                 remove_early_collision_idx=5,
                 n_pos_tgt_train_samples=n_pos_tgt_train_samples[i],
-                src_train_split=.95,
+                src_train_split=.9,
                 tgt_train_split=2./3,
                 target_idx=target_idx
             )
@@ -202,7 +202,7 @@ def main(
                 debug_size=debug_size,
                 remove_early_collision_idx=5,
                 n_tgt_train_samples=n_tgt_train_samples[i],
-                src_train_split=.95,
+                src_train_split=.9,
                 tgt_train_split=2/3.,
                 target_idx=target_idx
             )
