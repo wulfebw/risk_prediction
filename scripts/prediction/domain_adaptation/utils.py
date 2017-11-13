@@ -1,6 +1,7 @@
 
 from collections import defaultdict
 import h5py
+from imblearn.over_sampling import SMOTE
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -8,6 +9,15 @@ import numpy as np
 import os
 import sklearn.metrics
 import sys
+
+def oversample(x, y, w):
+    x, y_resampled = SMOTE().fit_sample(x, y)
+    new_y = np.zeros((len(y_resampled), 2))
+    zero_idxs = np.where(y_resampled == 0)
+    one_idxs = np.where(y_resampled == 1)
+    new_y[zero_idxs,0] = 1
+    new_y[one_idxs, 1] = 1
+    return x, new_y, np.ones(len(new_y))
 
 def maybe_mkdir(d):
     if not os.path.exists(d):

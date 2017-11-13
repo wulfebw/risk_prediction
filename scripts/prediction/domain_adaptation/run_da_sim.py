@@ -114,6 +114,30 @@ def hyperparam_search(
         src = tgt
         lambda_final = 0.
         da_mode = 'unsupervised'
+    elif mode == 'oversample':
+        try:
+            tgt['x_train'], tgt['y_train'], tgt['w_train'] = utils.oversample(
+                tgt['x_train'], 
+                tgt['y_train'][:,1], 
+                tgt['w_train']
+            )
+            src = tgt
+            lambda_final = 0.
+            da_mode = 'unsupervised'
+        except:
+            return
+    elif mode == 'with_oversample_adapt':
+        try:
+            tgt['x_train'], tgt['y_train'], tgt['w_train'] = utils.oversample(
+                tgt['x_train'], 
+                tgt['y_train'][:,1], 
+                tgt['w_train']
+            )
+            lambda_final = 0.1
+            da_mode = 'unsupervised'
+            src_only_adversarials = [True]
+        except:
+            return
 
     # build datasets
     dataset, val_dataset, test_dataset = build_datasets(src, tgt, batch_size)
@@ -171,9 +195,9 @@ def main(
         target_idx=2,
         batch_size=500,
         debug_size=100000,
-        n_pos_tgt_train_samples=[1, 10, 25, 50, 75, 100],
+        n_pos_tgt_train_samples=[1, 10, 25, 50, 75, 100, 200],
         n_tgt_train_samples=None,
-        n_epochs=[20, 22, 25, 30, 35, 40]):
+        n_epochs=[20, 22, 25, 30, 35, 40, 45]):
     
     utils.maybe_mkdir(results_dir)
     if n_pos_tgt_train_samples is not None:
