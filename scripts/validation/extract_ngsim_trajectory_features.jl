@@ -26,9 +26,11 @@ println("output filepath: $(output_filepath)")
 #         CarLidarFeatureExtractor(180, carlidar_max_range = 100.)
 #     ]
 # use these features for behavioral feature inference
-subexts = AbstractFeatureExtractor[
-    BehaviorDatasetFeatureExtractor()
-]
+# subexts = AbstractFeatureExtractor[
+#     BehaviorDatasetFeatureExtractor()
+# ]
+# use this for most everything else
+subexts = AbstractFeatureExtractor[]
 ext = MultiFeatureExtractor(subexts)
 n_features = length(ext)
 features = Dict{Int, Dict{Int, Array{Float64}}}()
