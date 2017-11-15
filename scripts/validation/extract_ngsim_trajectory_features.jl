@@ -20,17 +20,18 @@ println("output filepath: $(output_filepath)")
 
 # feature extractor (note the lack of behavioral features)
 # use these feature extractors for lidar imputation:
-# subexts = [
-#         CoreFeatureExtractor(),
-#         TemporalFeatureExtractor(),
-#         CarLidarFeatureExtractor(180, carlidar_max_range = 100.)
-#     ]
+subexts = [
+        CoreFeatureExtractor(),
+        TemporalFeatureExtractor(),
+        WellBehavedFeatureExtractor(),
+        NeighborFeatureExtractor()
+        # CarLidarFeatureExtractor(20, carlidar_max_range = 100.)
+    ]
 # use these features for behavioral feature inference
 # subexts = AbstractFeatureExtractor[
 #     BehaviorDatasetFeatureExtractor()
 # ]
-# use this for most everything else
-subexts = AbstractFeatureExtractor[]
+
 ext = MultiFeatureExtractor(subexts)
 n_features = length(ext)
 features = Dict{Int, Dict{Int, Array{Float64}}}()
